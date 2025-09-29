@@ -23,7 +23,7 @@ const Sidebar = ({ onLogout }) => {
   return (
     <div className="sidebar">
       <div className="sidebar-header">
-        <div className="sidebar-logo">AssetPro</div>
+        <div className="sidebar-logo">Inventra</div>
         <div className="sidebar-subtitle">Asset Management System</div>
       </div>
       
