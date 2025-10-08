@@ -1,58 +1,119 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Search, Filter, Plus, Eye, Edit, Trash2, Users, Calendar, Package } from 'lucide-react';
 
 const Projects = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [projects, setProjects] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  // Mock projects data
-  const [projects] = useState([
-    {
-      id: 1,
-      name: 'Office Digitalization - ABC Corp',
-      client: 'ABC Corporation',
-      status: 'Active',
-      startDate: '2024-01-15',
-      endDate: '2024-12-31',
-      postSupport: 'Premium Support',
-      assetsCount: 15,
-      description: 'Complete office digitalization with laptops and networking equipment'
-    },
-    {
-      id: 2,
-      name: 'IT Infrastructure - XYZ Ltd',
-      client: 'XYZ Limited',
-      status: 'In Progress',
-      startDate: '2024-03-01',
-      endDate: '2025-02-28',
-      postSupport: 'Standard Support',
-      assetsCount: 8,
-      description: 'IT infrastructure setup and maintenance for regional offices'
-    },
-    {
-      id: 3,
-      name: 'Security System - Tech Solutions',
-      client: 'Tech Solutions Inc',
-      status: 'Planning',
-      startDate: '2024-06-01',
-      endDate: '2024-11-30',
-      postSupport: 'Basic Support',
-      assetsCount: 12,
-      description: 'Security cameras and access control system implementation'
-    },
-    {
-      id: 4,
-      name: 'Network Upgrade - Global Systems',
-      client: 'Global Systems Ltd',
-      status: 'Completed',
-      startDate: '2023-09-01',
-      endDate: '2024-02-29',
-      postSupport: 'Extended Support',
-      assetsCount: 20,
-      description: 'Complete network infrastructure upgrade and optimization'
+  // API Configuration
+  const API_BASE = 'https://www.ivms2006.com/api';
+
+  // Fetch projects from API
+  const fetchProjects = async () => {
+    console.log('🔄 Starting Projects API call to:', `${API_BASE}/getProjects.php`);
+    
+    try {
+      const response = await fetch(`${API_BASE}/getProjects.php`, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
+        mode: 'cors'
+      });
+      
+      console.log('📡 Projects API Response status:', response.status);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const rawText = await response.text();
+      console.log('📦 Raw Projects API Response:', rawText);
+      
+      let data;
+      try {
+        data = JSON.parse(rawText);
+      } catch (parseError) {
+        console.error('❌ JSON Parse Error:', parseError);
+        throw new Error('Invalid JSON response from Projects API');
+      }
+      
+      console.log('📦 Parsed Projects API Response data:', data);
+      
+      if (data.success && data.data && Array.isArray(data.data)) {
+        console.log('✅ Projects API call successful, projects found:', data.data.length);
+        setProjects(data.data);
+      } else {
+        console.log('⚠️ Projects API returned success: false or no data array');
+        console.log('⚠️ Using fallback data due to API structure issue');
+        throw new Error('API returned invalid data structure');
+      }
+    } catch (error) {
+      console.error('❌ Error fetching projects:', error);
+      console.error('❌ Error details:', error.message);
+      
+      // Fallback to mock data if API fails
+      console.log('🔄 Using fallback mock projects data');
+      setProjects([
+        {
+          id: 1,
+          name: 'Office Digitalization - ABC Corp',
+          client: 'ABC Corporation',
+          status: 'Active',
+          startDate: '2024-01-15',
+          endDate: '2024-12-31',
+          postSupport: 'Premium Support',
+          assetsCount: 15,
+          description: 'Complete office digitalization with laptops and networking equipment'
+        },
+        {
+          id: 2,
+          name: 'IT Infrastructure - XYZ Ltd',
+          client: 'XYZ Limited',
+          status: 'In Progress',
+          startDate: '2024-03-01',
+          endDate: '2025-02-28',
+          postSupport: 'Standard Support',
+          assetsCount: 8,
+          description: 'IT infrastructure setup and maintenance for regional offices'
+        },
+        {
+          id: 3,
+          name: 'Security System - Tech Solutions',
+          client: 'Tech Solutions Inc',
+          status: 'Planning',
+          startDate: '2024-06-01',
+          endDate: '2024-11-30',
+          postSupport: 'Basic Support',
+          assetsCount: 12,
+          description: 'Security cameras and access control system implementation'
+        },
+        {
+          id: 4,
+          name: 'Network Upgrade - Global Systems',
+          client: 'Global Systems Ltd',
+          status: 'Completed',
+          startDate: '2023-09-01',
+          endDate: '2024-02-29',
+          postSupport: 'Extended Support',
+          assetsCount: 20,
+          description: 'Complete network infrastructure upgrade and optimization'
+        }
+      ]);
+    } finally {
+      console.log('⏰ Projects API call completed, loading set to false');
+      setLoading(false);
     }
-  ]);
+  };
+
+  // Fetch projects when component mounts
+  useEffect(() => {
+    fetchProjects();
+  }, []);
 
   const filteredProjects = projects.filter(project => {
     return (
@@ -72,6 +133,28 @@ const Projects = () => {
     };
     return colors[status] || { bg: '#f8f9fa', text: '#495057' };
   };
+
+  // Show loading state
+  if (loading) {
+    return (
+      <div>
+        <div className="page-header">
+          <h1 className="page-title">Projects</h1>
+          <div className="actions">
+            <button className="btn btn-primary" disabled>
+              <Plus size={16} style={{ marginRight: '5px' }} />
+              Add New Project
+            </button>
+          </div>
+        </div>
+        <div className="card">
+          <div style={{ textAlign: 'center', padding: '40px', color: '#666' }}>
+            Loading projects...
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div>
