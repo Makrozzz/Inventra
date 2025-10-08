@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Search, Filter, Edit, Trash2, Upload, Plus, Download } from 'lucide-react';
 
-const Assets = ({ assets, onDelete }) => {
+const Assets = ({ assets, onDelete, loading }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
@@ -117,37 +117,42 @@ const Assets = ({ assets, onDelete }) => {
           <p>Showing {filteredAssets.length} of {assets.length} assets</p>
         </div>
 
-        <table className="table">
-          <thead>
-            <tr>
-              <th>Asset ID</th>
-              <th>Asset Name</th>
-              <th>Category</th>
-              <th>Status</th>
-              <th>Location</th>
-              <th>Purchase Value</th>
-              <th>Current Value</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredAssets.map(asset => (
-              <tr key={asset.id}>
-                <td><strong>#{asset.id}</strong></td>
-                <td>{asset.name}</td>
-                <td>
-                  <span className="category-badge">
-                    {asset.category}
-                  </span>
-                </td>
-                <td>
-                  <span className={`status-badge status-${asset.status.toLowerCase()}`}>
-                    {asset.status}
-                  </span>
-                </td>
-                <td>{asset.location}</td>
-                <td>${asset.value.toLocaleString()}</td>
-                <td>${Math.round(asset.value * 0.85).toLocaleString()}</td>
+        {loading ? (
+          <div style={{ textAlign: 'center', padding: '40px' }}>
+            <p>Loading assets...</p>
+          </div>
+        ) : (
+          <table className="table">
+            <thead>
+              <tr>
+                <th>Asset ID</th>
+                <th>Asset Name</th>
+                <th>Category</th>
+                <th>Status</th>
+                <th>Location</th>
+                <th>Quantity</th>
+                <th>Price</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredAssets.map(asset => (
+                <tr key={asset.id}>
+                  <td><strong>#{asset.id}</strong></td>
+                  <td>{asset.name}</td>
+                  <td>
+                    <span className="category-badge">
+                      {asset.category}
+                    </span>
+                  </td>
+                  <td>
+                    <span className={`status-badge status-${asset.status.toLowerCase().replace(/\s+/g, '-')}`}>
+                      {asset.status}
+                    </span>
+                  </td>
+                  <td>{asset.location}</td>
+                  <td>{asset.quantity || 'N/A'}</td>
+                  <td>${asset.value ? asset.value.toLocaleString() : '0'}</td>
                 <td>
                   <div className="action-buttons">
                     <Link 
@@ -168,10 +173,11 @@ const Assets = ({ assets, onDelete }) => {
                 </td>
               </tr>
             ))}
-          </tbody>
-        </table>
+            </tbody>
+          </table>
+        )}
 
-        {filteredAssets.length === 0 && (
+        {!loading && filteredAssets.length === 0 && (
           <div className="empty-state">
             <p>No assets found matching your search criteria.</p>
             <Link to="/add-asset" className="btn btn-primary">
