@@ -134,7 +134,7 @@ function App() {
           <Routes>
             <Route path="/" element={<Dashboard />} />
             <Route path="/projects" element={<Projects />} />
-            <Route path="/assets" element={<Assets assets={assets} onDelete={deleteAsset} loading={loading} />} />
+            <Route path="/assets" element={<Assets onDelete={deleteAsset} />} />
             <Route path="/maintenance" element={<PreventiveMaintenance assets={assets} />} />
             <Route path="/settings" element={<AccountSettings />} />
             <Route path="/add-asset" element={<AddAsset onAdd={addAsset} />} />
