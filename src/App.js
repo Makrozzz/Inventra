@@ -132,7 +132,7 @@ function App() {
         <Sidebar onLogout={handleLogout} />
         <main className="main-content">
           <Routes>
-            <Route path="/" element={<Dashboard assets={assets} loading={loading} />} />
+            <Route path="/" element={<Dashboard />} />
             <Route path="/projects" element={<Projects />} />
             <Route path="/assets" element={<Assets assets={assets} onDelete={deleteAsset} loading={loading} />} />
             <Route path="/maintenance" element={<PreventiveMaintenance assets={assets} />} />
