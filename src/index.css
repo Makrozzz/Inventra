@@ -820,3 +820,299 @@ input[type="checkbox"] {
     grid-template-columns: 1fr;
   }
 }
+
+/* Enhanced table styles for Assets with all database attributes */
+.table-responsive {
+  overflow-x: auto;
+  max-width: 100%;
+  border-radius: 8px;
+  border: 1px solid #e9ecef;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  background: white;
+}
+
+.table {
+  min-width: 100%;
+  white-space: nowrap;
+  margin: 0;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.table th {
+  position: sticky;
+  top: 0;
+  background: linear-gradient(135deg, #2c3e50, #34495e);
+  color: white;
+  font-weight: 600;
+  padding: 16px 12px;
+  border: none;
+  min-width: 120px;
+  text-align: left;
+  font-size: 0.9rem;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  z-index: 10;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.table th:first-child {
+  border-top-left-radius: 8px;
+}
+
+.table th:last-child {
+  border-top-right-radius: 8px;
+}
+
+.table tbody tr {
+  transition: all 0.2s ease;
+  background: white;
+}
+
+.table tbody tr:nth-child(even) {
+  background: #f8f9fa;
+}
+
+.table tbody tr:hover {
+  background: linear-gradient(135deg, rgba(52, 152, 219, 0.08), rgba(52, 152, 219, 0.12));
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.table td {
+  padding: 14px 12px;
+  vertical-align: middle;
+  border-bottom: 1px solid #e9ecef;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: #2c3e50;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.table td span {
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Enhanced status badge styles with better contrast */
+.status-badge {
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 80px;
+  text-align: center;
+  border: 2px solid transparent;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s ease;
+}
+
+.status-active {
+  background: linear-gradient(135deg, #27ae60, #2ecc71);
+  color: white;
+  border-color: #27ae60;
+}
+
+.status-active:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(39, 174, 96, 0.3);
+}
+
+.status-maintenance, .status-in-service {
+  background: linear-gradient(135deg, #f39c12, #e67e22);
+  color: white;
+  border-color: #f39c12;
+}
+
+.status-maintenance:hover, .status-in-service:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(243, 156, 18, 0.3);
+}
+
+.status-inactive, .status-out-of-service {
+  background: linear-gradient(135deg, #e74c3c, #c0392b);
+  color: white;
+  border-color: #e74c3c;
+}
+
+.status-inactive:hover, .status-out-of-service:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(231, 76, 60, 0.3);
+}
+
+/* Additional status colors for other statuses */
+.status-pending {
+  background: linear-gradient(135deg, #9b59b6, #8e44ad);
+  color: white;
+  border-color: #9b59b6;
+}
+
+.status-under-repair {
+  background: linear-gradient(135deg, #34495e, #2c3e50);
+  color: white;
+  border-color: #34495e;
+}
+
+/* Enhanced action buttons with better visibility */
+.action-buttons {
+  display: flex;
+  gap: 8px;
+  min-width: 100px;
+  justify-content: center;
+  align-items: center;
+}
+
+.action-buttons .btn {
+  border-radius: 6px;
+  font-size: 0.8rem;
+  padding: 8px 12px;
+  border: 2px solid transparent;
+  transition: all 0.3s ease;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 36px;
+  min-height: 36px;
+}
+
+.action-buttons .btn-secondary {
+  background: linear-gradient(135deg, #3498db, #2980b9);
+  color: white;
+  border-color: #3498db;
+}
+
+.action-buttons .btn-secondary:hover {
+  background: linear-gradient(135deg, #2980b9, #1f618d);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(52, 152, 219, 0.4);
+}
+
+.action-buttons .btn-danger {
+  background: linear-gradient(135deg, #e74c3c, #c0392b);
+  color: white;
+  border-color: #e74c3c;
+}
+
+.action-buttons .btn-danger:hover {
+  background: linear-gradient(135deg, #c0392b, #a93226);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(231, 76, 60, 0.4);
+}
+
+/* Enhanced cell content styling */
+.table td span {
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.4;
+}
+
+/* Improved text contrast for different cell types */
+.table td[title] {
+  cursor: help;
+  position: relative;
+}
+
+.table td strong {
+  color: #2c3e50;
+  font-weight: 700;
+}
+
+/* Last row styling */
+.table tbody tr:last-child {
+  border-bottom: none;
+}
+
+.table tbody tr:last-child td:first-child {
+  border-bottom-left-radius: 8px;
+}
+
+.table tbody tr:last-child td:last-child {
+  border-bottom-right-radius: 8px;
+}
+
+/* Empty state styling */
+.empty-state {
+  text-align: center;
+  padding: 40px 20px;
+  color: #6c757d;
+  background: white;
+  border-radius: 0 0 8px 8px;
+}
+
+.empty-state p {
+  font-size: 1.1rem;
+  margin-bottom: 20px;
+  color: #495057;
+}
+
+/* Loading state enhancement */
+.table-loading {
+  text-align: center;
+  padding: 60px 20px;
+  background: white;
+  border-radius: 8px;
+  color: #6c757d;
+}
+
+.table-loading p {
+  font-size: 1.1rem;
+  color: #495057;
+  margin: 0;
+}
+
+/* Mobile responsiveness for large tables */
+@media (max-width: 768px) {
+  .table th,
+  .table td {
+    min-width: 100px;
+    font-size: 0.85rem;
+    padding: 10px 8px;
+  }
+  
+  .table th {
+    padding: 12px 8px;
+    font-size: 0.8rem;
+  }
+  
+  .action-buttons {
+    flex-direction: column;
+    gap: 4px;
+    min-width: 60px;
+  }
+  
+  .action-buttons .btn {
+    min-width: 32px;
+    min-height: 32px;
+    padding: 6px 8px;
+    font-size: 0.75rem;
+  }
+  
+  .status-badge {
+    padding: 4px 8px;
+    font-size: 0.7rem;
+    min-width: 60px;
+  }
+}
+
+/* Focus states for accessibility */
+.table .btn:focus {
+  outline: 2px solid #3498db;
+  outline-offset: 2px;
+}
+
+.status-badge:focus {
+  outline: 2px solid #2c3e50;
+  outline-offset: 2px;
+}
