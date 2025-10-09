@@ -1,25 +1,97 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Search, Filter, Edit, Trash2, Upload, Plus, Download } from 'lucide-react';
+import apiService from '../services/apiService';
 
-const Assets = ({ assets, onDelete, loading }) => {
+const Assets = ({ onDelete }) => {
+  const [assets, setAssets] = useState([]);
+  const [columns, setColumns] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
-  const [locationFilter, setLocationFilter] = useState('');
+
+  // Fetch all assets from database
+  useEffect(() => {
+    const fetchAssets = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const response = await apiService.getAllAssets();
+        
+        // Handle both new API structure and fallback structure
+        if (response.data && response.columns) {
+          // New API structure
+          setAssets(response.data);
+          setColumns(response.columns);
+        } else if (Array.isArray(response)) {
+          // Direct array response (fallback)
+          setAssets(response);
+          // Create mock columns based on first asset
+          if (response.length > 0) {
+            const firstAsset = response[0];
+            const mockColumns = Object.keys(firstAsset).map(key => ({
+              Field: key,
+              Type: 'varchar(255)'
+            }));
+            setColumns(mockColumns);
+          }
+        } else {
+          // Unexpected structure
+          console.warn('Unexpected API response structure:', response);
+          setAssets([]);
+          setColumns([]);
+        }
+      } catch (err) {
+        console.error('Error fetching assets:', err);
+        setError(err.message || 'Failed to load assets');
+        
+        // Set empty state on error
+        setAssets([]);
+        setColumns([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchAssets();
+  }, []);
 
   const filteredAssets = assets.filter(asset => {
+    const searchableFields = Object.values(asset).join(' ').toLowerCase();
+    const statusField = asset.Asset_Status || asset.status || '';
     return (
-      asset.name.toLowerCase().includes(searchTerm.toLowerCase()) &&
-      (categoryFilter === '' || asset.category === categoryFilter) &&
-      (statusFilter === '' || asset.status === statusFilter) &&
-      (locationFilter === '' || asset.location === locationFilter)
+      searchableFields.includes(searchTerm.toLowerCase()) &&
+      (statusFilter === '' || statusField === statusFilter)
     );
   });
 
-  const categories = [...new Set(assets.map(asset => asset.category))];
-  const statuses = [...new Set(assets.map(asset => asset.status))];
-  const locations = [...new Set(assets.map(asset => asset.location))];
+  // Get unique values for filters - check both possible status field names
+  const statuses = [...new Set(assets.map(asset => 
+    asset.Asset_Status || asset.status || ''
+  ).filter(Boolean))];
+  
+  // Define which columns to hide (typically internal/system columns)
+  const hiddenColumns = ['Asset_ID', 'Created_At', 'Updated_At', 'Deleted_At'];
+  
+  // Get displayable columns (exclude hidden ones)
+  const displayColumns = columns.filter(col => !hiddenColumns.includes(col.Field));
+  
+  // Helper function to format column names for display
+  const formatColumnName = (columnName) => {
+    return columnName
+      .replace(/_/g, ' ')
+      .replace(/\b\w/g, l => l.toUpperCase());
+  };
+  
+  // Helper function to format cell values
+  const formatCellValue = (value, columnName) => {
+    if (value === null || value === undefined) return 'N/A';
+    if (typeof value === 'string' && value.length > 50) {
+      return value.substring(0, 50) + '...';
+    }
+    return value;
+  };
 
   const handleImportCSV = (event) => {
     const file = event.target.files[0];
@@ -34,16 +106,28 @@ const Assets = ({ assets, onDelete, loading }) => {
   };
 
   const handleExportCSV = () => {
-    const csvContent = [
-      ['ID', 'Name', 'Category', 'Status', 'Location', 'Value'],
-      ...filteredAssets.map(asset => [asset.id, asset.name, asset.category, asset.status, asset.location, asset.value])
-    ].map(row => row.join(',')).join('\n');
+    if (displayColumns.length === 0 || filteredAssets.length === 0) {
+      alert('No data to export');
+      return;
+    }
+    
+    // Create headers from column names
+    const headers = displayColumns.map(col => formatColumnName(col.Field));
+    
+    // Create rows with all asset data
+    const rows = filteredAssets.map(asset => 
+      displayColumns.map(col => asset[col.Field] || 'N/A')
+    );
+    
+    const csvContent = [headers, ...rows]
+      .map(row => row.map(cell => `"${cell}"`).join(','))
+      .join('\n');
 
     const blob = new Blob([csvContent], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'assets.csv';
+    a.download = 'complete_assets.csv';
     a.click();
   };
 
@@ -91,95 +175,99 @@ const Assets = ({ assets, onDelete, loading }) => {
         <div className="filters">
           <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
             <Filter size={16} />
-            <span>Advanced Filters:</span>
+            <span>Filters:</span>
           </div>
-          <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)}>
-            <option value="">All Categories</option>
-            {categories.map(category => (
-              <option key={category} value={category}>{category}</option>
-            ))}
-          </select>
           <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
             <option value="">All Status</option>
             {statuses.map(status => (
               <option key={status} value={status}>{status}</option>
             ))}
           </select>
-          <select value={locationFilter} onChange={(e) => setLocationFilter(e.target.value)}>
-            <option value="">All Locations</option>
-            {locations.map(location => (
-              <option key={location} value={location}>{location}</option>
-            ))}
-          </select>
         </div>
 
-        <div className="table-info">
-          <p>Showing {filteredAssets.length} of {assets.length} assets</p>
+        <div className="table-info" style={{ 
+          padding: '12px 16px', 
+          background: 'linear-gradient(135deg, #ecf0f1, #d5dbdb)', 
+          borderRadius: '6px 6px 0 0',
+          border: '1px solid #bdc3c7',
+          borderBottom: 'none',
+          color: '#2c3e50',
+          fontWeight: '600',
+          fontSize: '0.9rem'
+        }}>
+          <p style={{ margin: 0 }}>
+            📊 Showing <strong>{filteredAssets.length}</strong> of <strong>{assets.length}</strong> assets
+          </p>
         </div>
 
         {loading ? (
-          <div style={{ textAlign: 'center', padding: '40px' }}>
+          <div className="table-loading">
             <p>Loading assets...</p>
           </div>
+        ) : error ? (
+          <div style={{ textAlign: 'center', padding: '40px', background: 'white', borderRadius: '8px', border: '1px solid #e9ecef' }}>
+            <p style={{ color: '#e74c3c', fontSize: '1.1rem', marginBottom: '20px' }}>⚠️ Error: {error}</p>
+            <button onClick={() => window.location.reload()} className="btn btn-primary">
+              🔄 Retry
+            </button>
+          </div>
         ) : (
-          <table className="table">
-            <thead>
-              <tr>
-                <th>Asset ID</th>
-                <th>Asset Name</th>
-                <th>Category</th>
-                <th>Status</th>
-                <th>Location</th>
-                <th>Quantity</th>
-                <th>Price</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredAssets.map(asset => (
-                <tr key={asset.id}>
-                  <td><strong>#{asset.id}</strong></td>
-                  <td>{asset.name}</td>
-                  <td>
-                    <span className="category-badge">
-                      {asset.category}
-                    </span>
-                  </td>
-                  <td>
-                    <span className={`status-badge status-${asset.status.toLowerCase().replace(/\s+/g, '-')}`}>
-                      {asset.status}
-                    </span>
-                  </td>
-                  <td>{asset.location}</td>
-                  <td>{asset.quantity || 'N/A'}</td>
-                  <td>${asset.value ? asset.value.toLocaleString() : '0'}</td>
-                <td>
-                  <div className="action-buttons">
-                    <Link 
-                      to={`/edit-asset/${asset.id}`} 
-                      className="btn btn-secondary btn-sm"
-                      title="Edit Asset"
-                    >
-                      <Edit size={14} />
-                    </Link>
-                    <button 
-                      onClick={() => onDelete(asset.id)} 
-                      className="btn btn-danger btn-sm"
-                      title="Delete Asset"
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-            </tbody>
-          </table>
+          <div className="table-responsive">
+            <table className="table">
+              <thead>
+                <tr>
+                  {displayColumns.map(column => (
+                    <th key={column.Field}>
+                      {formatColumnName(column.Field)}
+                    </th>
+                  ))}
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredAssets.map((asset, index) => (
+                  <tr key={asset.Serial_Number || asset.Asset_ID || asset.id || index}>
+                    {displayColumns.map(column => (
+                      <td key={column.Field}>
+                        {(column.Field === 'Asset_Status' || column.Field === 'status') ? (
+                          <span className={`status-badge status-${(asset[column.Field] || '').toLowerCase().replace(/\s+/g, '-')}`}>
+                            {formatCellValue(asset[column.Field], column.Field)}
+                          </span>
+                        ) : (
+                          <span title={asset[column.Field]}>
+                            {formatCellValue(asset[column.Field], column.Field)}
+                          </span>
+                        )}
+                      </td>
+                    ))}
+                    <td>
+                      <div className="action-buttons">
+                        <Link 
+                          to={`/edit-asset/${asset.Serial_Number || asset.Asset_ID || asset.id}`} 
+                          className="btn btn-secondary btn-sm"
+                          title="Edit Asset"
+                        >
+                          <Edit size={14} />
+                        </Link>
+                        <button 
+                          onClick={() => onDelete && onDelete(asset.Serial_Number || asset.Asset_ID || asset.id)} 
+                          className="btn btn-danger btn-sm"
+                          title="Delete Asset"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
 
-        {!loading && filteredAssets.length === 0 && (
+        {!loading && !error && filteredAssets.length === 0 && (
           <div className="empty-state">
-            <p>No assets found matching your search criteria.</p>
+            <p>📦 No assets found matching your search criteria.</p>
             <Link to="/add-asset" className="btn btn-primary">
               <Plus size={16} style={{ marginRight: '5px' }} />
               Add Your First Asset
