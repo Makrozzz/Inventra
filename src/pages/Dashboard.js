@@ -1,23 +1,66 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Plus, Package, Users, TrendingUp, BarChart3 } from 'lucide-react';
+import apiService from '../services/apiService';
 
-const Dashboard = ({ assets, customers = [] }) => {
-  const totalAssets = assets.length;
-  const totalCustomers = customers.length || 12; // Default value for demo
-  const activeAssets = assets.filter(asset => asset.status === 'Active').length;
-  const totalValue = assets.reduce((sum, asset) => sum + asset.value, 0);
+const Dashboard = () => {
+  const [dashboardData, setDashboardData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  // Mock customer data for the chart
-  const customerAssetData = [
-    { customer: 'ABC Corp', devices: 15 },
-    { customer: 'XYZ Ltd', devices: 8 },
-    { customer: 'Tech Solutions', devices: 12 },
-    { customer: 'Global Systems', devices: 20 },
-    { customer: 'Innovation Co', devices: 6 }
-  ];
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const data = await apiService.getDashboardData();
+        setDashboardData(data);
+      } catch (err) {
+        console.error('Error fetching dashboard data:', err);
+        setError(err.message || 'Failed to load dashboard data');
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  const maxDevices = Math.max(...customerAssetData.map(item => item.devices));
+    fetchDashboardData();
+  }, []);
+
+  // Loading state
+  if (loading) {
+    return (
+      <div>
+        <div className="page-header">
+          <h1 className="page-title">Dashboard</h1>
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '200px' }}>
+          <div>Loading dashboard data...</div>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div>
+        <div className="page-header">
+          <h1 className="page-title">Dashboard</h1>
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '200px' }}>
+          <div style={{ color: 'red' }}>Error: {error}</div>
+        </div>
+      </div>
+    );
+  }
+
+  // Extract data from API response
+  const { stats, customerAssetData, recentAssets } = dashboardData || {};
+  const { totalAssets = 0, activeAssets = 0, totalCustomers = 0, totalValue = 0 } = stats || {};
+
+  const maxDevices = customerAssetData?.length > 0 
+    ? Math.max(...customerAssetData.map(item => parseInt(item.devices))) 
+    : 0;
 
   return (
     <div>
@@ -80,23 +123,27 @@ const Dashboard = ({ assets, customers = [] }) => {
             Device Analysis by Customer
           </h2>
           <div className="chart-container">
-            {customerAssetData.map((item, index) => (
-              <div key={index} className="chart-bar-item">
-                <div className="chart-bar-info">
-                  <span className="customer-name">{item.customer}</span>
-                  <span className="device-count">{item.devices} devices</span>
+            {customerAssetData && customerAssetData.length > 0 ? (
+              customerAssetData.map((item, index) => (
+                <div key={index} className="chart-bar-item">
+                  <div className="chart-bar-info">
+                    <span className="customer-name">{item.customer}</span>
+                    <span className="device-count">{item.devices} devices</span>
+                  </div>
+                  <div className="chart-bar-container">
+                    <div 
+                      className="chart-bar" 
+                      style={{ 
+                        width: `${(parseInt(item.devices) / maxDevices) * 100}%`,
+                        backgroundColor: `hsl(${200 + index * 30}, 70%, 50%)`
+                      }}
+                    ></div>
+                  </div>
                 </div>
-                <div className="chart-bar-container">
-                  <div 
-                    className="chart-bar" 
-                    style={{ 
-                      width: `${(item.devices / maxDevices) * 100}%`,
-                      backgroundColor: `hsl(${200 + index * 30}, 70%, 50%)`
-                    }}
-                  ></div>
-                </div>
-              </div>
-            ))}
+              ))
+            ) : (
+              <div style={{ textAlign: 'center', color: '#666' }}>No customer data available</div>
+            )}
           </div>
         </div>
 
@@ -113,19 +160,27 @@ const Dashboard = ({ assets, customers = [] }) => {
               </tr>
             </thead>
             <tbody>
-              {assets.slice(0, 5).map(asset => (
-                <tr key={asset.id}>
-                  <td>{asset.name}</td>
-                  <td>{asset.category}</td>
-                  <td>
-                    <span className={`status-badge status-${asset.status.toLowerCase()}`}>
-                      {asset.status}
-                    </span>
+              {recentAssets && recentAssets.length > 0 ? (
+                recentAssets.map(asset => (
+                  <tr key={asset.id}>
+                    <td>{asset.name}</td>
+                    <td>{asset.category}</td>
+                    <td>
+                      <span className={`status-badge status-${asset.status.toLowerCase()}`}>
+                        {asset.status}
+                      </span>
+                    </td>
+                    <td>{asset.location}</td>
+                    <td>${parseInt(asset.value).toLocaleString()}</td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan="5" style={{ textAlign: 'center', color: '#666' }}>
+                    No assets available
                   </td>
-                  <td>{asset.location}</td>
-                  <td>${asset.value.toLocaleString()}</td>
                 </tr>
-              ))}
+              )}
             </tbody>
           </table>
           <div style={{ textAlign: 'center', marginTop: '15px' }}>
