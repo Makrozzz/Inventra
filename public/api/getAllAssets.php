@@ -12,10 +12,28 @@ try {
         throw new Exception("Database connection not established");
     }
     
-    // Query to get ALL columns from ASSET table
-    $query = "SELECT * FROM ASSET LIMIT 100";
+    // Get pagination parameters
+    $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+    $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 100;
+    $offset = ($page - 1) * $limit;
+    
+    // Ensure valid pagination values
+    $page = max(1, $page);
+    $limit = min(max(1, $limit), 1000); // Max 1000 items per page
+    
+    // Get total count for pagination
+    $countQuery = "SELECT COUNT(*) as total FROM ASSET";
+    $stmt = $pdo->prepare($countQuery);
+    $stmt->execute();
+    $totalItems = $stmt->fetch(PDO::FETCH_ASSOC)['total'];
+    $totalPages = ceil($totalItems / $limit);
+    
+    // Query to get paginated columns from ASSET table
+    $query = "SELECT * FROM ASSET LIMIT :limit OFFSET :offset";
     
     $stmt = $pdo->prepare($query);
+    $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+    $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
     $stmt->execute();
     $assets = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
@@ -25,12 +43,16 @@ try {
     $stmt->execute();
     $columns = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
-    // Return response with both data and column information
+    // Return response with both data and pagination information
     echo json_encode([
         "success" => true,
         "data" => $assets,
         "columns" => $columns,
         "count" => count($assets),
+        "total" => (int)$totalItems,
+        "page" => $page,
+        "totalPages" => $totalPages,
+        "limit" => $limit,
         "timestamp" => date('Y-m-d H:i:s')
     ]);
     
