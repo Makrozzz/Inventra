@@ -45,6 +45,32 @@ class ApiService {
     return this.makeRequest('getProducts.php');
   }
 
+  // Get all assets with complete database attributes
+  async getAllAssets() {
+    try {
+      // First try the new complete API
+      return await this.makeRequest('getAllAssets.php');
+    } catch (error) {
+        console.warn('getAllAssets.php not available, falling back to getProducts.php:', error);
+        // Fallback to existing API with enhanced structure
+        const products = await this.makeRequest('getProducts.php');      // Mock column structure based on existing data
+      const mockColumns = [
+        { Field: 'id', Type: 'varchar(255)' },
+        { Field: 'name', Type: 'varchar(255)' },
+        { Field: 'accessories', Type: 'text' }, 
+        { Field: 'status', Type: 'varchar(50)' },
+        { Field: 'price', Type: 'decimal(10,2)' },
+        { Field: 'quantity', Type: 'int(11)' }
+      ];
+      
+      return {
+        data: products,
+        columns: mockColumns,
+        count: products.length
+      };
+    }
+  }
+
   // Projects methods
   async getProjects() {
     return this.makeRequest('getProjects.php');
