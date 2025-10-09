@@ -46,14 +46,17 @@ class ApiService {
   }
 
   // Get all assets with complete database attributes
-  async getAllAssets() {
+  async getAllAssets(page = 1, limit = 100) {
     try {
-      // First try the new complete API
-      return await this.makeRequest('getAllAssets.php');
+      // First try the new complete API with pagination
+      const endpoint = `getAllAssets.php?page=${page}&limit=${limit}`;
+      return await this.makeRequest(endpoint);
     } catch (error) {
-        console.warn('getAllAssets.php not available, falling back to getProducts.php:', error);
-        // Fallback to existing API with enhanced structure
-        const products = await this.makeRequest('getProducts.php');      // Mock column structure based on existing data
+      console.warn('getAllAssets.php not available, falling back to getProducts.php:', error);
+      // Fallback to existing API with enhanced structure
+      const products = await this.makeRequest('getProducts.php');
+      
+      // Mock column structure based on existing data
       const mockColumns = [
         { Field: 'id', Type: 'varchar(255)' },
         { Field: 'name', Type: 'varchar(255)' },
@@ -66,7 +69,10 @@ class ApiService {
       return {
         data: products,
         columns: mockColumns,
-        count: products.length
+        count: products.length,
+        total: products.length,
+        page: 1,
+        totalPages: 1
       };
     }
   }
