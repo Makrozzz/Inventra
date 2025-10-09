@@ -2,16 +2,23 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Search, Filter, Edit, Trash2, Upload, Plus, Download } from 'lucide-react';
 import apiService from '../services/apiService';
+import Pagination from '../components/Pagination';
 
 const Assets = ({ onDelete }) => {
-  const [assets, setAssets] = useState([]);
   const [columns, setColumns] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
-  // Fetch all assets from database
+  // State for all assets (loaded once)
+  const [allAssets, setAllAssets] = useState([]);
+
+  // Fetch all assets from database (once)
   useEffect(() => {
     const fetchAssets = async () => {
       try {
@@ -22,11 +29,12 @@ const Assets = ({ onDelete }) => {
         // Handle both new API structure and fallback structure
         if (response.data && response.columns) {
           // New API structure
-          setAssets(response.data);
+          setAllAssets(response.data);
           setColumns(response.columns);
         } else if (Array.isArray(response)) {
           // Direct array response (fallback)
-          setAssets(response);
+          setAllAssets(response);
+          
           // Create mock columns based on first asset
           if (response.length > 0) {
             const firstAsset = response[0];
@@ -39,7 +47,7 @@ const Assets = ({ onDelete }) => {
         } else {
           // Unexpected structure
           console.warn('Unexpected API response structure:', response);
-          setAssets([]);
+          setAllAssets([]);
           setColumns([]);
         }
       } catch (err) {
@@ -47,7 +55,7 @@ const Assets = ({ onDelete }) => {
         setError(err.message || 'Failed to load assets');
         
         // Set empty state on error
-        setAssets([]);
+        setAllAssets([]);
         setColumns([]);
       } finally {
         setLoading(false);
@@ -55,9 +63,10 @@ const Assets = ({ onDelete }) => {
     };
 
     fetchAssets();
-  }, []);
+  }, []); // Only fetch once
 
-  const filteredAssets = assets.filter(asset => {
+  // Filter assets based on search and status
+  const filteredAssets = allAssets.filter(asset => {
     const searchableFields = Object.values(asset).join(' ').toLowerCase();
     const statusField = asset.Asset_Status || asset.status || '';
     return (
@@ -66,8 +75,31 @@ const Assets = ({ onDelete }) => {
     );
   });
 
+  // Client-side pagination calculations
+  const totalItems = filteredAssets.length;
+  const calculatedTotalPages = Math.ceil(totalItems / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedAssets = filteredAssets.slice(startIndex, endIndex);
+
+  // Reset to first page when filters change
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, statusFilter]);
+
+  // Pagination handlers
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleItemsPerPageChange = (newItemsPerPage) => {
+    setItemsPerPage(newItemsPerPage);
+    setCurrentPage(1);
+  };
+
   // Get unique values for filters - check both possible status field names
-  const statuses = [...new Set(assets.map(asset => 
+  const statuses = [...new Set(allAssets.map(asset => 
     asset.Asset_Status || asset.status || ''
   ).filter(Boolean))];
   
@@ -106,7 +138,7 @@ const Assets = ({ onDelete }) => {
   };
 
   const handleExportCSV = () => {
-    if (displayColumns.length === 0 || filteredAssets.length === 0) {
+    if (displayColumns.length === 0 || allAssets.length === 0) {
       alert('No data to export');
       return;
     }
@@ -114,8 +146,8 @@ const Assets = ({ onDelete }) => {
     // Create headers from column names
     const headers = displayColumns.map(col => formatColumnName(col.Field));
     
-    // Create rows with all asset data
-    const rows = filteredAssets.map(asset => 
+    // Create rows with all asset data (not just filtered)
+    const rows = allAssets.map(asset => 
       displayColumns.map(col => asset[col.Field] || 'N/A')
     );
     
@@ -196,7 +228,8 @@ const Assets = ({ onDelete }) => {
           fontSize: '0.9rem'
         }}>
           <p style={{ margin: 0 }}>
-            📊 Showing <strong>{filteredAssets.length}</strong> of <strong>{assets.length}</strong> assets
+            📊 Page <strong>{currentPage}</strong> of <strong>{calculatedTotalPages}</strong> - 
+            Showing <strong>{paginatedAssets.length}</strong> of <strong>{totalItems}</strong> total assets
           </p>
         </div>
 
@@ -225,7 +258,7 @@ const Assets = ({ onDelete }) => {
                 </tr>
               </thead>
               <tbody>
-                {filteredAssets.map((asset, index) => (
+                {paginatedAssets.map((asset, index) => (
                   <tr key={asset.Serial_Number || asset.Asset_ID || asset.id || index}>
                     {displayColumns.map(column => (
                       <td key={column.Field}>
@@ -273,6 +306,17 @@ const Assets = ({ onDelete }) => {
               Add Your First Asset
             </Link>
           </div>
+        )}
+
+        {!loading && !error && filteredAssets.length > 0 && (
+          <Pagination
+            currentPage={currentPage}
+            totalPages={calculatedTotalPages}
+            onPageChange={handlePageChange}
+            itemsPerPage={itemsPerPage}
+            onItemsPerPageChange={handleItemsPerPageChange}
+            totalItems={totalItems}
+          />
         )}
       </div>
     </div>
