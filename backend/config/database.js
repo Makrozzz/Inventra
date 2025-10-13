@@ -82,9 +82,6 @@ const initializeDatabase = async () => {
     
     // Real database connection failed - exit the application
     process.exit(1);
-    
-    // For production, you might want to exit instead:
-    // process.exit(1);
   }
 };
 
