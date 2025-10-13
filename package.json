@@ -1,19 +1,29 @@
 {
-  "name": "inventory-system-ui",
+  "name": "inventra",
   "version": "1.0.0",
   "private": true,
-  "dependencies": {
-    "lucide-react": "^0.263.1",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "react-router-dom": "^6.8.0",
-    "react-scripts": "5.0.1"
-  },
+  "description": "Full-stack Asset Management System",
+  "workspaces": [
+    "frontend",
+    "backend"
+  ],
   "scripts": {
-    "start": "react-scripts start",
-    "build": "react-scripts build",
-    "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "dev": "concurrently \"npm run frontend:dev\" \"npm run backend:dev\"",
+    "frontend:dev": "cd frontend && npm start",
+    "backend:dev": "cd backend && npm run dev",
+    "build": "npm run frontend:build && npm run backend:build",
+    "frontend:build": "cd frontend && npm run build",
+    "backend:build": "cd backend && npm run build",
+    "test": "npm run frontend:test && npm run backend:test",
+    "frontend:test": "cd frontend && npm test",
+    "backend:test": "cd backend && npm test",
+    "setup": "npm install && cd frontend && npm install && cd ../backend && npm install",
+    "seed": "cd backend && npm run seed",
+    "migrate": "cd backend && node -e \"require('./config/database').initializeDatabase()\"",
+    "init-db": "cd backend && node scripts/init-database.js"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.0"
   },
   "eslintConfig": {
     "extends": [

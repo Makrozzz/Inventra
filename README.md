@@ -1,20 +1,23 @@
-# Inventra - Asset Management System
+# Inventra - Full-Stack Asset Management System
 
-A modern, comprehensive asset management system built with React.js for tracking company assets, managing projects, scheduling preventive maintenance, and overseeing client relationships.
+A comprehensive full-stack asset management system built with React frontend and Node.js/Express backend for complete asset lifecycle tracking, user management, and enterprise-grade operations.
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![React](https://img.shields.io/badge/React-18.x-61DAFB.svg)
 ![Node](https://img.shields.io/badge/Node-16+-339933.svg)
+![Express](https://img.shields.io/badge/Express-4.x-000000.svg)
+![MySQL](https://img.shields.io/badge/MySQL-8.0+-4479A1.svg)
 
 ## 📋 Table of Contents
 
 - [Overview](#overview)
 - [Features](#features)
 - [System Architecture](#system-architecture)
-- [Installation & Setup](#installation--setup)
-- [Usage Guide](#usage-guide)
+- [Quick Start](#quick-start)
+- [API Documentation](#api-documentation)
 - [Project Structure](#project-structure)
-- [Recent Changes](#recent-changes)
+- [Development](#development)
+- [Deployment](#deployment)
 - [Contributing](#contributing)
 - [License](#license)
 
