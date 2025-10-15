@@ -13,11 +13,48 @@ const Dashboard = () => {
       try {
         setLoading(true);
         setError(null);
-        const data = await apiService.getDashboardData();
-        setDashboardData(data);
+        const response = await apiService.getDashboardData();
+        
+        console.log('Dashboard API Response:', response); // Debug log
+        
+        // Handle the statistics response structure
+        if (response && response.success && response.data) {
+          const stats = response.data;
+          
+          // Transform the backend statistics to match frontend expectations
+          const dashboardData = {
+            stats: {
+              totalAssets: stats.total || 0,
+              activeAssets: stats.byStatus?.find(s => s.status === 'Active')?.count || 0,
+              totalCustomers: stats.byStatus?.length || 0, // Number of different statuses as proxy
+              totalValue: 0 // Will be calculated from asset prices
+            },
+            customerAssetData: stats.byCategory?.map((cat, index) => ({
+              customer: cat.category,
+              devices: cat.count.toString()
+            })) || [],
+            recentAssets: stats.recent?.map(asset => ({
+              id: asset.serialNumber || 'N/A',
+              name: asset.assetModelName || 'Unknown',
+              category: asset.assetCategory || 'Unknown',
+              status: asset.assetStatus || 'Unknown',
+              location: asset.assetLocation || 'Unknown',
+              value: 0 // No price in current database structure
+            })) || []
+          };
+          
+          setDashboardData(dashboardData);
+        } else {
+          console.warn('Unexpected dashboard response structure:', response);
+          setDashboardData({
+            stats: { totalAssets: 0, activeAssets: 0, totalCustomers: 0, totalValue: 0 },
+            customerAssetData: [],
+            recentAssets: []
+          });
+        }
       } catch (err) {
         console.error('Error fetching dashboard data:', err);
-        setError(err.message || 'Failed to load dashboard data');
+        setError(err.message || 'Failed to load dashboard data. Make sure the backend server is running.');
       } finally {
         setLoading(false);
       }
