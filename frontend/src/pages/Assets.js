@@ -24,37 +24,63 @@ const Assets = ({ onDelete }) => {
       try {
         setLoading(true);
         setError(null);
-        const response = await apiService.getAllAssets();
+        const response = await apiService.getAllAssets(1, 1000); // Get more assets at once
         
-        // Handle both new API structure and fallback structure
-        if (response.data && response.columns) {
-          // New API structure
-          setAllAssets(response.data);
-          setColumns(response.columns);
+        console.log('API Response:', response); // Debug log
+        
+        // Handle the new backend API response structure
+        if (response && response.success && response.data && response.data.assets && Array.isArray(response.data.assets)) {
+          const assets = response.data.assets;
+          setAllAssets(assets);
+          
+          // Create columns based on first asset if available
+          if (assets.length > 0) {
+            const firstAsset = assets[0];
+            const assetColumns = Object.keys(firstAsset).map(key => ({
+              Field: key,
+              Type: 'varchar(255)'
+            }));
+            setColumns(assetColumns);
+          } else {
+            // Default columns if no assets exist
+            setColumns([
+              { Field: 'serialNumber', Type: 'varchar(255)' },
+              { Field: 'assetModelName', Type: 'varchar(255)' },
+              { Field: 'assetStatus', Type: 'varchar(255)' },
+              { Field: 'assetLocation', Type: 'varchar(255)' },
+              { Field: 'assetCategory', Type: 'varchar(255)' }
+            ]);
+          }
+        } else if (response && response.data && Array.isArray(response.data)) {
+          // Fallback for direct array response
+          const assets = response.data;
+          setAllAssets(assets);
+          
+          if (assets.length > 0) {
+            const assetColumns = Object.keys(assets[0]).map(key => ({
+              Field: key,
+              Type: 'varchar(255)'
+            }));
+            setColumns(assetColumns);
+          }
         } else if (Array.isArray(response)) {
           // Direct array response (fallback)
           setAllAssets(response);
-          
-          // Create mock columns based on first asset
           if (response.length > 0) {
-            const firstAsset = response[0];
-            const mockColumns = Object.keys(firstAsset).map(key => ({
+            const mockColumns = Object.keys(response[0]).map(key => ({
               Field: key,
               Type: 'varchar(255)'
             }));
             setColumns(mockColumns);
           }
         } else {
-          // Unexpected structure
           console.warn('Unexpected API response structure:', response);
           setAllAssets([]);
           setColumns([]);
         }
       } catch (err) {
         console.error('Error fetching assets:', err);
-        setError(err.message || 'Failed to load assets');
-        
-        // Set empty state on error
+        setError(err.message || 'Failed to load assets. Make sure the backend server is running.');
         setAllAssets([]);
         setColumns([]);
       } finally {
@@ -68,7 +94,7 @@ const Assets = ({ onDelete }) => {
   // Filter assets based on search and status
   const filteredAssets = allAssets.filter(asset => {
     const searchableFields = Object.values(asset).join(' ').toLowerCase();
-    const statusField = asset.Asset_Status || asset.status || '';
+    const statusField = asset.assetStatus || asset.Asset_Status || asset.status || '';
     return (
       searchableFields.includes(searchTerm.toLowerCase()) &&
       (statusFilter === '' || statusField === statusFilter)
@@ -100,11 +126,11 @@ const Assets = ({ onDelete }) => {
 
   // Get unique values for filters - check both possible status field names
   const statuses = [...new Set(allAssets.map(asset => 
-    asset.Asset_Status || asset.status || ''
+    asset.assetStatus || asset.Asset_Status || asset.status || ''
   ).filter(Boolean))];
   
   // Define which columns to hide (typically internal/system columns)
-  const hiddenColumns = ['Asset_ID', 'Created_At', 'Updated_At', 'Deleted_At'];
+  const hiddenColumns = ['Asset_ID', 'Created_At', 'Updated_At', 'Deleted_At', 'createdAt', 'updatedAt'];
   
   // Get displayable columns (exclude hidden ones)
   const displayColumns = columns.filter(col => !hiddenColumns.includes(col.Field));
@@ -259,10 +285,10 @@ const Assets = ({ onDelete }) => {
               </thead>
               <tbody>
                 {paginatedAssets.map((asset, index) => (
-                  <tr key={asset.Serial_Number || asset.Asset_ID || asset.id || index}>
+                  <tr key={asset.serialNumber || asset.Serial_Number || asset.Asset_ID || asset.id || index}>
                     {displayColumns.map(column => (
                       <td key={column.Field}>
-                        {(column.Field === 'Asset_Status' || column.Field === 'status') ? (
+                        {(column.Field === 'assetStatus' || column.Field === 'Asset_Status' || column.Field === 'status') ? (
                           <span className={`status-badge status-${(asset[column.Field] || '').toLowerCase().replace(/\s+/g, '-')}`}>
                             {formatCellValue(asset[column.Field], column.Field)}
                           </span>
@@ -276,14 +302,14 @@ const Assets = ({ onDelete }) => {
                     <td>
                       <div className="action-buttons">
                         <Link 
-                          to={`/edit-asset/${asset.Serial_Number || asset.Asset_ID || asset.id}`} 
+                          to={`/edit-asset/${asset.serialNumber || asset.Serial_Number || asset.Asset_ID || asset.id}`} 
                           className="btn btn-secondary btn-sm"
                           title="Edit Asset"
                         >
                           <Edit size={14} />
                         </Link>
                         <button 
-                          onClick={() => onDelete && onDelete(asset.Serial_Number || asset.Asset_ID || asset.id)} 
+                          onClick={() => onDelete && onDelete(asset.serialNumber || asset.Serial_Number || asset.Asset_ID || asset.id)} 
                           className="btn btn-danger btn-sm"
                           title="Delete Asset"
                         >
