@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inventra API Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
+        .container { max-width: 800px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .test-result { margin: 10px 0; padding: 10px; border-radius: 4px; }
+        .success { background: #d4edda; border-left: 4px solid #28a745; }
+        .error { background: #f8d7da; border-left: 4px solid #dc3545; }
+        .loading { background: #e2e3e5; border-left: 4px solid #6c757d; }
+        pre { background: #f8f9fa; padding: 10px; border-radius: 4px; overflow-x: auto; }
+        button { background: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; margin: 5px; }
+        button:hover { background: #0056b3; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔬 Inventra API Connection Test</h1>
+        <p>This page tests the connection between your frontend and backend API.</p>
+        
+        <button onclick="testHealthCheck()">Test Health Check</button>
+        <button onclick="testAssetsAPI()">Test Assets API</button>
+        <button onclick="testDashboard()">Test Dashboard API</button>
+        <button onclick="runAllTests()">Run All Tests</button>
+        
+        <div id="results"></div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:5000';
+        const resultsDiv = document.getElementById('results');
+
+        function addResult(title, status, data, error = null) {
+            const resultDiv = document.createElement('div');
+            resultDiv.className = `test-result ${status}`;
+            
+            let content = `<h3>${title}</h3>`;
+            if (status === 'success') {
+                content += `<p>✅ Success!</p>`;
+                if (data) {
+                    content += `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+                }
+            } else if (status === 'error') {
+                content += `<p>❌ Error: ${error}</p>`;
+            } else if (status === 'loading') {
+                content += `<p>🔄 Testing...</p>`;
+            }
+            
+            resultDiv.innerHTML = content;
+            resultsDiv.appendChild(resultDiv);
+        }
+
+        async function testHealthCheck() {
+            addResult('Health Check', 'loading');
+            try {
+                const response = await fetch(`${API_BASE}/health`);
+                const data = await response.json();
+                
+                resultsDiv.removeChild(resultsDiv.lastChild);
+                addResult('Health Check', 'success', data);
+            } catch (error) {
+                resultsDiv.removeChild(resultsDiv.lastChild);
+                addResult('Health Check', 'error', null, error.message);
+            }
+        }
+
+        async function testAssetsAPI() {
+            addResult('Assets API', 'loading');
+            try {
+                const response = await fetch(`${API_BASE}/api/v1/assets`);
+                const data = await response.json();
+                
+                resultsDiv.removeChild(resultsDiv.lastChild);
+                
+                if (data.success && data.data && data.data.assets) {
+                    addResult('Assets API', 'success', {
+                        success: data.success,
+                        message: data.message,
+                        assetsCount: data.data.assets.length,
+                        sampleAsset: data.data.assets[0] || null
+                    });
+                } else {
+                    addResult('Assets API', 'error', null, 'Unexpected response structure');
+                }
+            } catch (error) {
+                resultsDiv.removeChild(resultsDiv.lastChild);
+                addResult('Assets API', 'error', null, error.message);
+            }
+        }
+
+        async function testDashboard() {
+            addResult('Dashboard Statistics', 'loading');
+            try {
+                const response = await fetch(`${API_BASE}/api/v1/assets/statistics`);
+                const data = await response.json();
+                
+                resultsDiv.removeChild(resultsDiv.lastChild);
+                addResult('Dashboard Statistics', 'success', data);
+            } catch (error) {
+                resultsDiv.removeChild(resultsDiv.lastChild);
+                addResult('Dashboard Statistics', 'error', null, error.message);
+            }
+        }
+
+        async function runAllTests() {
+            resultsDiv.innerHTML = '<h2>Running All Tests...</h2>';
+            await testHealthCheck();
+            await new Promise(resolve => setTimeout(resolve, 500));
+            await testAssetsAPI();
+            await new Promise(resolve => setTimeout(resolve, 500));
+            await testDashboard();
+        }
+
+        // Auto-run tests when page loads
+        window.onload = () => {
+            setTimeout(runAllTests, 1000);
+        };
+    </script>
+</body>
+</html>
