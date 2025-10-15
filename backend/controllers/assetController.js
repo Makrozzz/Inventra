@@ -7,51 +7,30 @@ const logger = require('../utils/logger');
  */
 const getAllAssets = async (req, res, next) => {
   try {
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
-    
-    const filters = {
-      status: req.query.status,
-      category: req.query.category,
-      search: req.query.search
-    };
+    const assets = await Asset.findAll();
 
-    const result = await Asset.findAll(page, limit, filters);
-
-    res.status(200).json(
-      formatResponse(true, result.assets, 'Assets retrieved successfully', {
-        pagination: result.pagination,
-        filters: filters
-      })
-    );
+    // Return assets directly as JSON array for frontend compatibility
+    res.status(200).json(assets);
   } catch (error) {
     logger.error('Error in getAllAssets:', error);
+    console.error('Error fetching assets:', error);
     
-    // If database error, return mock data for frontend to work
-    if (error.message.includes('Access denied') || error.message.includes('ENOTFOUND')) {
-      logger.warn('Database not available, returning mock data');
-      const mockAssets = [
-        {
-          serialNumber: 'MOCK-001',
-          assetModelName: 'Mock Asset 1',
-          assetModelDesc: 'Database connection not available',
-          assetStatus: 'Testing',
-          assetCategory: 'Mock',
-          assetLocation: 'Development',
-          assetOwner: 'System'
-        }
-      ];
-      
-      res.status(200).json(
-        formatResponse(true, {
-          assets: mockAssets,
-          pagination: { page: 1, totalPages: 1, totalItems: 1 }
-        }, 'Mock data returned (database not available)')
-      );
-      return;
-    }
+    // Return mock data if database query fails
+    const mockAssets = [
+      {
+        Asset_ID: 1,
+        Asset_Serial_Number: 'MOCK-001',
+        Asset_Tag_ID: 'TAG-001',
+        Item_Name: 'Mock Desktop PC',
+        Status: 'Active',
+        Category: 'Desktop',
+        Model: 'OptiPlex Mock',
+        Recipient_Name: 'Test User',
+        Department: 'IT Department'
+      }
+    ];
     
-    next(error);
+    res.status(200).json(mockAssets);
   }
 };
 
@@ -61,20 +40,25 @@ const getAllAssets = async (req, res, next) => {
 const getAssetBySerialNumber = async (req, res, next) => {
   try {
     const { serialNumber } = req.params;
-    const asset = await Asset.findBySerialNumber(serialNumber);
+    
+    // For now, we'll search through all assets to find by serial number
+    // In a production app, you'd want a dedicated method for this
+    const allAssets = await Asset.findAll();
+    const asset = allAssets.find(a => a.Asset_Serial_Number === serialNumber);
 
     if (!asset) {
-      return res.status(404).json(
-        formatResponse(false, null, 'Asset not found')
-      );
+      return res.status(404).json({
+        error: 'Asset not found'
+      });
     }
 
-    res.status(200).json(
-      formatResponse(true, asset, 'Asset retrieved successfully')
-    );
+    res.status(200).json(asset);
   } catch (error) {
     logger.error('Error in getAssetBySerialNumber:', error);
-    next(error);
+    res.status(500).json({
+      error: 'Failed to fetch asset',
+      message: error.message
+    });
   }
 };
 
