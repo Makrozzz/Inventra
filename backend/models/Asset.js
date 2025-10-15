@@ -3,45 +3,45 @@ const { getPaginationMeta, toCamelCase } = require('../utils/helpers');
 
 class Asset {
   constructor(data) {
-    this.serialNumber = data.serial_number || data.serialNumber;
-    this.assetModelName = data.asset_model_name || data.assetModelName;
-    this.assetModelDesc = data.asset_model_desc || data.assetModelDesc;
-    this.assetManufacturer = data.asset_manufacturer || data.assetManufacturer;
-    this.assetStatus = data.asset_status || data.assetStatus;
-    this.assetLocation = data.asset_location || data.assetLocation;
-    this.assetCategory = data.asset_category || data.assetCategory;
-    this.purchaseDate = data.purchase_date || data.purchaseDate;
-    this.purchasePrice = data.purchase_price || data.purchasePrice;
-    this.warrantyDate = data.warranty_date || data.warrantyDate;
-    this.assignedTo = data.assigned_to || data.assignedTo;
-    this.notes = data.notes;
-    this.createdAt = data.created_at || data.createdAt;
-    this.updatedAt = data.updated_at || data.updatedAt;
+    this.serialNumber = data.Serial_Number || data.serialNumber;
+    this.assetModelName = data.Asset_ModelName || data.assetModelName;
+    this.assetModelDesc = data.Asset_ModelDesc || data.assetModelDesc;
+    this.assetTagID = data.Asset_TagID || data.assetTagID;
+    this.assetStatus = data.Asset_Status || data.assetStatus;
+    this.assetLocation = data.Asset_Location || data.assetLocation;
+    this.assetCategory = data.Asset_Category || data.assetCategory;
+    this.assetOs = data.Asset_Os || data.assetOs;
+    this.assetSoftware = data.Asset_Software || data.assetSoftware;
+    this.assetOwner = data.Asset_Owner || data.assetOwner;
+    this.accessories = data.Accessories || data.accessories;
+    this.department = data.Department || data.department;
+    this.pmContractName = data.PM_Contract_Name || data.pmContractName;
   }
 
   // Create new asset
   static async create(assetData) {
     const query = `
       INSERT INTO ASSET (
-        Serial_Number, Asset_ModelName, Asset_ModelDesc, Asset_Manufacturer,
-        Asset_Status, Asset_Location, Asset_Category, Purchase_Date,
-        Purchase_Price, Warranty_Date, Assigned_To, Notes
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        Serial_Number, Asset_ModelName, Asset_ModelDesc, Asset_TagID,
+        Asset_Status, Asset_Location, Asset_Category, Asset_Os,
+        Asset_Software, Asset_Owner, Accessories, Department, PM_Contract_Name
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
     const values = [
       assetData.serialNumber,
       assetData.assetModelName,
       assetData.assetModelDesc,
-      assetData.assetManufacturer,
-      assetData.assetStatus || 'Available',
+      assetData.assetTagID,
+      assetData.assetStatus || 'Active',
       assetData.assetLocation,
       assetData.assetCategory,
-      assetData.purchaseDate,
-      assetData.purchasePrice,
-      assetData.warrantyDate,
-      assetData.assignedTo,
-      assetData.notes
+      assetData.assetOs,
+      assetData.assetSoftware,
+      assetData.assetOwner,
+      assetData.accessories,
+      assetData.department,
+      assetData.pmContractName
     ];
 
     const result = await executeQuery(query, values);
@@ -69,11 +69,13 @@ class Asset {
       whereClause += ` AND (
         Serial_Number LIKE ? OR 
         Asset_ModelName LIKE ? OR 
-        Asset_Manufacturer LIKE ? OR
-        Asset_Location LIKE ?
+        Asset_ModelDesc LIKE ? OR
+        Asset_Location LIKE ? OR
+        Asset_Owner LIKE ? OR
+        Department LIKE ?
       )`;
       const searchTerm = `%${filters.search}%`;
-      queryParams.push(searchTerm, searchTerm, searchTerm, searchTerm);
+      queryParams.push(searchTerm, searchTerm, searchTerm, searchTerm, searchTerm, searchTerm);
     }
 
     // Get total count
@@ -85,16 +87,18 @@ class Asset {
     const dataQuery = `
       SELECT * FROM ASSET 
       ${whereClause} 
-      ORDER BY Created_At DESC 
+      ORDER BY Serial_Number DESC 
       LIMIT ? OFFSET ?
     `;
     queryParams.push(limit, offset);
 
     const assets = await executeQuery(dataQuery, queryParams);
-    const camelCaseAssets = toCamelCase(assets);
+    
+    // Transform database results to camelCase for frontend
+    const transformedAssets = assets.map(asset => new Asset(asset));
 
     return {
-      assets: camelCaseAssets,
+      assets: transformedAssets,
       pagination: getPaginationMeta(page, limit, totalCount)
     };
   }
@@ -103,7 +107,7 @@ class Asset {
   static async findBySerialNumber(serialNumber) {
     const query = 'SELECT * FROM ASSET WHERE Serial_Number = ?';
     const result = await executeQuery(query, [serialNumber]);
-    return result.length > 0 ? toCamelCase(result[0]) : null;
+    return result.length > 0 ? new Asset(result[0]) : null;
   }
 
   // Update asset
@@ -148,7 +152,7 @@ class Asset {
       'SELECT COUNT(*) as total FROM ASSET',
       'SELECT Asset_Status as status, COUNT(*) as count FROM ASSET GROUP BY Asset_Status',
       'SELECT Asset_Category as category, COUNT(*) as count FROM ASSET GROUP BY Asset_Category',
-      'SELECT * FROM ASSET ORDER BY Created_At DESC LIMIT 5'
+      'SELECT * FROM ASSET ORDER BY Serial_Number DESC LIMIT 5'
     ];
 
     const [totalResult, statusResult, categoryResult, recentResult] = await Promise.all(
@@ -157,27 +161,34 @@ class Asset {
 
     return {
       total: totalResult[0].total,
-      byStatus: toCamelCase(statusResult),
-      byCategory: toCamelCase(categoryResult),
-      recent: toCamelCase(recentResult)
+      byStatus: statusResult.map(item => ({
+        status: item.status,
+        count: item.count
+      })),
+      byCategory: categoryResult.map(item => ({
+        category: item.category,
+        count: item.count
+      })),
+      recent: recentResult.map(asset => new Asset(asset))
     };
   }
 
   // Helper method to map camelCase to database field names
   static getDbFieldName(field) {
     const fieldMap = {
-      'serial_number': 'Serial_Number',
-      'asset_model_name': 'Asset_ModelName',
-      'asset_model_desc': 'Asset_ModelDesc',
-      'asset_manufacturer': 'Asset_Manufacturer',
-      'asset_status': 'Asset_Status',
-      'asset_location': 'Asset_Location',
-      'asset_category': 'Asset_Category',
-      'purchase_date': 'Purchase_Date',
-      'purchase_price': 'Purchase_Price',
-      'warranty_date': 'Warranty_Date',
-      'assigned_to': 'Assigned_To',
-      'notes': 'Notes'
+      'serialNumber': 'Serial_Number',
+      'assetModelName': 'Asset_ModelName',
+      'assetModelDesc': 'Asset_ModelDesc',
+      'assetTagID': 'Asset_TagID',
+      'assetStatus': 'Asset_Status',
+      'assetLocation': 'Asset_Location',
+      'assetCategory': 'Asset_Category',
+      'assetOs': 'Asset_Os',
+      'assetSoftware': 'Asset_Software',
+      'assetOwner': 'Asset_Owner',
+      'accessories': 'Accessories',
+      'department': 'Department',
+      'pmContractName': 'PM_Contract_Name'
     };
     return fieldMap[field] || null;
   }
