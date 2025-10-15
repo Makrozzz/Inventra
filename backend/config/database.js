@@ -78,10 +78,10 @@ const initializeDatabase = async () => {
     console.log('1. Verify MySQL server is running');
     console.log('2. Check username and password in backend/.env');
     console.log('3. Ensure database exists');
-    console.log('4. Try connecting with MySQL Workbench first');
+    console.log('4. Add your current IP (115.133.188.46) to cPanel Remote MySQL');
     
-    // Real database connection failed - exit the application
-    process.exit(1);
+    console.log('\n⚠️ Server will continue with limited functionality...');
+    console.log('Some API endpoints may not work without database connection.');
   }
 };
 
