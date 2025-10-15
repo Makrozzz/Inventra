@@ -8,22 +8,21 @@
     "backend"
   ],
   "scripts": {
-    "dev": "concurrently \"npm run frontend:dev\" \"npm run backend:dev\"",
-    "frontend:dev": "cd frontend && npm start",
+    "dev": "concurrently \"npm run backend:dev\" \"npm run frontend:start\" --names \"BACKEND,FRONTEND\" --prefix-colors \"bgBlue.bold,bgGreen.bold\"",
+    "start": "npm run dev",
+    "frontend:start": "cd frontend && npm start",
     "backend:dev": "cd backend && npm run dev",
-    "build": "npm run frontend:build && npm run backend:build",
+    "backend:start": "cd backend && npm start",
+    "build": "npm run frontend:build",
     "frontend:build": "cd frontend && npm run build",
-    "backend:build": "cd backend && npm run build",
     "test": "npm run frontend:test && npm run backend:test",
     "frontend:test": "cd frontend && npm test",
     "backend:test": "cd backend && npm test",
     "setup": "npm install && cd frontend && npm install && cd ../backend && npm install",
-    "seed": "cd backend && npm run seed",
-    "migrate": "cd backend && node -e \"require('./config/database').initializeDatabase()\"",
-    "init-db": "cd backend && node scripts/init-database.js"
+    "install:all": "npm run setup"
   },
   "devDependencies": {
-    "concurrently": "^8.2.0"
+    "concurrently": "^8.2.2"
   },
   "eslintConfig": {
     "extends": [
