@@ -718,3 +718,48 @@
   level: 'info',
   timestamp: '2025-10-15 10:19:37'
 }
+{
+  message: '✅ Database connected successfully',
+  level: 'info',
+  timestamp: '2025-10-15 10:25:17'
+}
+{
+  message: '🚀 Inventra Backend Server running on port 5000',
+  level: 'info',
+  timestamp: '2025-10-15 10:25:17'
+}
+{
+  message: '📍 Environment: development',
+  level: 'info',
+  timestamp: '2025-10-15 10:25:17'
+}
+{
+  message: '🌐 CORS enabled for: http://localhost:3000',
+  level: 'info',
+  timestamp: '2025-10-15 10:25:17'
+}
+{
+  message: 'SIGINT received, shutting down gracefully',
+  level: 'info',
+  timestamp: '2025-10-15 10:26:38'
+}
+{
+  message: '✅ Database connected successfully',
+  level: 'info',
+  timestamp: '2025-10-15 10:37:45'
+}
+{
+  message: '🚀 Inventra Backend Server running on port 5000',
+  level: 'info',
+  timestamp: '2025-10-15 10:37:45'
+}
+{
+  message: '📍 Environment: development',
+  level: 'info',
+  timestamp: '2025-10-15 10:37:45'
+}
+{
+  message: '🌐 CORS enabled for: http://localhost:3000',
+  level: 'info',
+  timestamp: '2025-10-15 10:37:45'
+}
