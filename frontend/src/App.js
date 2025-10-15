@@ -9,95 +9,13 @@ import PreventiveMaintenance from './pages/PreventiveMaintenance';
 import AccountSettings from './pages/AccountSettings';
 import AddAsset from './pages/AddAsset';
 import EditAsset from './pages/EditAsset';
+import DatabaseTest from './components/DatabaseTest';
+import apiService from './services/apiService';
 
 function App() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(true); // Set to true for testing
   const [assets, setAssets] = useState([]);
-  const [loading, setLoading] = useState(true);
-
-  // API Configuration - Using working remote API
-  const API_BASE = 'https://www.ivms2006.com/api';
-
-  // Fetch assets from API
-  const fetchAssets = async () => {
-    console.log('🔄 Starting API call to:', `${API_BASE}/getProducts.php`);
-    
-    try {
-      const response = await fetch(`${API_BASE}/getProducts.php`, {
-        method: 'GET',
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
-        },
-        mode: 'cors' // Explicitly enable CORS
-      });
-      
-      console.log('📡 API Response status:', response.status);
-      console.log('📡 API Response headers:', response.headers);
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      
-      const rawText = await response.text();
-      console.log('📦 Raw API Response:', rawText);
-      
-      let data;
-      try {
-        data = JSON.parse(rawText);
-      } catch (parseError) {
-        console.error('❌ JSON Parse Error:', parseError);
-        throw new Error('Invalid JSON response from API');
-      }
-      
-      console.log('📦 Parsed API Response data:', data);
-      
-      if (data.success && data.data && Array.isArray(data.data)) {
-        console.log('✅ API call successful, products found:', data.data.length);
-        
-        // Map API data to match existing asset structure
-        const mappedAssets = data.data.map(product => ({
-          id: product.id || product.ID,
-          name: product.name || product.NAME || product.product_name,
-          category: product.category || 'Electronics', // Default category
-          status: (product.quantity || product.QUANTITY) > 0 ? 'Active' : 'Out of Stock',
-          location: product.location || 'Warehouse', // Default location
-          value: parseFloat(product.price || product.PRICE || 0),
-          quantity: parseInt(product.quantity || product.QUANTITY || 0)
-        }));
-        
-        setAssets(mappedAssets);
-        console.log('✅ Assets updated with API data:', mappedAssets.length, 'items');
-      } else {
-        console.log('⚠️ API returned success: false or no data array');
-        console.log('⚠️ Using fallback data due to API structure issue');
-        throw new Error('API returned invalid data structure');
-      }
-    } catch (error) {
-      console.error('❌ Error fetching assets:', error);
-      console.error('❌ Error details:', error.message);
-      
-      // Fallback to mock data if API fails
-      console.log('🔄 Using fallback mock data');
-      setAssets([
-        { id: 1, name: 'Laptop Dell XPS', category: 'Electronics', status: 'Active', location: 'Office A', value: 1200, quantity: 5 },
-        { id: 2, name: 'Office Chair', category: 'Furniture', status: 'Active', location: 'Office B', value: 300, quantity: 12 },
-        { id: 3, name: 'Printer HP LaserJet', category: 'Electronics', status: 'Maintenance', location: 'Office A', value: 450, quantity: 2 },
-        { id: 4, name: 'Monitor Samsung 24"', category: 'Electronics', status: 'Active', location: 'Office C', value: 280, quantity: 8 },
-        { id: 5, name: 'Desk Lamp', category: 'Furniture', status: 'Active', location: 'Office A', value: 45, quantity: 15 }
-      ]);
-    } finally {
-      console.log('⏰ API call completed, loading set to false');
-      setLoading(false);
-    }
-  };
-
-  // Fetch assets when user is authenticated
-  useEffect(() => {
-    if (isAuthenticated) {
-      fetchAssets();
-    }
-  }, [isAuthenticated]);
+  const [loading, setLoading] = useState(false);
 
   const handleLogin = () => {
     setIsAuthenticated(true);
@@ -109,17 +27,34 @@ function App() {
     setLoading(true);
   };
 
-  const addAsset = (asset) => {
-    const newAsset = { ...asset, id: Date.now() };
-    setAssets([...assets, newAsset]);
+  const addAsset = async (assetData) => {
+    try {
+      const response = await apiService.createAsset(assetData);
+      console.log('Asset created:', response);
+      // Refresh assets list or add to local state
+    } catch (error) {
+      console.error('Error creating asset:', error);
+    }
   };
 
-  const updateAsset = (id, updatedAsset) => {
-    setAssets(assets.map(asset => asset.id === parseInt(id) ? { ...updatedAsset, id: parseInt(id) } : asset));
+  const updateAsset = async (serialNumber, assetData) => {
+    try {
+      const response = await apiService.updateAsset(serialNumber, assetData);
+      console.log('Asset updated:', response);
+      // Refresh assets list or update local state
+    } catch (error) {
+      console.error('Error updating asset:', error);
+    }
   };
 
-  const deleteAsset = (id) => {
-    setAssets(assets.filter(asset => asset.id !== id));
+  const deleteAsset = async (serialNumber) => {
+    try {
+      const response = await apiService.deleteAsset(serialNumber);
+      console.log('Asset deleted:', response);
+      // Refresh assets list or remove from local state
+    } catch (error) {
+      console.error('Error deleting asset:', error);
+    }
   };
 
   if (!isAuthenticated) {
@@ -139,6 +74,7 @@ function App() {
             <Route path="/settings" element={<AccountSettings />} />
             <Route path="/add-asset" element={<AddAsset onAdd={addAsset} />} />
             <Route path="/edit-asset/:id" element={<EditAsset assets={assets} onUpdate={updateAsset} />} />
+            <Route path="/db-test" element={<DatabaseTest />} />
             <Route path="*" element={<Navigate to="/" />} />
           </Routes>
         </main>
