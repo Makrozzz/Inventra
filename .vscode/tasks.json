@@ -1,0 +1,60 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Start Backend Server",
+            "type": "shell",
+            "command": "node",
+            "args": ["server.js"],
+            "options": {
+                "cwd": "${workspaceFolder}/backend"
+            },
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "new"
+            },
+            "problemMatcher": [],
+            "runOptions": {
+                "runOn": "default"
+            }
+        },
+        {
+            "label": "Start Frontend Server",
+            "type": "shell",
+            "command": "npm",
+            "args": ["start"],
+            "options": {
+                "cwd": "${workspaceFolder}/frontend"
+            },
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "new"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Start Both Servers",
+            "dependsOrder": "parallel",
+            "dependsOn": [
+                "Start Backend Server",
+                "Start Frontend Server"
+            ],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "new"
+            }
+        }
+    ]
+}
