@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
 import { Search, Filter, Plus, Eye, Edit, Trash2, Users, Calendar, Package } from 'lucide-react';
 
 const Projects = () => {
@@ -8,50 +7,19 @@ const Projects = () => {
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // API Configuration
-  const API_BASE = 'https://www.ivms2006.com/api';
-
   // Fetch projects from API
   const fetchProjects = async () => {
-    console.log('🔄 Starting Projects API call to:', `${API_BASE}/getProjects.php`);
+    console.log('🔄 Starting Projects API call to Node.js backend');
     
     try {
-      const response = await fetch(`${API_BASE}/getProjects.php`, {
-        method: 'GET',
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
-        },
-        mode: 'cors'
-      });
-      
-      console.log('📡 Projects API Response status:', response.status);
-      
+      // Use direct fetch with correct API endpoint
+      const response = await fetch('http://localhost:5000/api/v1/projects');
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      
-      const rawText = await response.text();
-      console.log('📦 Raw Projects API Response:', rawText);
-      
-      let data;
-      try {
-        data = JSON.parse(rawText);
-      } catch (parseError) {
-        console.error('❌ JSON Parse Error:', parseError);
-        throw new Error('Invalid JSON response from Projects API');
-      }
-      
-      console.log('📦 Parsed Projects API Response data:', data);
-      
-      if (data.success && data.data && Array.isArray(data.data)) {
-        console.log('✅ Projects API call successful, projects found:', data.data.length);
-        setProjects(data.data);
-      } else {
-        console.log('⚠️ Projects API returned success: false or no data array');
-        console.log('⚠️ Using fallback data due to API structure issue');
-        throw new Error('API returned invalid data structure');
-      }
+      const data = await response.json();
+      console.log('✅ Projects API call successful, projects found:', data.length);
+      setProjects(data);
     } catch (error) {
       console.error('❌ Error fetching projects:', error);
       console.error('❌ Error details:', error.message);
@@ -60,48 +28,34 @@ const Projects = () => {
       console.log('🔄 Using fallback mock projects data');
       setProjects([
         {
-          id: 1,
-          name: 'Office Digitalization - ABC Corp',
-          client: 'ABC Corporation',
-          status: 'Active',
-          startDate: '2024-01-15',
-          endDate: '2024-12-31',
-          postSupport: 'Premium Support',
-          assetsCount: 15,
-          description: 'Complete office digitalization with laptops and networking equipment'
+          Project_ID: 1,
+          Project_Ref_Number: "PRJ-2024-001",
+          Project_Title: "Office Digital Transformation",
+          Solution_Principal: "John Smith",
+          Warranty: "2 Years Extended",
+          Preventive_Maintenance: "Quarterly Service",
+          Start_Date: "2024-01-15",
+          End_Date: "2024-12-31"
         },
         {
-          id: 2,
-          name: 'IT Infrastructure - XYZ Ltd',
-          client: 'XYZ Limited',
-          status: 'In Progress',
-          startDate: '2024-03-01',
-          endDate: '2025-02-28',
-          postSupport: 'Standard Support',
-          assetsCount: 8,
-          description: 'IT infrastructure setup and maintenance for regional offices'
+          Project_ID: 2,
+          Project_Ref_Number: "PRJ-2024-002",
+          Project_Title: "IT Infrastructure Upgrade",
+          Solution_Principal: "Sarah Johnson",
+          Warranty: "1 Year Standard",
+          Preventive_Maintenance: "Monthly Checkup",
+          Start_Date: "2024-03-01",
+          End_Date: "2025-02-28"
         },
         {
-          id: 3,
-          name: 'Security System - Tech Solutions',
-          client: 'Tech Solutions Inc',
-          status: 'Planning',
-          startDate: '2024-06-01',
-          endDate: '2024-11-30',
-          postSupport: 'Basic Support',
-          assetsCount: 12,
-          description: 'Security cameras and access control system implementation'
-        },
-        {
-          id: 4,
-          name: 'Network Upgrade - Global Systems',
-          client: 'Global Systems Ltd',
-          status: 'Completed',
-          startDate: '2023-09-01',
-          endDate: '2024-02-29',
-          postSupport: 'Extended Support',
-          assetsCount: 20,
-          description: 'Complete network infrastructure upgrade and optimization'
+          Project_ID: 3,
+          Project_Ref_Number: "PRJ-2024-003",
+          Project_Title: "Security System Implementation",
+          Solution_Principal: "Mike Wilson",
+          Warranty: "3 Years Premium",
+          Preventive_Maintenance: "Bi-weekly Monitoring",
+          Start_Date: "2024-06-01",
+          End_Date: "2024-11-30"
         }
       ]);
     } finally {
@@ -117,19 +71,27 @@ const Projects = () => {
 
   const filteredProjects = projects.filter(project => {
     return (
-      project.name.toLowerCase().includes(searchTerm.toLowerCase()) &&
-      (statusFilter === '' || project.status === statusFilter)
+      (project.Project_Title && project.Project_Title.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (project.Project_Ref_Number && project.Project_Ref_Number.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (project.Solution_Principal && project.Solution_Principal.toLowerCase().includes(searchTerm.toLowerCase()))
     );
   });
 
-  const statuses = [...new Set(projects.map(project => project.status))];
+  // Create status based on end date
+  const getProjectStatus = (endDate) => {
+    if (!endDate) return 'Unknown';
+    const today = new Date();
+    const projectEndDate = new Date(endDate);
+    return projectEndDate >= today ? 'Active' : 'Completed';
+  };
+
+  const statuses = ['Active', 'Completed', 'Unknown'];
 
   const getStatusColor = (status) => {
     const colors = {
       'Active': { bg: '#d4edda', text: '#155724' },
-      'In Progress': { bg: '#cce5ff', text: '#004085' },
-      'Planning': { bg: '#fff3cd', text: '#856404' },
-      'Completed': { bg: '#e2e3e5', text: '#383d41' }
+      'Completed': { bg: '#e2e3e5', text: '#383d41' },
+      'Unknown': { bg: '#f8f9fa', text: '#495057' }
     };
     return colors[status] || { bg: '#f8f9fa', text: '#495057' };
   };
@@ -197,11 +159,12 @@ const Projects = () => {
 
         <div className="projects-grid">
           {filteredProjects.map(project => {
-            const statusColor = getStatusColor(project.status);
+            const projectStatus = getProjectStatus(project.End_Date);
+            const statusColor = getStatusColor(projectStatus);
             return (
-              <div key={project.id} className="project-card">
+              <div key={project.Project_ID} className="project-card">
                 <div className="project-header">
-                  <h3 className="project-title">{project.name}</h3>
+                  <h3 className="project-title">{project.Project_Title}</h3>
                   <span 
                     className="status-badge"
                     style={{
@@ -209,29 +172,31 @@ const Projects = () => {
                       color: statusColor.text
                     }}
                   >
-                    {project.status}
+                    {projectStatus}
                   </span>
                 </div>
                 
                 <div className="project-info">
                   <div className="info-item">
                     <Users size={16} />
-                    <span><strong>Client:</strong> {project.client}</span>
+                    <span><strong>Ref Number:</strong> {project.Project_Ref_Number || 'N/A'}</span>
                   </div>
                   <div className="info-item">
                     <Calendar size={16} />
-                    <span><strong>Duration:</strong> {new Date(project.startDate).toLocaleDateString()} - {new Date(project.endDate).toLocaleDateString()}</span>
+                    <span><strong>Duration:</strong> {project.Start_Date ? new Date(project.Start_Date).toLocaleDateString() : 'N/A'} - {project.End_Date ? new Date(project.End_Date).toLocaleDateString() : 'N/A'}</span>
                   </div>
                   <div className="info-item">
                     <Package size={16} />
-                    <span><strong>Assets:</strong> {project.assetsCount} items</span>
+                    <span><strong>Solution Principal:</strong> {project.Solution_Principal || 'N/A'}</span>
+                  </div>
+                  <div className="info-item">
+                    <Users size={16} />
+                    <span><strong>Warranty:</strong> {project.Warranty || 'N/A'}</span>
                   </div>
                 </div>
 
-                <p className="project-description">{project.description}</p>
-                
                 <div className="project-support">
-                  <strong>Post Support:</strong> {project.postSupport}
+                  <strong>Preventive Maintenance:</strong> {project.Preventive_Maintenance || 'N/A'}
                 </div>
 
                 <div className="project-actions">
