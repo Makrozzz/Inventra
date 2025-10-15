@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Search, Filter, Edit, Trash2, Upload, Plus, Download } from 'lucide-react';
-import apiService from '../services/apiService';
 import Pagination from '../components/Pagination';
 
 const Assets = ({ onDelete }) => {
@@ -24,60 +23,31 @@ const Assets = ({ onDelete }) => {
       try {
         setLoading(true);
         setError(null);
-        const response = await apiService.getAllAssets(1, 1000); // Get more assets at once
         
-        console.log('API Response:', response); // Debug log
-        
-        // Handle the new backend API response structure
-        if (response && response.success && response.data && response.data.assets && Array.isArray(response.data.assets)) {
-          const assets = response.data.assets;
-          setAllAssets(assets);
-          
-          // Create columns based on first asset if available
-          if (assets.length > 0) {
-            const firstAsset = assets[0];
-            const assetColumns = Object.keys(firstAsset).map(key => ({
-              Field: key,
-              Type: 'varchar(255)'
-            }));
-            setColumns(assetColumns);
-          } else {
-            // Default columns if no assets exist
-            setColumns([
-              { Field: 'serialNumber', Type: 'varchar(255)' },
-              { Field: 'assetModelName', Type: 'varchar(255)' },
-              { Field: 'assetStatus', Type: 'varchar(255)' },
-              { Field: 'assetLocation', Type: 'varchar(255)' },
-              { Field: 'assetCategory', Type: 'varchar(255)' }
-            ]);
-          }
-        } else if (response && response.data && Array.isArray(response.data)) {
-          // Fallback for direct array response
-          const assets = response.data;
-          setAllAssets(assets);
-          
-          if (assets.length > 0) {
-            const assetColumns = Object.keys(assets[0]).map(key => ({
-              Field: key,
-              Type: 'varchar(255)'
-            }));
-            setColumns(assetColumns);
-          }
-        } else if (Array.isArray(response)) {
-          // Direct array response (fallback)
-          setAllAssets(response);
-          if (response.length > 0) {
-            const mockColumns = Object.keys(response[0]).map(key => ({
-              Field: key,
-              Type: 'varchar(255)'
-            }));
-            setColumns(mockColumns);
-          }
-        } else {
-          console.warn('Unexpected API response structure:', response);
-          setAllAssets([]);
-          setColumns([]);
+        // Use direct fetch with correct API endpoint
+        const response = await fetch('http://localhost:5000/api/v1/assets');
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
         }
+        const assets = await response.json();
+        
+        console.log('Assets API Response:', assets); // Debug log
+        
+        setAllAssets(assets);
+        
+        // Create columns based on new database structure
+        const assetColumns = [
+          { Field: 'Asset_ID', Type: 'int' },
+          { Field: 'Asset_Serial_Number', Type: 'varchar(100)' },
+          { Field: 'Asset_Tag_ID', Type: 'varchar(100)' },
+          { Field: 'Item_Name', Type: 'varchar(100)' },
+          { Field: 'Status', Type: 'varchar(50)' },
+          { Field: 'Category', Type: 'varchar(100)' },
+          { Field: 'Model', Type: 'varchar(100)' },
+          { Field: 'Recipient_Name', Type: 'varchar(100)' },
+          { Field: 'Department', Type: 'varchar(100)' }
+        ];
+        setColumns(assetColumns);
       } catch (err) {
         console.error('Error fetching assets:', err);
         setError(err.message || 'Failed to load assets. Make sure the backend server is running.');
