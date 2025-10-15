@@ -68,19 +68,18 @@ app.use(errorHandler);
 // Initialize database and start server
 const startServer = async () => {
   try {
-    // Initialize database connection
+    // Try to initialize database connection (but don't fail if it doesn't work)
     await initializeDatabase();
-    
-    // Start server
-    app.listen(PORT, () => {
-      logger.info(`🚀 Inventra Backend Server running on port ${PORT}`);
-      logger.info(`📍 Environment: ${process.env.NODE_ENV}`);
-      logger.info(`🌐 CORS enabled for: ${process.env.CORS_ORIGIN}`);
-    });
   } catch (error) {
-    logger.error('Failed to start server:', error.message);
-    process.exit(1);
+    logger.warn('Database initialization failed, but server will continue:', error.message);
   }
+  
+  // Start server regardless of database connection status
+  app.listen(PORT, () => {
+    logger.info(`🚀 Inventra Backend Server running on port ${PORT}`);
+    logger.info(`📍 Environment: ${process.env.NODE_ENV}`);
+    logger.info(`🌐 CORS enabled for: ${process.env.CORS_ORIGIN}`);
+  });
 };
 
 startServer();
