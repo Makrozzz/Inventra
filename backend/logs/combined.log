@@ -519,3 +519,23 @@
   level: 'info',
   timestamp: '2025-10-15 09:34:25'
 }
+{
+  message: '✅ Database connected successfully',
+  level: 'info',
+  timestamp: '2025-10-15 09:34:35'
+}
+{
+  message: '🚀 Inventra Backend Server running on port 5000',
+  level: 'info',
+  timestamp: '2025-10-15 09:34:35'
+}
+{
+  message: '📍 Environment: development',
+  level: 'info',
+  timestamp: '2025-10-15 09:34:35'
+}
+{
+  message: '🌐 CORS enabled for: http://localhost:3000',
+  level: 'info',
+  timestamp: '2025-10-15 09:34:35'
+}
