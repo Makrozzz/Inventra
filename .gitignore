@@ -1,1 +1,4 @@
 node_modules
+# Ignore backend runtime logs
+backend/logs/
+*.log
