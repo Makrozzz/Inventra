@@ -3,6 +3,7 @@ const { body } = require('express-validator');
 const {
   getAllAssets,
   getAssetBySerialNumber,
+  getAssetDetail,
   createAsset,
   updateAsset,
   deleteAsset,
@@ -82,6 +83,7 @@ const updateAssetValidationRules = [
 // Routes
 router.get('/', getAllAssets);
 router.get('/statistics', getAssetStatistics);
+router.get('/detail/:id', getAssetDetail);
 router.get('/:serialNumber', getAssetBySerialNumber);
 
 // Protected routes (require authentication)

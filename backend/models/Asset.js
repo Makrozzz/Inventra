@@ -18,30 +18,45 @@ class Asset {
     this.Department = data.Department;
   }
 
-  // Get all assets with related information
+  // Get all assets with complete inventory information (Project, Customer, Recipients, Category, Model)
   static async findAll() {
     try {
       const [rows] = await pool.execute(`
         SELECT 
+          i.Inventory_ID,
           a.Asset_ID,
           a.Asset_Serial_Number,
           a.Asset_Tag_ID,
           a.Item_Name,
-          a.Recipients_ID,
-          a.Category_ID,
-          a.Model_ID,
           a.Status,
           c.Category,
           m.Model,
           r.Recipient_Name,
-          r.Department
-        FROM ASSET a
+          r.Department,
+          p.Project_ID,
+          p.Project_Ref_Number,
+          p.Project_Title,
+          p.Solution_Principal,
+          p.Warranty,
+          p.Preventive_Maintenance,
+          p.Start_Date,
+          p.End_Date,
+          cust.Customer_ID,
+          cust.Customer_Ref_Number,
+          cust.Customer_Name,
+          cust.Branch
+        FROM INVENTORY i
+        INNER JOIN ASSET a ON i.Asset_ID = a.Asset_ID
         LEFT JOIN CATEGORY c ON a.Category_ID = c.Category_ID
         LEFT JOIN MODEL m ON a.Model_ID = m.Model_ID
         LEFT JOIN RECIPIENTS r ON a.Recipients_ID = r.Recipients_ID
-        ORDER BY a.Asset_ID DESC
+        LEFT JOIN PROJECT p ON i.Project_ID = p.Project_ID
+        LEFT JOIN CUSTOMER cust ON i.Customer_ID = cust.Customer_ID
+        ORDER BY i.Inventory_ID DESC
       `);
-      return rows.map(row => new Asset(row));
+      
+      // Return rows with all joined data
+      return rows;
     } catch (error) {
       console.error('Error in Asset.findAll:', error);
       throw error;
@@ -144,6 +159,75 @@ class Asset {
       return result.affectedRows > 0;
     } catch (error) {
       console.error('Error in Asset.delete:', error);
+      throw error;
+    }
+  }
+
+  // Get complete asset detail with all related information (Project, Customer, Peripherals, etc.)
+  static async findDetailById(id) {
+    try {
+      // Get main asset information with project, customer, recipients
+      const [assetRows] = await pool.execute(`
+        SELECT 
+          a.Asset_ID,
+          a.Asset_Serial_Number,
+          a.Asset_Tag_ID,
+          a.Item_Name,
+          a.Status,
+          c.Category,
+          m.Model,
+          r.Recipient_Name,
+          r.Department,
+          p.Project_ID,
+          p.Project_Ref_Number,
+          p.Project_Title,
+          p.Solution_Principal,
+          p.Warranty,
+          p.Preventive_Maintenance,
+          p.Start_Date,
+          p.End_Date,
+          cust.Customer_ID,
+          cust.Customer_Ref_Number,
+          cust.Customer_Name,
+          cust.Branch
+        FROM ASSET a
+        LEFT JOIN CATEGORY c ON a.Category_ID = c.Category_ID
+        LEFT JOIN MODEL m ON a.Model_ID = m.Model_ID
+        LEFT JOIN RECIPIENTS r ON a.Recipients_ID = r.Recipients_ID
+        LEFT JOIN INVENTORY i ON a.Asset_ID = i.Asset_ID
+        LEFT JOIN PROJECT p ON i.Project_ID = p.Project_ID
+        LEFT JOIN CUSTOMER cust ON i.Customer_ID = cust.Customer_ID
+        WHERE a.Asset_ID = ?
+        LIMIT 1
+      `, [id]);
+      
+      if (assetRows.length === 0) {
+        return null;
+      }
+
+      const assetData = assetRows[0];
+
+      // Get peripherals for this asset
+      const [peripheralRows] = await pool.execute(`
+        SELECT 
+          per.Peripheral_ID,
+          per.Serial_Code,
+          per.Condition,
+          per.Remarks,
+          pt.Peripheral_Type_Name
+        FROM PERIPHERAL per
+        LEFT JOIN PERIPHERAL_TYPE pt ON per.Peripheral_Type_ID = pt.Peripheral_Type_ID
+        WHERE per.Asset_ID = ?
+        ORDER BY pt.Peripheral_Type_Name
+      `, [id]);
+
+      // Combine asset data with peripherals
+      return {
+        ...assetData,
+        Peripherals: peripheralRows
+      };
+    } catch (error) {
+      console.error('Error in Asset.findDetailById:', error);
       throw error;
     }
   }

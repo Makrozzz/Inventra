@@ -63,6 +63,31 @@ const getAssetBySerialNumber = async (req, res, next) => {
 };
 
 /**
+ * Get complete asset detail by ID (includes project, customer, peripherals)
+ */
+const getAssetDetail = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    
+    const assetDetail = await Asset.findDetailById(id);
+
+    if (!assetDetail) {
+      return res.status(404).json({
+        error: 'Asset not found'
+      });
+    }
+
+    res.status(200).json(assetDetail);
+  } catch (error) {
+    logger.error('Error in getAssetDetail:', error);
+    res.status(500).json({
+      error: 'Failed to fetch asset detail',
+      message: error.message
+    });
+  }
+};
+
+/**
  * Create new asset
  */
 const createAsset = async (req, res, next) => {
@@ -256,6 +281,7 @@ const bulkImportAssets = async (req, res, next) => {
 module.exports = {
   getAllAssets,
   getAssetBySerialNumber,
+  getAssetDetail,
   createAsset,
   updateAsset,
   deleteAsset,
