@@ -531,7 +531,7 @@ const Assets = ({ onDelete }) => {
                             className="btn btn-secondary btn-sm"
                             title="View Details"
                           >
-                            <Eye size={14} />
+                            <Eye size={18} />
                           </button>
                           <Link 
                             to={`/asset-detail/${asset.Asset_ID}`} 
@@ -547,7 +547,7 @@ const Assets = ({ onDelete }) => {
                               fontWeight: '600'
                             }}
                           >
-                            <FileText size={16} />
+                            <FileText size={18} />
                             <span>Details</span>
                           </Link>
                           <Link 
@@ -556,7 +556,7 @@ const Assets = ({ onDelete }) => {
                             title="Edit Asset"
                             onClick={(e) => e.stopPropagation()}
                           >
-                            <Edit size={14} />
+                            <Edit size={18} />
                           </Link>
                           <button 
                             onClick={(e) => {
@@ -566,7 +566,7 @@ const Assets = ({ onDelete }) => {
                             className="btn btn-danger btn-sm"
                             title="Delete Asset"
                           >
-                            <Trash2 size={14} />
+                            <Trash2 size={18} />
                           </button>
                         </div>
                       </td>
