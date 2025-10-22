@@ -8,7 +8,6 @@ const Assets = ({ onDelete }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
   
   // Column-specific filters
   const [columnFilters, setColumnFilters] = useState({});
@@ -74,15 +73,11 @@ const Assets = ({ onDelete }) => {
     fetchAssets();
   }, []); // Only fetch once
 
-  // Filter assets based on search, status, and column-specific filters
+  // Filter assets based on search and column-specific filters
   const filteredAssets = allAssets.filter(asset => {
     // Global search filter
     const searchableFields = Object.values(asset).join(' ').toLowerCase();
     const matchesSearch = searchableFields.includes(searchTerm.toLowerCase());
-    
-    // Status filter
-    const statusField = asset.assetStatus || asset.Asset_Status || asset.Status || '';
-    const matchesStatus = statusFilter === '' || statusField === statusFilter;
     
     // Column-specific filters
     const matchesColumnFilters = Object.keys(columnFilters).every(columnKey => {
@@ -92,7 +87,7 @@ const Assets = ({ onDelete }) => {
       return assetValue.includes(filterValue);
     });
     
-    return matchesSearch && matchesStatus && matchesColumnFilters;
+    return matchesSearch && matchesColumnFilters;
   });
 
   // Client-side pagination calculations
@@ -105,7 +100,7 @@ const Assets = ({ onDelete }) => {
   // Reset to first page when filters change
   React.useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, statusFilter, columnFilters]);
+  }, [searchTerm, columnFilters]);
 
   // Close filter popup when clicking outside
   React.useEffect(() => {
@@ -158,11 +153,6 @@ const Assets = ({ onDelete }) => {
   const clearColumnFilters = () => {
     setColumnFilters({});
   };
-
-  // Get unique values for filters - check both possible status field names
-  const statuses = [...new Set(allAssets.map(asset => 
-    asset.assetStatus || asset.Asset_Status || asset.Status || ''
-  ).filter(Boolean))];
   
   // Define which columns to hide (typically internal/system columns)
   const hiddenColumns = [
@@ -243,36 +233,82 @@ const Assets = ({ onDelete }) => {
   };
 
   return (
-    <div>
-      <div className="page-header">
-        <h1 className="page-title">Asset Inventory Management</h1>
-        <p style={{ margin: '5px 0 0 0', color: '#7f8c8d', fontSize: '0.9rem' }}>
-          View complete asset information including project, customer, and maintenance details
-        </p>
-        <div className="actions">
-          <input
-            type="file"
-            accept=".csv"
-            onChange={handleImportCSV}
-            style={{ display: 'none' }}
-            id="csv-import"
-          />
-          <label htmlFor="csv-import" className="btn btn-secondary">
-            <Upload size={16} style={{ marginRight: '5px' }} />
-            Import CSV
-          </label>
-          <button onClick={handleExportCSV} className="btn btn-secondary">
-            <Download size={16} style={{ marginRight: '5px' }} />
-            Export CSV
-          </button>
-          <Link to="/add-asset" className="btn btn-primary">
-            <Plus size={16} style={{ marginRight: '5px' }} />
-            Add New Asset
-          </Link>
+    <div style={{ padding: '0' }}>
+      {/* Header Section with Gradient */}
+      <div style={{
+        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        padding: '30px 40px',
+        marginBottom: '30px',
+        borderRadius: '0 0 20px 20px',
+        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)'
+      }}>
+        <div style={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center',
+          maxWidth: '1400px',
+          margin: '0 auto'
+        }}>
+          <div>
+            <h1 style={{ 
+              color: 'white', 
+              margin: '0 0 10px 0',
+              fontSize: '32px',
+              fontWeight: '700'
+            }}>
+              Asset Inventory Management
+            </h1>
+            <p style={{ 
+              color: 'rgba(255, 255, 255, 0.9)', 
+              margin: 0,
+              fontSize: '16px'
+            }}>
+              View complete asset information including project, customer, and maintenance details
+            </p>
+          </div>
+          <div className="actions">
+            <input
+              type="file"
+              accept=".csv"
+              onChange={handleImportCSV}
+              style={{ display: 'none' }}
+              id="csv-import"
+            />
+            <label htmlFor="csv-import" className="btn btn-secondary" style={{
+              backgroundColor: 'rgba(255, 255, 255, 0.2)',
+              color: 'white',
+              border: '1px solid rgba(255, 255, 255, 0.3)',
+              backdropFilter: 'blur(10px)',
+              marginRight: '10px'
+            }}>
+              <Upload size={16} style={{ marginRight: '5px' }} />
+              Import CSV
+            </label>
+            <button onClick={handleExportCSV} className="btn btn-secondary" style={{
+              backgroundColor: 'rgba(255, 255, 255, 0.2)',
+              color: 'white',
+              border: '1px solid rgba(255, 255, 255, 0.3)',
+              backdropFilter: 'blur(10px)',
+              marginRight: '10px'
+            }}>
+              <Download size={16} style={{ marginRight: '5px' }} />
+              Export CSV
+            </button>
+            <Link to="/add-asset" className="btn btn-primary" style={{
+              backgroundColor: 'rgba(255, 255, 255, 0.9)',
+              color: '#667eea',
+              border: 'none',
+              fontWeight: '600'
+            }}>
+              <Plus size={16} style={{ marginRight: '5px' }} />
+              Add New Asset
+            </Link>
+          </div>
         </div>
       </div>
 
-      <div className="card">
+      <div style={{ padding: '0 40px', maxWidth: '1400px', margin: '0 auto' }}>
+        <div className="card">
         <div className="search-bar">
           <div style={{ position: 'relative', flex: 1 }}>
             <Search size={16} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#666' }} />
@@ -284,19 +320,6 @@ const Assets = ({ onDelete }) => {
               style={{ paddingLeft: '35px' }}
             />
           </div>
-        </div>
-
-        <div className="filters">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-            <Filter size={16} />
-            <span>Filters:</span>
-          </div>
-          <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
-            <option value="">All Status</option>
-            {statuses.map(status => (
-              <option key={status} value={status}>{status}</option>
-            ))}
-          </select>
         </div>
 
         <div style={{
@@ -819,6 +842,7 @@ const Assets = ({ onDelete }) => {
             totalItems={totalItems}
           />
         )}
+      </div>
       </div>
     </div>
   );
