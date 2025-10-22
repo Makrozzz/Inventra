@@ -149,6 +149,9 @@ const updateAssetById = async (req, res, next) => {
     const { id } = req.params;
     const updateData = req.body;
 
+    console.log('Updating asset ID:', id);
+    console.log('Update data received:', updateData);
+
     // Check if asset exists
     const existingAsset = await Asset.findById(id);
     if (!existingAsset) {
@@ -171,20 +174,86 @@ const updateAssetById = async (req, res, next) => {
     if (updateData.Category_ID) finalUpdateData.Category_ID = updateData.Category_ID;
     if (updateData.Model_ID) finalUpdateData.Model_ID = updateData.Model_ID;
 
+    // Handle name-based updates by updating existing records in-place
+    if (updateData.Recipient_Name || updateData.Department) {
+      try {
+        const recipientId = await Asset.updateRecipientInfo(
+          updateData.Recipient_Name,
+          updateData.Department,
+          existingAsset.Recipients_ID
+        );
+        if (recipientId) {
+          finalUpdateData.Recipients_ID = recipientId;
+          console.log('Updated Recipients_ID to:', recipientId);
+        }
+      } catch (error) {
+        console.warn('Could not update recipient information:', error.message);
+      }
+    }
+
+    if (updateData.Category) {
+      try {
+        const categoryId = await Asset.updateCategoryInfo(updateData.Category, existingAsset.Category_ID);
+        if (categoryId) {
+          finalUpdateData.Category_ID = categoryId;
+          console.log('Updated Category_ID to:', categoryId);
+        }
+      } catch (error) {
+        console.warn('Could not update category:', error.message);
+      }
+    }
+
+    if (updateData.Model) {
+      try {
+        const modelId = await Asset.updateModelInfo(updateData.Model, existingAsset.Model_ID);
+        if (modelId) {
+          finalUpdateData.Model_ID = modelId;
+          console.log('Updated Model_ID to:', modelId);
+        }
+      } catch (error) {
+        console.warn('Could not update model:', error.message);
+      }
+    }
+
+    console.log('Final update data:', finalUpdateData);
+
+    // Ensure we have data to update
+    if (Object.keys(finalUpdateData).length === 0) {
+      console.log('No valid updates to apply');
+      return res.status(400).json({
+        error: 'No valid updates provided'
+      });
+    }
+
     // Update the asset properties
     Object.assign(existingAsset, finalUpdateData);
     
     // Save the updated asset
+    console.log('Executing update for Asset_ID:', existingAsset.Asset_ID);
     await existingAsset.update();
     
     // Fetch the updated asset to return with joined data
     const updatedAsset = await Asset.findById(id);
+
+    console.log('Asset updated successfully:', updatedAsset);
+
+    // Verify the update was applied correctly
+    if (updatedAsset) {
+      const verificationLog = {};
+      if (finalUpdateData.Asset_Serial_Number) verificationLog.Serial = `${existingAsset.Asset_Serial_Number} -> ${updatedAsset.Asset_Serial_Number}`;
+      if (finalUpdateData.Recipients_ID) verificationLog.Recipient = `ID ${finalUpdateData.Recipients_ID} -> ${updatedAsset.Recipient_Name}`;
+      if (finalUpdateData.Category_ID) verificationLog.Category = `ID ${finalUpdateData.Category_ID} -> ${updatedAsset.Category}`;
+      if (finalUpdateData.Model_ID) verificationLog.Model = `ID ${finalUpdateData.Model_ID} -> ${updatedAsset.Model}`;
+      
+      console.log('Update verification:', verificationLog);
+    }
 
     logger.info(`Asset updated: ID ${id} by user ${req.user?.userId || 'unknown'}`);
 
     res.status(200).json(updatedAsset);
   } catch (error) {
     logger.error('Error in updateAssetById:', error);
+    console.error('Error updating asset:', error);
     res.status(500).json({
       error: 'Failed to update asset',
       message: error.message

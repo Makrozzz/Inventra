@@ -152,6 +152,112 @@ class Asset {
     }
   }
 
+  // Helper method to update recipient information properly
+  static async updateRecipientInfo(recipientName, department, currentRecipientId) {
+    try {
+      if (!recipientName && !department) return currentRecipientId;
+
+      // If we have a current recipient ID, update that recipient's information
+      if (currentRecipientId) {
+        const updateFields = [];
+        const updateValues = [];
+
+        if (recipientName) {
+          updateFields.push('Recipient_Name = ?');
+          updateValues.push(recipientName);
+        }
+
+        if (department) {
+          updateFields.push('Department = ?');
+          updateValues.push(department);
+        }
+
+        if (updateFields.length > 0) {
+          updateValues.push(currentRecipientId);
+          
+          const updateQuery = `UPDATE RECIPIENTS SET ${updateFields.join(', ')} WHERE Recipients_ID = ?`;
+          console.log('Updating existing recipient:', { recipientName, department, currentRecipientId });
+          
+          await pool.execute(updateQuery, updateValues);
+          return currentRecipientId;
+        }
+      }
+
+      // If no current recipient ID, create new recipient
+      if (recipientName) {
+        console.log('Creating new recipient:', { recipientName, department });
+        const [result] = await pool.execute(
+          'INSERT INTO RECIPIENTS (Recipient_Name, Department) VALUES (?, ?)',
+          [recipientName, department || '']
+        );
+        return result.insertId;
+      }
+
+      return currentRecipientId;
+    } catch (error) {
+      console.error('Error in updateRecipientInfo:', error);
+      return currentRecipientId; // Return original ID on error
+    }
+  }
+
+  // Helper method to update category information properly
+  static async updateCategoryInfo(categoryName, currentCategoryId) {
+    try {
+      if (!categoryName) return currentCategoryId;
+
+      // If we have a current category ID, update that category's name
+      if (currentCategoryId) {
+        console.log('Updating existing category:', { categoryName, currentCategoryId });
+        
+        await pool.execute(
+          'UPDATE CATEGORY SET Category = ? WHERE Category_ID = ?',
+          [categoryName, currentCategoryId]
+        );
+        return currentCategoryId;
+      }
+
+      // If no current category ID, create new category
+      console.log('Creating new category:', { categoryName });
+      const [result] = await pool.execute(
+        'INSERT INTO CATEGORY (Category) VALUES (?)',
+        [categoryName]
+      );
+      return result.insertId;
+    } catch (error) {
+      console.error('Error in updateCategoryInfo:', error);
+      return currentCategoryId; // Return original ID on error
+    }
+  }
+
+  // Helper method to update model information properly
+  static async updateModelInfo(modelName, currentModelId) {
+    try {
+      if (!modelName) return currentModelId;
+
+      // If we have a current model ID, update that model's name
+      if (currentModelId) {
+        console.log('Updating existing model:', { modelName, currentModelId });
+        
+        await pool.execute(
+          'UPDATE MODEL SET Model = ? WHERE Model_ID = ?',
+          [modelName, currentModelId]
+        );
+        return currentModelId;
+      }
+
+      // If no current model ID, create new model
+      console.log('Creating new model:', { modelName });
+      const [result] = await pool.execute(
+        'INSERT INTO MODEL (Model) VALUES (?)',
+        [modelName]
+      );
+      return result.insertId;
+    } catch (error) {
+      console.error('Error in updateModelInfo:', error);
+      return currentModelId; // Return original ID on error
+    }
+  }
+
   // Delete asset
   static async delete(id) {
     try {
