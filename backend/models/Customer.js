@@ -10,12 +10,13 @@ class Customer {
 
   /**
    * Create multiple customer records (one for each branch)
+   * @param {number} projectId - Project ID
    * @param {string} customerRefNumber - Customer reference number
    * @param {string} customerName - Customer name
    * @param {string[]} branches - Array of branch names
    * @returns {Promise<number[]>} - Array of created Customer_IDs
    */
-  static async createMultipleBranches(customerRefNumber, customerName, branches) {
+  static async createMultipleBranches(projectId, customerRefNumber, customerName, branches) {
     const connection = await pool.getConnection();
     try {
       await connection.beginTransaction();
@@ -25,13 +26,13 @@ class Customer {
       // Create a customer record for each branch
       for (const branch of branches) {
         const [result] = await connection.execute(
-          `INSERT INTO CUSTOMER (Customer_Ref_Number, Customer_Name, Branch) 
-           VALUES (?, ?, ?)`,
-          [customerRefNumber, customerName, branch]
+          `INSERT INTO CUSTOMER (Project_ID, Customer_Ref_Number, Customer_Name, Branch) 
+           VALUES (?, ?, ?, ?)`,
+          [projectId, customerRefNumber, customerName, branch]
         );
         
         customerIds.push(result.insertId);
-        console.log(`Created customer record: ID ${result.insertId}, Branch: ${branch}`);
+        console.log(`Created customer record: ID ${result.insertId}, Project_ID: ${projectId}, Branch: ${branch}`);
       }
       
       await connection.commit();

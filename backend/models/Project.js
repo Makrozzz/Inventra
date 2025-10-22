@@ -14,23 +14,27 @@ class Project {
     this.End_Date = project.End_Date;
   }
 
-  // Get all projects
+  // Get all projects with customer information
   static async findAll() {
     try {
       const [rows] = await pool.execute(`
-        SELECT 
-          Project_ID,
-          Project_Ref_Number,
-          Project_Title,
-          Solution_Principal,
-          Warranty,
-          Preventive_Maintenance,
-          Start_Date,
-          End_Date
-        FROM PROJECT
-        ORDER BY Project_ID DESC
+        SELECT DISTINCT
+          p.Project_ID,
+          p.Project_Ref_Number,
+          p.Project_Title,
+          p.Solution_Principal,
+          p.Warranty,
+          p.Preventive_Maintenance,
+          p.Start_Date,
+          p.End_Date,
+          c.Customer_Name,
+          c.Customer_Ref_Number
+        FROM PROJECT p
+        LEFT JOIN CUSTOMER c ON p.Project_ID = c.Project_ID
+        GROUP BY p.Project_ID
+        ORDER BY p.Project_ID DESC
       `);
-      return rows.map(row => new Project(row));
+      return rows;
     } catch (error) {
       console.error('Error in Project.findAll:', error);
       throw error;

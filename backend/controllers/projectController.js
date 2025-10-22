@@ -14,6 +14,8 @@ exports.getAllProjects = async (req, res) => {
           Project_ID: 1,
           Project_Ref_Number: "PRJ-2024-001",
           Project_Title: "Office Digital Transformation",
+          Customer_Name: "Tech Solutions Inc.",
+          Customer_Ref_Number: "CUST-001",
           Solution_Principal: "John Smith",
           Warranty: "2 Years Extended",
           Preventive_Maintenance: "Quarterly Service",
@@ -24,6 +26,8 @@ exports.getAllProjects = async (req, res) => {
           Project_ID: 2,
           Project_Ref_Number: "PRJ-2024-002",
           Project_Title: "IT Infrastructure Upgrade",
+          Customer_Name: "Global Systems Ltd.",
+          Customer_Ref_Number: "CUST-002",
           Solution_Principal: "Sarah Johnson",
           Warranty: "1 Year Standard",
           Preventive_Maintenance: "Monthly Checkup",
@@ -34,6 +38,8 @@ exports.getAllProjects = async (req, res) => {
           Project_ID: 3,
           Project_Ref_Number: "PRJ-2024-003",
           Project_Title: "Security System Implementation",
+          Customer_Name: "SecureNet Corp.",
+          Customer_Ref_Number: "CUST-003",
           Solution_Principal: "Mike Wilson",
           Warranty: "3 Years Premium",
           Preventive_Maintenance: "Bi-weekly Monitoring",
@@ -113,6 +119,7 @@ exports.createProject = async (req, res) => {
 
     // Step 2: Create customer records (one for each branch)
     const customerIds = await Customer.createMultipleBranches(
+      newProject.Project_ID,
       customer.Customer_Ref_Number,
       customer.Customer_Name,
       customer.branches
