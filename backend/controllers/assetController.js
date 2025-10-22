@@ -190,7 +190,13 @@ const deleteAsset = async (req, res, next) => {
  */
 const getAssetStatistics = async (req, res, next) => {
   try {
+    const Project = require('../models/Project');
+    
     const statistics = await Asset.getStatistics();
+    const projectStats = await Project.getStatistics();
+    
+    // Add project count as total customers (1 project = 1 customer)
+    statistics.totalProjects = projectStats.total;
 
     res.status(200).json(
       formatResponse(true, statistics, 'Asset statistics retrieved successfully')
@@ -203,6 +209,7 @@ const getAssetStatistics = async (req, res, next) => {
       logger.warn('Database not available, returning mock statistics');
       const mockStats = {
         total: 1,
+        totalProjects: 0,
         byStatus: [{ status: 'Testing', count: 1 }],
         byCategory: [{ category: 'Mock', count: 1 }],
         recent: [{

@@ -1,4 +1,5 @@
 const Project = require('../models/Project');
+const Customer = require('../models/Customer');
 
 // Get all projects
 exports.getAllProjects = async (req, res) => {
@@ -77,20 +78,58 @@ exports.getProjectById = async (req, res) => {
 // Create new project
 exports.createProject = async (req, res) => {
   try {
-    const projectData = req.body;
+    const { project, customer } = req.body;
     
     // Validate required fields
-    const requiredFields = ['Project_Title'];
-    for (const field of requiredFields) {
-      if (!projectData[field]) {
+    const requiredProjectFields = ['Project_Title'];
+    for (const field of requiredProjectFields) {
+      if (!project || !project[field]) {
         return res.status(400).json({ 
           error: `${field} is required` 
         });
       }
     }
-    
-    const newProject = await Project.create(projectData);
-    res.status(201).json(newProject);
+
+    // Validate customer fields
+    if (!customer || !customer.Customer_Ref_Number || !customer.Customer_Name) {
+      return res.status(400).json({ 
+        error: 'Customer information (Customer_Ref_Number and Customer_Name) is required' 
+      });
+    }
+
+    // Validate branches
+    if (!customer.branches || !Array.isArray(customer.branches) || customer.branches.length === 0) {
+      return res.status(400).json({ 
+        error: 'At least one branch is required' 
+      });
+    }
+
+    console.log('Creating project with customer data:', { project, customer });
+
+    // Step 1: Create the project
+    const newProject = await Project.create(project);
+    console.log('Project created:', newProject);
+
+    // Step 2: Create customer records (one for each branch)
+    const customerIds = await Customer.createMultipleBranches(
+      customer.Customer_Ref_Number,
+      customer.Customer_Name,
+      customer.branches
+    );
+    console.log('Customer records created with IDs:', customerIds);
+
+    // Return success with project and customer info
+    res.status(201).json({
+      success: true,
+      project: newProject,
+      customer: {
+        Customer_Ref_Number: customer.Customer_Ref_Number,
+        Customer_Name: customer.Customer_Name,
+        branches: customer.branches,
+        customerIds: customerIds
+      },
+      message: `Project created successfully with ${customerIds.length} customer branch(es)`
+    });
   } catch (error) {
     console.error('Error creating project:', error);
     res.status(500).json({ 
