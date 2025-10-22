@@ -114,16 +114,16 @@ class PMaintenance {
   // Get unique customers
   static async getCustomers() {
     try {
+      // Get all customers grouped by Customer_Ref_Number (1 project = 1 customer)
+      // This will show all customers even if they don't have PM records yet
       const [rows] = await pool.execute(`
         SELECT DISTINCT 
-          cust.Customer_ID,
-          cust.Customer_Name,
-          cust.Customer_Ref_Number
-        FROM CUSTOMER cust
-        INNER JOIN INVENTORY i ON cust.Customer_ID = i.Customer_ID
-        INNER JOIN ASSET a ON i.Asset_ID = a.Asset_ID
-        INNER JOIN PMAINTENANCE pm ON a.Asset_ID = pm.Asset_ID
-        ORDER BY cust.Customer_Name
+          Customer_Ref_Number as Customer_ID,
+          Customer_Name,
+          Customer_Ref_Number
+        FROM CUSTOMER
+        GROUP BY Customer_Ref_Number, Customer_Name
+        ORDER BY Customer_Name
       `);
       return rows;
     } catch (error) {
@@ -132,19 +132,16 @@ class PMaintenance {
     }
   }
 
-  // Get branches by customer
-  static async getBranchesByCustomer(customerId) {
+  // Get branches by customer reference number
+  static async getBranchesByCustomer(customerRefNumber) {
     try {
+      // Get all branches for this customer reference (since customerId is now Customer_Ref_Number)
       const [rows] = await pool.execute(`
-        SELECT DISTINCT 
-          cust.Branch
-        FROM CUSTOMER cust
-        INNER JOIN INVENTORY i ON cust.Customer_ID = i.Customer_ID
-        INNER JOIN ASSET a ON i.Asset_ID = a.Asset_ID
-        INNER JOIN PMAINTENANCE pm ON a.Asset_ID = pm.Asset_ID
-        WHERE cust.Customer_ID = ?
-        ORDER BY cust.Branch
-      `, [customerId]);
+        SELECT DISTINCT Branch
+        FROM CUSTOMER
+        WHERE Customer_Ref_Number = ?
+        ORDER BY Branch
+      `, [customerRefNumber]);
       return rows.map(row => row.Branch);
     } catch (error) {
       console.error('Error in PMaintenance.getBranchesByCustomer:', error);
@@ -153,7 +150,7 @@ class PMaintenance {
   }
 
   // Get PM data filtered by customer and branch
-  static async findByCustomerAndBranch(customerId, branch) {
+  static async findByCustomerAndBranch(customerRefNumber, branch) {
     try {
       const [rows] = await pool.execute(`
         SELECT 
@@ -186,9 +183,9 @@ class PMaintenance {
         LEFT JOIN INVENTORY i ON a.Asset_ID = i.Asset_ID
         LEFT JOIN PROJECT p ON i.Project_ID = p.Project_ID
         LEFT JOIN CUSTOMER cust ON i.Customer_ID = cust.Customer_ID
-        WHERE cust.Customer_ID = ? AND cust.Branch = ?
+        WHERE cust.Customer_Ref_Number = ? AND cust.Branch = ?
         ORDER BY c.Category, pm.PM_Date DESC
-      `, [customerId, branch]);
+      `, [customerRefNumber, branch]);
       return rows;
     } catch (error) {
       console.error('Error in PMaintenance.findByCustomerAndBranch:', error);
@@ -277,9 +274,10 @@ class PMaintenance {
   }
 
   // Get PM data with checklist results grouped by category
-  static async getPMWithChecklistByCustomerAndBranch(customerId, branch) {
+  static async getPMWithChecklistByCustomerAndBranch(customerRefNumber, branch) {
     try {
-      // First get all PM records for this customer and branch
+      // First get all PM records for this customer reference number and branch
+      // customerId is now Customer_Ref_Number (e.g., "M24050")
       const [pmRows] = await pool.execute(`
         SELECT 
           pm.PM_ID,
@@ -302,9 +300,9 @@ class PMaintenance {
         LEFT JOIN RECIPIENTS r ON a.Recipients_ID = r.Recipients_ID
         LEFT JOIN INVENTORY i ON a.Asset_ID = i.Asset_ID
         LEFT JOIN CUSTOMER cust ON i.Customer_ID = cust.Customer_ID
-        WHERE cust.Customer_ID = ? AND cust.Branch = ?
+        WHERE cust.Customer_Ref_Number = ? AND cust.Branch = ?
         ORDER BY c.Category, a.Asset_Tag_ID
-      `, [customerId, branch]);
+      `, [customerRefNumber, branch]);
 
       // For each PM record, get its checklist results
       const pmWithChecklists = await Promise.all(

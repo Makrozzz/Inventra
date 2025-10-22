@@ -26,7 +26,7 @@ const Dashboard = () => {
             stats: {
               totalAssets: stats.total || 0,
               activeAssets: stats.byStatus?.find(s => s.status === 'Active')?.count || 0,
-              totalCustomers: stats.byStatus?.length || 0, // Number of different statuses as proxy
+              totalCustomers: stats.totalProjects || 0, // 1 project = 1 customer
               totalValue: 0 // Will be calculated from asset prices
             },
             customerAssetData: stats.byCategory?.map((cat, index) => ({
