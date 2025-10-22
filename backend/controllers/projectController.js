@@ -1,5 +1,6 @@
 const Project = require('../models/Project');
 const Customer = require('../models/Customer');
+const Inventory = require('../models/Inventory');
 
 // Get all projects
 exports.getAllProjects = async (req, res) => {
@@ -118,7 +119,15 @@ exports.createProject = async (req, res) => {
     );
     console.log('Customer records created with IDs:', customerIds);
 
-    // Return success with project and customer info
+    // Step 3: Create INVENTORY records linking project to customers
+    // Asset_ID will be NULL initially, filled when assets are added
+    const inventoryIds = await Inventory.createForProject(
+      newProject.Project_ID,
+      customerIds
+    );
+    console.log('Inventory records created with IDs:', inventoryIds);
+
+    // Return success with project, customer, and inventory info
     res.status(201).json({
       success: true,
       project: newProject,
@@ -128,7 +137,11 @@ exports.createProject = async (req, res) => {
         branches: customer.branches,
         customerIds: customerIds
       },
-      message: `Project created successfully with ${customerIds.length} customer branch(es)`
+      inventory: {
+        inventoryIds: inventoryIds,
+        count: inventoryIds.length
+      },
+      message: `Project created successfully with ${customerIds.length} customer branch(es) and ${inventoryIds.length} inventory record(s)`
     });
   } catch (error) {
     console.error('Error creating project:', error);
@@ -173,12 +186,43 @@ exports.deleteProject = async (req, res) => {
   try {
     const { id } = req.params;
     
+    console.log(`Attempting to delete project with ID: ${id}`);
+    
+    // Step 1: Get all inventory records for this project to find related customers
+    const inventoryRecords = await Inventory.findByProject(id);
+    console.log(`Found ${inventoryRecords.length} inventory records for project ${id}`);
+    
+    // Step 2: Delete all inventory records for this project
+    for (const inv of inventoryRecords) {
+      await Inventory.delete(inv.Inventory_ID);
+      console.log(`Deleted inventory record: ${inv.Inventory_ID}`);
+    }
+    
+    // Step 3: Delete all customer records associated with this project
+    // Get unique customer IDs from inventory
+    const customerIds = [...new Set(inventoryRecords.map(inv => inv.Customer_ID))];
+    console.log(`Found ${customerIds.length} unique customers to delete`);
+    
+    for (const customerId of customerIds) {
+      if (customerId) {
+        await Customer.delete(customerId);
+        console.log(`Deleted customer record: ${customerId}`);
+      }
+    }
+    
+    // Step 4: Finally, delete the project
     const deleted = await Project.delete(id);
     if (!deleted) {
       return res.status(404).json({ error: 'Project not found' });
     }
     
-    res.json({ message: 'Project deleted successfully' });
+    console.log(`Successfully deleted project ${id} and all related records`);
+    
+    res.json({ 
+      message: 'Project and all related records deleted successfully',
+      deletedInventory: inventoryRecords.length,
+      deletedCustomers: customerIds.length
+    });
   } catch (error) {
     console.error('Error deleting project:', error);
     res.status(500).json({ 

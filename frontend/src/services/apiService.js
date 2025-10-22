@@ -192,6 +192,23 @@ class ApiService {
   async getProjects() {
     return this.getAllProjects();
   }
+
+  // Inventory methods
+  async getInventoryByProject(projectId) {
+    return this.makeRequest(`inventory/project/${projectId}`);
+  }
+
+  async updateInventoryWithAsset(projectId, customerId, assetId) {
+    return this.makeRequest('inventory/update-asset', {
+      method: 'POST',
+      body: JSON.stringify({ projectId, customerId, assetId })
+    });
+  }
+
+  // Customer methods
+  async getCustomersByProject(projectId) {
+    return this.makeRequest(`customers/project/${projectId}`);
+  }
 }
 
 // Create and export a singleton instance
