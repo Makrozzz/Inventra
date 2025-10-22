@@ -535,6 +535,7 @@ const Projects = () => {
                         View
                       </button>
                       <button 
+                        onClick={() => navigate(`/projects/edit/${project.Project_ID}`)}
                         style={{
                           flex: 1,
                           padding: '10px',

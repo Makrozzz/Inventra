@@ -164,29 +164,56 @@ const ProjectDetail = () => {
         boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)'
       }}>
         <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
-          <button
-            onClick={() => navigate('/projects')}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              padding: '8px 16px',
-              backgroundColor: 'rgba(255, 255, 255, 0.2)',
-              color: 'white',
-              border: 'none',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              fontSize: '14px',
-              fontWeight: '600',
-              marginBottom: '15px',
-              transition: 'all 0.3s ease'
-            }}
-            onMouseEnter={(e) => e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.3)'}
-            onMouseLeave={(e) => e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.2)'}
-          >
-            <ArrowLeft size={18} />
-            Back to Projects
-          </button>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <div style={{ flex: 1 }}>
+              <button
+                onClick={() => navigate('/projects')}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '8px 16px',
+                  backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  marginBottom: '15px',
+                  transition: 'all 0.3s ease'
+                }}
+                onMouseEnter={(e) => e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.3)'}
+                onMouseLeave={(e) => e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.2)'}
+              >
+                <ArrowLeft size={18} />
+                Back to Projects
+              </button>
+            </div>
+            
+            <button
+              onClick={() => navigate(`/projects/edit/${id}`)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '10px 20px',
+                backgroundColor: '#10b981',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                fontSize: '14px',
+                fontWeight: '600',
+                transition: 'all 0.3s ease'
+              }}
+              onMouseEnter={(e) => e.target.style.backgroundColor = '#059669'}
+              onMouseLeave={(e) => e.target.style.backgroundColor = '#10b981'}
+            >
+              <Edit size={18} />
+              Edit Project
+            </button>
+          </div>
           
           <h1 style={{ 
             color: 'white', 

@@ -6,6 +6,7 @@ import Dashboard from './pages/Dashboard';
 import Projects from './pages/Projects';
 import ProjectDetail from './pages/ProjectDetail';
 import AddProject from './pages/AddProject';
+import EditProject from './pages/EditProject';
 import Assets from './pages/Assets';
 import AssetDetail from './pages/AssetDetail';
 import PreventiveMaintenance from './pages/PreventiveMaintenance';
@@ -73,6 +74,7 @@ function App() {
             <Route path="/" element={<Dashboard />} />
             <Route path="/projects" element={<Projects />} />
             <Route path="/projects/add" element={<AddProject />} />
+            <Route path="/projects/edit/:id" element={<EditProject />} />
             <Route path="/projects/:id" element={<ProjectDetail />} />
             <Route path="/assets" element={<Assets onDelete={deleteAsset} />} />
             <Route path="/asset-detail/:assetId" element={<AssetDetail />} />
