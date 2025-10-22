@@ -4,7 +4,9 @@ import Sidebar from './components/Sidebar';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Projects from './pages/Projects';
+import AddProject from './pages/AddProject';
 import Assets from './pages/Assets';
+import AssetDetail from './pages/AssetDetail';
 import PreventiveMaintenance from './pages/PreventiveMaintenance';
 import AccountSettings from './pages/AccountSettings';
 import AddAsset from './pages/AddAsset';
@@ -69,7 +71,9 @@ function App() {
           <Routes>
             <Route path="/" element={<Dashboard />} />
             <Route path="/projects" element={<Projects />} />
+            <Route path="/projects/add" element={<AddProject />} />
             <Route path="/assets" element={<Assets onDelete={deleteAsset} />} />
+            <Route path="/asset-detail/:assetId" element={<AssetDetail />} />
             <Route path="/maintenance" element={<PreventiveMaintenance assets={assets} />} />
             <Route path="/settings" element={<AccountSettings />} />
             <Route path="/add-asset" element={<AddAsset onAdd={addAsset} />} />

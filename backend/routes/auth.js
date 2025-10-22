@@ -1,5 +1,6 @@
 const express = require('express');
 const { body } = require('express-validator');
+const jwt = require('jsonwebtoken');
 const {
   register,
   login,
@@ -127,5 +128,40 @@ router.delete('/users/:userId',
   authorize('admin'), 
   deleteUser
 );
+
+// Development only - generate test token
+if (process.env.NODE_ENV === 'development') {
+  router.post('/dev-token', (req, res) => {
+    try {
+      const testUser = {
+        userId: 1,
+        username: 'dev-user',
+        email: 'dev@test.com',
+        role: 'admin'
+      };
+
+      const token = jwt.sign(
+        testUser,
+        process.env.JWT_SECRET,
+        { expiresIn: process.env.JWT_EXPIRES_IN || '24h' }
+      );
+
+      res.json({
+        success: true,
+        data: {
+          token,
+          user: testUser
+        },
+        message: 'Development token generated'
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: 'Failed to generate development token',
+        error: error.message
+      });
+    }
+  });
+}
 
 module.exports = router;

@@ -1,4 +1,489 @@
 {
+  message: '✅ Database connected successfully',
+  level: 'info',
+  timestamp: '2025-10-17 11:04:29'
+}
+{
+  message: '🚀 Inventra Backend Server running on port 5000',
+  level: 'info',
+  timestamp: '2025-10-17 11:04:29'
+}
+{
+  message: '📍 Environment: development',
+  level: 'info',
+  timestamp: '2025-10-17 11:04:29'
+}
+{
+  message: '🌐 CORS enabled for: http://localhost:3000',
+  level: 'info',
+  timestamp: '2025-10-17 11:04:29'
+}
+{
+  message: '✅ Database connected successfully',
+  level: 'info',
+  timestamp: '2025-10-17 14:07:10'
+}
+{
+  message: '🚀 Inventra Backend Server running on port 5000',
+  level: 'info',
+  timestamp: '2025-10-17 14:07:10'
+}
+{
+  message: '📍 Environment: development',
+  level: 'info',
+  timestamp: '2025-10-17 14:07:10'
+}
+{
+  message: '🌐 CORS enabled for: http://localhost:3000',
+  level: 'info',
+  timestamp: '2025-10-17 14:07:10'
+}
+{
+  message: '✅ Database connected successfully',
+  level: 'info',
+  timestamp: '2025-10-17 14:07:14'
+}
+{
+  message: '🚀 Inventra Backend Server running on port 5000',
+  level: 'info',
+  timestamp: '2025-10-17 14:07:14'
+}
+{
+  message: '📍 Environment: development',
+  level: 'info',
+  timestamp: '2025-10-17 14:07:14'
+}
+{
+  message: '🌐 CORS enabled for: http://localhost:3000',
+  level: 'info',
+  timestamp: '2025-10-17 14:07:14'
+}
+{
+  message: 'SIGINT received, shutting down gracefully',
+  level: 'info',
+  timestamp: '2025-10-17 14:07:22'
+}
+{
+  message: '✅ Database connected successfully',
+  level: 'info',
+  timestamp: '2025-10-17 14:07:41'
+}
+{
+  message: '🚀 Inventra Backend Server running on port 5000',
+  level: 'info',
+  timestamp: '2025-10-17 14:07:41'
+}
+{
+  message: '📍 Environment: development',
+  level: 'info',
+  timestamp: '2025-10-17 14:07:41'
+}
+{
+  message: '🌐 CORS enabled for: http://localhost:3000',
+  level: 'info',
+  timestamp: '2025-10-17 14:07:41'
+}
+{
+  message: '✅ Database connected successfully',
+  level: 'info',
+  timestamp: '2025-10-17 14:14:34'
+}
+{
+  message: '🚀 Inventra Backend Server running on port 5000',
+  level: 'info',
+  timestamp: '2025-10-17 14:14:34'
+}
+{
+  message: '📍 Environment: development',
+  level: 'info',
+  timestamp: '2025-10-17 14:14:34'
+}
+{
+  message: '🌐 CORS enabled for: http://localhost:3000',
+  level: 'info',
+  timestamp: '2025-10-17 14:14:34'
+}
+{
+  message: '✅ Database connected successfully',
+  level: 'info',
+  timestamp: '2025-10-17 14:14:38'
+}
+{
+  message: '🚀 Inventra Backend Server running on port 5000',
+  level: 'info',
+  timestamp: '2025-10-17 14:14:38'
+}
+{
+  message: '📍 Environment: development',
+  level: 'info',
+  timestamp: '2025-10-17 14:14:38'
+}
+{
+  message: '🌐 CORS enabled for: http://localhost:3000',
+  level: 'info',
+  timestamp: '2025-10-17 14:14:38'
+}
+{
+  message: 'SIGINT received, shutting down gracefully',
+  level: 'info',
+  timestamp: '2025-10-17 14:17:06'
+}
+{
+  message: '✅ Database connected successfully',
+  level: 'info',
+  timestamp: '2025-10-17 14:24:58'
+}
+{
+  message: '🚀 Inventra Backend Server running on port 5000',
+  level: 'info',
+  timestamp: '2025-10-17 14:24:58'
+}
+{
+  message: '📍 Environment: development',
+  level: 'info',
+  timestamp: '2025-10-17 14:24:58'
+}
+{
+  message: '🌐 CORS enabled for: http://localhost:3000',
+  level: 'info',
+  timestamp: '2025-10-17 14:24:58'
+}
+{
+  message: '✅ Database connected successfully',
+  level: 'info',
+  timestamp: '2025-10-17 17:22:06'
+}
+{
+  message: '🚀 Inventra Backend Server running on port 5000',
+  level: 'info',
+  timestamp: '2025-10-17 17:22:06'
+}
+{
+  message: '📍 Environment: development',
+  level: 'info',
+  timestamp: '2025-10-17 17:22:06'
+}
+{
+  message: '🌐 CORS enabled for: http://localhost:3000',
+  level: 'info',
+  timestamp: '2025-10-17 17:22:06'
+}
+{
+  message: '✅ Database connected successfully',
+  level: 'info',
+  timestamp: '2025-10-21 12:03:07'
+}
+{
+  message: '🚀 Inventra Backend Server running on port 5000',
+  level: 'info',
+  timestamp: '2025-10-21 12:03:07'
+}
+{
+  message: '📍 Environment: development',
+  level: 'info',
+  timestamp: '2025-10-21 12:03:07'
+}
+{
+  message: '🌐 CORS enabled for: http://localhost:3000',
+  level: 'info',
+  timestamp: '2025-10-21 12:03:07'
+}
+{
+  message: '✅ Database connected successfully',
+  level: 'info',
+  timestamp: '2025-10-22 09:16:16'
+}
+{
+  message: '🚀 Inventra Backend Server running on port 5000',
+  level: 'info',
+  timestamp: '2025-10-22 09:16:16'
+}
+{
+  message: '📍 Environment: development',
+  level: 'info',
+  timestamp: '2025-10-22 09:16:16'
+}
+{
+  message: '🌐 CORS enabled for: http://localhost:3000',
+  level: 'info',
+  timestamp: '2025-10-22 09:16:16'
+}
+{
+  message: 'SIGINT received, shutting down gracefully',
+  level: 'info',
+  timestamp: '2025-10-22 09:24:01'
+}
+{
+  message: '✅ Database connected successfully',
+  level: 'info',
+  timestamp: '2025-10-22 09:29:56'
+}
+{
+  message: '🚀 Inventra Backend Server running on port 5000',
+  level: 'info',
+  timestamp: '2025-10-22 09:29:56'
+}
+{
+  message: '📍 Environment: development',
+  level: 'info',
+  timestamp: '2025-10-22 09:29:56'
+}
+{
+  message: '🌐 CORS enabled for: http://localhost:3000',
+  level: 'info',
+  timestamp: '2025-10-22 09:29:56'
+}
+{
+  message: 'SIGINT received, shutting down gracefully',
+  level: 'info',
+  timestamp: '2025-10-22 09:30:25'
+}
+{
+  message: '✅ Database connected successfully',
+  level: 'info',
+  timestamp: '2025-10-22 09:40:04'
+}
+{
+  message: '🚀 Inventra Backend Server running on port 5000',
+  level: 'info',
+  timestamp: '2025-10-22 09:40:04'
+}
+{
+  message: '📍 Environment: development',
+  level: 'info',
+  timestamp: '2025-10-22 09:40:04'
+}
+{
+  message: '🌐 CORS enabled for: http://localhost:3000',
+  level: 'info',
+  timestamp: '2025-10-22 09:40:04'
+}
+{
+  message: 'SIGINT received, shutting down gracefully',
+  level: 'info',
+  timestamp: '2025-10-22 10:08:49'
+}
+{
+  message: '✅ Database connected successfully',
+  level: 'info',
+  timestamp: '2025-10-22 10:08:58'
+}
+{
+  message: '🚀 Inventra Backend Server running on port 5000',
+  level: 'info',
+  timestamp: '2025-10-22 10:08:58'
+}
+{
+  message: '📍 Environment: development',
+  level: 'info',
+  timestamp: '2025-10-22 10:08:58'
+}
+{
+  message: '🌐 CORS enabled for: http://localhost:3000',
+  level: 'info',
+  timestamp: '2025-10-22 10:08:58'
+}
+{
+  message: 'SIGINT received, shutting down gracefully',
+  level: 'info',
+  timestamp: '2025-10-22 10:29:39'
+}
+{
+  message: '✅ Database connected successfully',
+  level: 'info',
+  timestamp: '2025-10-22 10:31:39'
+}
+{
+  message: '🚀 Inventra Backend Server running on port 5000',
+  level: 'info',
+  timestamp: '2025-10-22 10:31:39'
+}
+{
+  message: '📍 Environment: development',
+  level: 'info',
+  timestamp: '2025-10-22 10:31:39'
+}
+{
+  message: '🌐 CORS enabled for: http://localhost:3000',
+  level: 'info',
+  timestamp: '2025-10-22 10:31:39'
+}
+{
+  message: '✅ Database connected successfully',
+  level: 'info',
+  timestamp: '2025-10-22 10:31:54'
+}
+{
+  message: '🚀 Inventra Backend Server running on port 5000',
+  level: 'info',
+  timestamp: '2025-10-22 10:31:54'
+}
+{
+  message: '📍 Environment: development',
+  level: 'info',
+  timestamp: '2025-10-22 10:31:54'
+}
+{
+  message: '🌐 CORS enabled for: http://localhost:3000',
+  level: 'info',
+  timestamp: '2025-10-22 10:31:54'
+}
+{
+  message: '✅ Database connected successfully',
+  level: 'info',
+  timestamp: '2025-10-22 10:32:10'
+}
+{
+  message: '🚀 Inventra Backend Server running on port 5000',
+  level: 'info',
+  timestamp: '2025-10-22 10:32:10'
+}
+{
+  message: '📍 Environment: development',
+  level: 'info',
+  timestamp: '2025-10-22 10:32:10'
+}
+{
+  message: '🌐 CORS enabled for: http://localhost:3000',
+  level: 'info',
+  timestamp: '2025-10-22 10:32:10'
+}
+{
+  message: '✅ Database connected successfully',
+  level: 'info',
+  timestamp: '2025-10-22 10:36:26'
+}
+{
+  message: '🚀 Inventra Backend Server running on port 5000',
+  level: 'info',
+  timestamp: '2025-10-22 10:36:26'
+}
+{
+  message: '📍 Environment: development',
+  level: 'info',
+  timestamp: '2025-10-22 10:36:26'
+}
+{
+  message: '🌐 CORS enabled for: http://localhost:3000',
+  level: 'info',
+  timestamp: '2025-10-22 10:36:26'
+}
+{
+  message: 'SIGINT received, shutting down gracefully',
+  level: 'info',
+  timestamp: '2025-10-22 10:38:06'
+}
+{
+  message: '✅ Database connected successfully',
+  level: 'info',
+  timestamp: '2025-10-22 10:38:19'
+}
+{
+  message: '🚀 Inventra Backend Server running on port 5000',
+  level: 'info',
+  timestamp: '2025-10-22 10:38:19'
+}
+{
+  message: '📍 Environment: development',
+  level: 'info',
+  timestamp: '2025-10-22 10:38:19'
+}
+{
+  message: '🌐 CORS enabled for: http://localhost:3000',
+  level: 'info',
+  timestamp: '2025-10-22 10:38:19'
+}
+{
+  message: 'SIGINT received, shutting down gracefully',
+  level: 'info',
+  timestamp: '2025-10-22 10:39:43'
+}
+{
+  message: '✅ Database connected successfully',
+  level: 'info',
+  timestamp: '2025-10-22 10:40:09'
+}
+{
+  message: '🚀 Inventra Backend Server running on port 5000',
+  level: 'info',
+  timestamp: '2025-10-22 10:40:09'
+}
+{
+  message: '📍 Environment: development',
+  level: 'info',
+  timestamp: '2025-10-22 10:40:09'
+}
+{
+  message: '🌐 CORS enabled for: http://localhost:3000',
+  level: 'info',
+  timestamp: '2025-10-22 10:40:09'
+}
+{
+  message: '✅ Database connected successfully',
+  level: 'info',
+  timestamp: '2025-10-22 10:43:37'
+}
+{
+  message: '🚀 Inventra Backend Server running on port 5000',
+  level: 'info',
+  timestamp: '2025-10-22 10:43:37'
+}
+{
+  message: '📍 Environment: development',
+  level: 'info',
+  timestamp: '2025-10-22 10:43:37'
+}
+{
+  message: '🌐 CORS enabled for: http://localhost:3000',
+  level: 'info',
+  timestamp: '2025-10-22 10:43:37'
+}
+{
+  message: '✅ Database connected successfully',
+  level: 'info',
+  timestamp: '2025-10-22 11:22:54'
+}
+{
+  message: '🚀 Inventra Backend Server running on port 5000',
+  level: 'info',
+  timestamp: '2025-10-22 11:22:54'
+}
+{
+  message: '📍 Environment: development',
+  level: 'info',
+  timestamp: '2025-10-22 11:22:54'
+}
+{
+  message: '🌐 CORS enabled for: http://localhost:3000',
+  level: 'info',
+  timestamp: '2025-10-22 11:22:54'
+}
+{
+  message: '✅ Database connected successfully',
+  level: 'info',
+  timestamp: '2025-10-22 11:37:03'
+}
+{
+  message: '🚀 Inventra Backend Server running on port 5000',
+  level: 'info',
+  timestamp: '2025-10-22 11:37:03'
+}
+{
+  message: '📍 Environment: development',
+  level: 'info',
+  timestamp: '2025-10-22 11:37:03'
+}
+{
+  message: '🌐 CORS enabled for: http://localhost:3000',
+  level: 'info',
+  timestamp: '2025-10-22 11:37:03'
+}
+{
+  message: '✅ Database connected successfully',
+  level: 'info',
+  timestamp: '2025-10-22 11:39:50'
+}
+{
   error: Error: listen EADDRINUSE: address already in use :::5000
       at Server.setupListenHandle [as _listen2] (node:net:1940:16)
       at listenInCluster (node:net:1997:12)
@@ -101,6 +586,31 @@
     }
   ],
   timestamp: '2025-10-22 11:39:50'
+}
+{
+  message: '✅ Database connected successfully',
+  level: 'info',
+  timestamp: '2025-10-22 11:42:47'
+}
+{
+  message: '🚀 Inventra Backend Server running on port 5000',
+  level: 'info',
+  timestamp: '2025-10-22 11:42:47'
+}
+{
+  message: '📍 Environment: development',
+  level: 'info',
+  timestamp: '2025-10-22 11:42:47'
+}
+{
+  message: '🌐 CORS enabled for: http://localhost:3000',
+  level: 'info',
+  timestamp: '2025-10-22 11:42:47'
+}
+{
+  message: '✅ Database connected successfully',
+  level: 'info',
+  timestamp: '2025-10-22 11:42:52'
 }
 {
   error: Error: listen EADDRINUSE: address already in use :::5000
@@ -1415,6 +1925,31 @@
   timestamp: '2025-10-22 11:45:02'
 }
 {
+  message: '✅ Database connected successfully',
+  level: 'info',
+  timestamp: '2025-10-22 11:45:28'
+}
+{
+  message: '✅ Database connected successfully',
+  level: 'info',
+  timestamp: '2025-10-22 11:45:28'
+}
+{
+  message: '🚀 Inventra Backend Server running on port 5000',
+  level: 'info',
+  timestamp: '2025-10-22 11:45:28'
+}
+{
+  message: '📍 Environment: development',
+  level: 'info',
+  timestamp: '2025-10-22 11:45:28'
+}
+{
+  message: '🌐 CORS enabled for: http://localhost:3000',
+  level: 'info',
+  timestamp: '2025-10-22 11:45:28'
+}
+{
   error: Error: listen EADDRINUSE: address already in use :::5000
       at Server.setupListenHandle [as _listen2] (node:net:1940:16)
       at listenInCluster (node:net:1997:12)
@@ -1517,6 +2052,11 @@
     }
   ],
   timestamp: '2025-10-22 11:45:28'
+}
+{
+  message: '✅ Database connected successfully',
+  level: 'info',
+  timestamp: '2025-10-22 11:45:48'
 }
 {
   error: Error: listen EADDRINUSE: address already in use :::5000
@@ -1623,6 +2163,61 @@
   timestamp: '2025-10-22 11:45:48'
 }
 {
+  message: 'SIGINT received, shutting down gracefully',
+  level: 'info',
+  timestamp: '2025-10-22 11:45:54'
+}
+{
+  message: '✅ Database connected successfully',
+  level: 'info',
+  timestamp: '2025-10-22 11:46:02'
+}
+{
+  message: '🚀 Inventra Backend Server running on port 5000',
+  level: 'info',
+  timestamp: '2025-10-22 11:46:02'
+}
+{
+  message: '📍 Environment: development',
+  level: 'info',
+  timestamp: '2025-10-22 11:46:02'
+}
+{
+  message: '🌐 CORS enabled for: http://localhost:3000',
+  level: 'info',
+  timestamp: '2025-10-22 11:46:02'
+}
+{
+  message: 'SIGINT received, shutting down gracefully',
+  level: 'info',
+  timestamp: '2025-10-22 11:46:52'
+}
+{
+  message: '✅ Database connected successfully',
+  level: 'info',
+  timestamp: '2025-10-22 11:49:52'
+}
+{
+  message: '✅ Database connected successfully',
+  level: 'info',
+  timestamp: '2025-10-22 11:49:52'
+}
+{
+  message: '🚀 Inventra Backend Server running on port 5000',
+  level: 'info',
+  timestamp: '2025-10-22 11:49:52'
+}
+{
+  message: '📍 Environment: development',
+  level: 'info',
+  timestamp: '2025-10-22 11:49:52'
+}
+{
+  message: '🌐 CORS enabled for: http://localhost:3000',
+  level: 'info',
+  timestamp: '2025-10-22 11:49:52'
+}
+{
   error: Error: listen EADDRINUSE: address already in use :::5000
       at Server.setupListenHandle [as _listen2] (node:net:1940:16)
       at listenInCluster (node:net:1997:12)
@@ -1725,6 +2320,31 @@
     }
   ],
   timestamp: '2025-10-22 11:49:52'
+}
+{
+  message: '✅ Database connected successfully',
+  level: 'info',
+  timestamp: '2025-10-22 11:50:22'
+}
+{
+  message: '✅ Database connected successfully',
+  level: 'info',
+  timestamp: '2025-10-22 11:50:22'
+}
+{
+  message: '🚀 Inventra Backend Server running on port 5000',
+  level: 'info',
+  timestamp: '2025-10-22 11:50:22'
+}
+{
+  message: '📍 Environment: development',
+  level: 'info',
+  timestamp: '2025-10-22 11:50:22'
+}
+{
+  message: '🌐 CORS enabled for: http://localhost:3000',
+  level: 'info',
+  timestamp: '2025-10-22 11:50:22'
 }
 {
   error: Error: listen EADDRINUSE: address already in use :::5000
@@ -1831,6 +2451,11 @@
   timestamp: '2025-10-22 11:50:22'
 }
 {
+  message: '✅ Database connected successfully',
+  level: 'info',
+  timestamp: '2025-10-22 11:50:40'
+}
+{
   error: Error: listen EADDRINUSE: address already in use :::5000
       at Server.setupListenHandle [as _listen2] (node:net:1940:16)
       at listenInCluster (node:net:1997:12)
@@ -1933,6 +2558,11 @@
     }
   ],
   timestamp: '2025-10-22 11:50:40'
+}
+{
+  message: '✅ Database connected successfully',
+  level: 'info',
+  timestamp: '2025-10-22 12:10:03'
 }
 {
   error: Error: listen EADDRINUSE: address already in use :::5000
@@ -2039,6 +2669,11 @@
   timestamp: '2025-10-22 12:10:03'
 }
 {
+  message: '✅ Database connected successfully',
+  level: 'info',
+  timestamp: '2025-10-22 12:13:29'
+}
+{
   error: Error: listen EADDRINUSE: address already in use :::5000
       at Server.setupListenHandle [as _listen2] (node:net:1940:16)
       at listenInCluster (node:net:1997:12)
@@ -2143,6 +2778,11 @@
   timestamp: '2025-10-22 12:13:29'
 }
 {
+  message: '✅ Database connected successfully',
+  level: 'info',
+  timestamp: '2025-10-22 12:14:18'
+}
+{
   error: Error: listen EADDRINUSE: address already in use :::5000
       at Server.setupListenHandle [as _listen2] (node:net:1940:16)
       at listenInCluster (node:net:1997:12)
@@ -2245,6 +2885,36 @@
     }
   ],
   timestamp: '2025-10-22 12:14:18'
+}
+{
+  message: '✅ Database connected successfully',
+  level: 'info',
+  timestamp: '2025-10-22 12:25:29'
+}
+{
+  message: '✅ Database connected successfully',
+  level: 'info',
+  timestamp: '2025-10-22 12:25:29'
+}
+{
+  message: '✅ Database connected successfully',
+  level: 'info',
+  timestamp: '2025-10-22 12:25:29'
+}
+{
+  message: '🚀 Inventra Backend Server running on port 5000',
+  level: 'info',
+  timestamp: '2025-10-22 12:25:29'
+}
+{
+  message: '📍 Environment: development',
+  level: 'info',
+  timestamp: '2025-10-22 12:25:29'
+}
+{
+  message: '🌐 CORS enabled for: http://localhost:3000',
+  level: 'info',
+  timestamp: '2025-10-22 12:25:29'
 }
 {
   error: Error: listen EADDRINUSE: address already in use :::5000
@@ -2455,6 +3125,36 @@
   timestamp: '2025-10-22 12:25:29'
 }
 {
+  message: '✅ Database connected successfully',
+  level: 'info',
+  timestamp: '2025-10-22 12:25:38'
+}
+{
+  message: '🚀 Inventra Backend Server running on port 5000',
+  level: 'info',
+  timestamp: '2025-10-22 12:25:38'
+}
+{
+  message: '📍 Environment: development',
+  level: 'info',
+  timestamp: '2025-10-22 12:25:38'
+}
+{
+  message: '🌐 CORS enabled for: http://localhost:3000',
+  level: 'info',
+  timestamp: '2025-10-22 12:25:38'
+}
+{
+  message: '✅ Database connected successfully',
+  level: 'info',
+  timestamp: '2025-10-22 12:25:38'
+}
+{
+  message: '✅ Database connected successfully',
+  level: 'info',
+  timestamp: '2025-10-22 12:25:38'
+}
+{
   error: Error: listen EADDRINUSE: address already in use :::5000
       at Server.setupListenHandle [as _listen2] (node:net:1940:16)
       at listenInCluster (node:net:1997:12)
@@ -2663,6 +3363,31 @@
   timestamp: '2025-10-22 12:25:38'
 }
 {
+  message: '✅ Database connected successfully',
+  level: 'info',
+  timestamp: '2025-10-22 12:26:03'
+}
+{
+  message: '✅ Database connected successfully',
+  level: 'info',
+  timestamp: '2025-10-22 12:26:03'
+}
+{
+  message: '🚀 Inventra Backend Server running on port 5000',
+  level: 'info',
+  timestamp: '2025-10-22 12:26:03'
+}
+{
+  message: '📍 Environment: development',
+  level: 'info',
+  timestamp: '2025-10-22 12:26:03'
+}
+{
+  message: '🌐 CORS enabled for: http://localhost:3000',
+  level: 'info',
+  timestamp: '2025-10-22 12:26:03'
+}
+{
   error: Error: listen EADDRINUSE: address already in use :::5000
       at Server.setupListenHandle [as _listen2] (node:net:1940:16)
       at listenInCluster (node:net:1997:12)
@@ -2765,6 +3490,31 @@
     }
   ],
   timestamp: '2025-10-22 12:26:03'
+}
+{
+  message: '✅ Database connected successfully',
+  level: 'info',
+  timestamp: '2025-10-22 12:26:14'
+}
+{
+  message: '✅ Database connected successfully',
+  level: 'info',
+  timestamp: '2025-10-22 12:26:14'
+}
+{
+  message: '🚀 Inventra Backend Server running on port 5000',
+  level: 'info',
+  timestamp: '2025-10-22 12:26:14'
+}
+{
+  message: '📍 Environment: development',
+  level: 'info',
+  timestamp: '2025-10-22 12:26:14'
+}
+{
+  message: '🌐 CORS enabled for: http://localhost:3000',
+  level: 'info',
+  timestamp: '2025-10-22 12:26:14'
 }
 {
   error: Error: listen EADDRINUSE: address already in use :::5000
@@ -2871,6 +3621,11 @@
   timestamp: '2025-10-22 12:26:14'
 }
 {
+  message: '✅ Database connected successfully',
+  level: 'info',
+  timestamp: '2025-10-22 12:27:16'
+}
+{
   error: Error: listen EADDRINUSE: address already in use :::5000
       at Server.setupListenHandle [as _listen2] (node:net:1940:16)
       at listenInCluster (node:net:1997:12)
@@ -2973,6 +3728,11 @@
     }
   ],
   timestamp: '2025-10-22 12:27:16'
+}
+{
+  message: '✅ Database connected successfully',
+  level: 'info',
+  timestamp: '2025-10-22 12:27:29'
 }
 {
   error: Error: listen EADDRINUSE: address already in use :::5000
@@ -3093,6 +3853,31 @@
   timestamp: '2025-10-22 12:27:47'
 }
 {
+  message: '✅ Database connected successfully',
+  level: 'info',
+  timestamp: '2025-10-22 12:28:48'
+}
+{
+  message: '✅ Database connected successfully',
+  level: 'info',
+  timestamp: '2025-10-22 12:28:48'
+}
+{
+  message: '🚀 Inventra Backend Server running on port 5000',
+  level: 'info',
+  timestamp: '2025-10-22 12:28:48'
+}
+{
+  message: '📍 Environment: development',
+  level: 'info',
+  timestamp: '2025-10-22 12:28:48'
+}
+{
+  message: '🌐 CORS enabled for: http://localhost:3000',
+  level: 'info',
+  timestamp: '2025-10-22 12:28:48'
+}
+{
   error: Error: listen EADDRINUSE: address already in use :::5000
       at Server.setupListenHandle [as _listen2] (node:net:1940:16)
       at listenInCluster (node:net:1997:12)
@@ -3195,6 +3980,31 @@
     }
   ],
   timestamp: '2025-10-22 12:28:48'
+}
+{
+  message: '✅ Database connected successfully',
+  level: 'info',
+  timestamp: '2025-10-22 12:29:08'
+}
+{
+  message: '✅ Database connected successfully',
+  level: 'info',
+  timestamp: '2025-10-22 12:29:08'
+}
+{
+  message: '🚀 Inventra Backend Server running on port 5000',
+  level: 'info',
+  timestamp: '2025-10-22 12:29:08'
+}
+{
+  message: '📍 Environment: development',
+  level: 'info',
+  timestamp: '2025-10-22 12:29:08'
+}
+{
+  message: '🌐 CORS enabled for: http://localhost:3000',
+  level: 'info',
+  timestamp: '2025-10-22 12:29:08'
 }
 {
   error: Error: listen EADDRINUSE: address already in use :::5000
@@ -3301,6 +4111,31 @@
   timestamp: '2025-10-22 12:29:08'
 }
 {
+  message: '✅ Database connected successfully',
+  level: 'info',
+  timestamp: '2025-10-22 12:29:25'
+}
+{
+  message: '🚀 Inventra Backend Server running on port 5000',
+  level: 'info',
+  timestamp: '2025-10-22 12:29:25'
+}
+{
+  message: '📍 Environment: development',
+  level: 'info',
+  timestamp: '2025-10-22 12:29:25'
+}
+{
+  message: '🌐 CORS enabled for: http://localhost:3000',
+  level: 'info',
+  timestamp: '2025-10-22 12:29:25'
+}
+{
+  message: '✅ Database connected successfully',
+  level: 'info',
+  timestamp: '2025-10-22 12:29:25'
+}
+{
   error: Error: listen EADDRINUSE: address already in use :::5000
       at Server.setupListenHandle [as _listen2] (node:net:1940:16)
       at listenInCluster (node:net:1997:12)
@@ -3403,6 +4238,31 @@
     }
   ],
   timestamp: '2025-10-22 12:29:25'
+}
+{
+  message: '✅ Database connected successfully',
+  level: 'info',
+  timestamp: '2025-10-22 12:29:34'
+}
+{
+  message: '✅ Database connected successfully',
+  level: 'info',
+  timestamp: '2025-10-22 12:29:34'
+}
+{
+  message: '🚀 Inventra Backend Server running on port 5000',
+  level: 'info',
+  timestamp: '2025-10-22 12:29:34'
+}
+{
+  message: '📍 Environment: development',
+  level: 'info',
+  timestamp: '2025-10-22 12:29:34'
+}
+{
+  message: '🌐 CORS enabled for: http://localhost:3000',
+  level: 'info',
+  timestamp: '2025-10-22 12:29:34'
 }
 {
   error: Error: listen EADDRINUSE: address already in use :::5000
@@ -3509,6 +4369,31 @@
   timestamp: '2025-10-22 12:29:34'
 }
 {
+  message: '✅ Database connected successfully',
+  level: 'info',
+  timestamp: '2025-10-22 12:29:55'
+}
+{
+  message: '✅ Database connected successfully',
+  level: 'info',
+  timestamp: '2025-10-22 12:29:55'
+}
+{
+  message: '🚀 Inventra Backend Server running on port 5000',
+  level: 'info',
+  timestamp: '2025-10-22 12:29:55'
+}
+{
+  message: '📍 Environment: development',
+  level: 'info',
+  timestamp: '2025-10-22 12:29:55'
+}
+{
+  message: '🌐 CORS enabled for: http://localhost:3000',
+  level: 'info',
+  timestamp: '2025-10-22 12:29:55'
+}
+{
   error: Error: listen EADDRINUSE: address already in use :::5000
       at Server.setupListenHandle [as _listen2] (node:net:1940:16)
       at listenInCluster (node:net:1997:12)
@@ -3611,6 +4496,31 @@
     }
   ],
   timestamp: '2025-10-22 12:29:55'
+}
+{
+  message: '✅ Database connected successfully',
+  level: 'info',
+  timestamp: '2025-10-22 12:30:16'
+}
+{
+  message: '✅ Database connected successfully',
+  level: 'info',
+  timestamp: '2025-10-22 12:30:16'
+}
+{
+  message: '🚀 Inventra Backend Server running on port 5000',
+  level: 'info',
+  timestamp: '2025-10-22 12:30:16'
+}
+{
+  message: '📍 Environment: development',
+  level: 'info',
+  timestamp: '2025-10-22 12:30:16'
+}
+{
+  message: '🌐 CORS enabled for: http://localhost:3000',
+  level: 'info',
+  timestamp: '2025-10-22 12:30:16'
 }
 {
   error: Error: listen EADDRINUSE: address already in use :::5000
@@ -3717,6 +4627,31 @@
   timestamp: '2025-10-22 12:30:16'
 }
 {
+  message: '✅ Database connected successfully',
+  level: 'info',
+  timestamp: '2025-10-22 12:30:27'
+}
+{
+  message: '✅ Database connected successfully',
+  level: 'info',
+  timestamp: '2025-10-22 12:30:27'
+}
+{
+  message: '🚀 Inventra Backend Server running on port 5000',
+  level: 'info',
+  timestamp: '2025-10-22 12:30:27'
+}
+{
+  message: '📍 Environment: development',
+  level: 'info',
+  timestamp: '2025-10-22 12:30:27'
+}
+{
+  message: '🌐 CORS enabled for: http://localhost:3000',
+  level: 'info',
+  timestamp: '2025-10-22 12:30:27'
+}
+{
   error: Error: listen EADDRINUSE: address already in use :::5000
       at Server.setupListenHandle [as _listen2] (node:net:1940:16)
       at listenInCluster (node:net:1997:12)
@@ -3821,6 +4756,36 @@
   timestamp: '2025-10-22 12:30:27'
 }
 {
+  message: '✅ Database connected successfully',
+  level: 'info',
+  timestamp: '2025-10-22 12:30:37'
+}
+{
+  message: '✅ Database connected successfully',
+  level: 'info',
+  timestamp: '2025-10-22 12:30:37'
+}
+{
+  message: 'Database tables initialized successfully',
+  level: 'info',
+  timestamp: '2025-10-22 12:30:38'
+}
+{
+  message: '🚀 Inventra Backend Server running on port 5000',
+  level: 'info',
+  timestamp: '2025-10-22 12:30:38'
+}
+{
+  message: '📍 Environment: development',
+  level: 'info',
+  timestamp: '2025-10-22 12:30:38'
+}
+{
+  message: '🌐 CORS enabled for: http://localhost:3000',
+  level: 'info',
+  timestamp: '2025-10-22 12:30:38'
+}
+{
   query: '-- Create users table\r\n' +
     'CREATE TABLE users (\r\n' +
     '    user_id INT PRIMARY KEY AUTO_INCREMENT,\r\n' +
@@ -3833,6 +4798,11 @@
 {
   level: 'error',
   message: 'Error initializing database tables:',
+  timestamp: '2025-10-22 12:30:38'
+}
+{
+  level: 'warn',
+  message: 'Database initialization failed, but server will continue:',
   timestamp: '2025-10-22 12:30:38'
 }
 {
@@ -3940,6 +4910,16 @@
   timestamp: '2025-10-22 12:30:38'
 }
 {
+  message: '✅ Database connected successfully',
+  level: 'info',
+  timestamp: '2025-10-22 12:33:59'
+}
+{
+  message: 'Database tables initialized successfully',
+  level: 'info',
+  timestamp: '2025-10-22 12:34:00'
+}
+{
   error: Error: listen EADDRINUSE: address already in use :::5000
       at Server.setupListenHandle [as _listen2] (node:net:1940:16)
       at listenInCluster (node:net:1997:12)
@@ -4042,6 +5022,16 @@
     }
   ],
   timestamp: '2025-10-22 12:34:00'
+}
+{
+  message: '✅ Database connected successfully',
+  level: 'info',
+  timestamp: '2025-10-22 12:34:26'
+}
+{
+  message: 'Database tables initialized successfully',
+  level: 'info',
+  timestamp: '2025-10-22 12:34:27'
 }
 {
   error: Error: listen EADDRINUSE: address already in use :::5000
@@ -4148,6 +5138,86 @@
   timestamp: '2025-10-22 12:34:27'
 }
 {
+  message: 'SIGINT received, shutting down gracefully',
+  level: 'info',
+  timestamp: '2025-10-22 12:34:30'
+}
+{
+  message: '✅ Database connected successfully',
+  level: 'info',
+  timestamp: '2025-10-22 12:34:39'
+}
+{
+  message: 'Database tables initialized successfully',
+  level: 'info',
+  timestamp: '2025-10-22 12:34:39'
+}
+{
+  message: '🚀 Inventra Backend Server running on port 5000',
+  level: 'info',
+  timestamp: '2025-10-22 12:34:39'
+}
+{
+  message: '📍 Environment: development',
+  level: 'info',
+  timestamp: '2025-10-22 12:34:39'
+}
+{
+  message: '🌐 CORS enabled for: http://localhost:3000',
+  level: 'info',
+  timestamp: '2025-10-22 12:34:39'
+}
+{
+  message: 'SIGINT received, shutting down gracefully',
+  level: 'info',
+  timestamp: '2025-10-22 12:37:00'
+}
+{
+  message: '✅ Database connected successfully',
+  level: 'info',
+  timestamp: '2025-10-22 12:37:05'
+}
+{
+  message: 'Database tables initialized successfully',
+  level: 'info',
+  timestamp: '2025-10-22 12:37:05'
+}
+{
+  message: '🚀 Inventra Backend Server running on port 5000',
+  level: 'info',
+  timestamp: '2025-10-22 12:37:05'
+}
+{
+  message: '📍 Environment: development',
+  level: 'info',
+  timestamp: '2025-10-22 12:37:05'
+}
+{
+  message: '🌐 CORS enabled for: http://localhost:3000',
+  level: 'info',
+  timestamp: '2025-10-22 12:37:05'
+}
+{
+  message: '✅ Database connected successfully',
+  level: 'info',
+  timestamp: '2025-10-22 12:55:38'
+}
+{
+  message: '✅ Database connected successfully',
+  level: 'info',
+  timestamp: '2025-10-22 12:55:38'
+}
+{
+  message: '✅ Database connected successfully',
+  level: 'info',
+  timestamp: '2025-10-22 12:55:38'
+}
+{
+  message: 'Database tables initialized successfully',
+  level: 'info',
+  timestamp: '2025-10-22 12:55:39'
+}
+{
   query: '-- Create users table\r\n' +
     'CREATE TABLE users (\r\n' +
     '    user_id INT PRIMARY KEY AUTO_INCREMENT,\r\n' +
@@ -4165,11 +5235,31 @@
   error: "Table 'users' already exists",
   level: 'error',
   message: 'Database query error:',
+  timestamp: '2025-10-22 12:55:39'
+}
+{
+  message: '🚀 Inventra Backend Server running on port 5000',
+  level: 'info',
+  timestamp: '2025-10-22 12:55:39'
+}
+{
+  message: '📍 Environment: development',
+  level: 'info',
+  timestamp: '2025-10-22 12:55:39'
+}
+{
+  message: '🌐 CORS enabled for: http://localhost:3000',
+  level: 'info',
   timestamp: '2025-10-22 12:55:39'
 }
 {
   level: 'error',
   message: 'Error initializing database tables:',
+  timestamp: '2025-10-22 12:55:39'
+}
+{
+  level: 'warn',
+  message: 'Database initialization failed, but server will continue:',
   timestamp: '2025-10-22 12:55:39'
 }
 {
@@ -4282,6 +5372,11 @@
   timestamp: '2025-10-22 12:55:39'
 }
 {
+  level: 'warn',
+  message: 'Database initialization failed, but server will continue:',
+  timestamp: '2025-10-22 12:55:39'
+}
+{
   error: Error: listen EADDRINUSE: address already in use :::5000
       at Server.setupListenHandle [as _listen2] (node:net:1940:16)
       at listenInCluster (node:net:1997:12)
@@ -4386,6 +5481,26 @@
   timestamp: '2025-10-22 12:55:39'
 }
 {
+  message: '✅ Database connected successfully',
+  level: 'info',
+  timestamp: '2025-10-22 12:55:54'
+}
+{
+  message: '✅ Database connected successfully',
+  level: 'info',
+  timestamp: '2025-10-22 12:55:54'
+}
+{
+  message: '✅ Database connected successfully',
+  level: 'info',
+  timestamp: '2025-10-22 12:55:54'
+}
+{
+  message: 'Database tables initialized successfully',
+  level: 'info',
+  timestamp: '2025-10-22 12:55:55'
+}
+{
   query: '-- Create users table\r\n' +
     'CREATE TABLE users (\r\n' +
     '    user_id INT PRIMARY KEY AUTO_INCREMENT,\r\n' +
@@ -4403,11 +5518,31 @@
   error: "Table 'users' already exists",
   level: 'error',
   message: 'Database query error:',
+  timestamp: '2025-10-22 12:55:55'
+}
+{
+  message: '🚀 Inventra Backend Server running on port 5000',
+  level: 'info',
+  timestamp: '2025-10-22 12:55:55'
+}
+{
+  message: '📍 Environment: development',
+  level: 'info',
+  timestamp: '2025-10-22 12:55:55'
+}
+{
+  message: '🌐 CORS enabled for: http://localhost:3000',
+  level: 'info',
   timestamp: '2025-10-22 12:55:55'
 }
 {
   level: 'error',
   message: 'Error initializing database tables:',
+  timestamp: '2025-10-22 12:55:55'
+}
+{
+  level: 'warn',
+  message: 'Database initialization failed, but server will continue:',
   timestamp: '2025-10-22 12:55:55'
 }
 {
@@ -4517,6 +5652,11 @@
 {
   level: 'error',
   message: 'Error initializing database tables:',
+  timestamp: '2025-10-22 12:55:55'
+}
+{
+  level: 'warn',
+  message: 'Database initialization failed, but server will continue:',
   timestamp: '2025-10-22 12:55:55'
 }
 {
@@ -5476,6 +6616,31 @@
   timestamp: '2025-10-22 12:59:05'
 }
 {
+  message: '✅ Database connected successfully',
+  level: 'info',
+  timestamp: '2025-10-22 13:00:27'
+}
+{
+  message: '✅ Database connected successfully',
+  level: 'info',
+  timestamp: '2025-10-22 13:00:27'
+}
+{
+  message: '🚀 Inventra Backend Server running on port 5000',
+  level: 'info',
+  timestamp: '2025-10-22 13:00:27'
+}
+{
+  message: '📍 Environment: development',
+  level: 'info',
+  timestamp: '2025-10-22 13:00:27'
+}
+{
+  message: '🌐 CORS enabled for: http://localhost:3000',
+  level: 'info',
+  timestamp: '2025-10-22 13:00:27'
+}
+{
   error: Error: listen EADDRINUSE: address already in use :::5000
       at Server.setupListenHandle [as _listen2] (node:net:1940:16)
       at listenInCluster (node:net:1997:12)
@@ -5578,6 +6743,11 @@
     }
   ],
   timestamp: '2025-10-22 13:00:27'
+}
+{
+  message: '✅ Database connected successfully',
+  level: 'info',
+  timestamp: '2025-10-22 13:00:39'
 }
 {
   error: Error: listen EADDRINUSE: address already in use :::5000
@@ -5684,6 +6854,11 @@
   timestamp: '2025-10-22 13:00:39'
 }
 {
+  message: '✅ Database connected successfully',
+  level: 'info',
+  timestamp: '2025-10-22 14:42:46'
+}
+{
   error: Error: listen EADDRINUSE: address already in use :::5000
       at Server.setupListenHandle [as _listen2] (node:net:1940:16)
       at listenInCluster (node:net:1997:12)
@@ -5786,6 +6961,31 @@
     }
   ],
   timestamp: '2025-10-22 14:42:47'
+}
+{
+  message: '✅ Database connected successfully',
+  level: 'info',
+  timestamp: '2025-10-22 15:11:22'
+}
+{
+  message: '✅ Database connected successfully',
+  level: 'info',
+  timestamp: '2025-10-22 15:11:22'
+}
+{
+  message: '🚀 Inventra Backend Server running on port 5000',
+  level: 'info',
+  timestamp: '2025-10-22 15:11:22'
+}
+{
+  message: '📍 Environment: development',
+  level: 'info',
+  timestamp: '2025-10-22 15:11:22'
+}
+{
+  message: '🌐 CORS enabled for: http://localhost:3000',
+  level: 'info',
+  timestamp: '2025-10-22 15:11:22'
 }
 {
   error: Error: listen EADDRINUSE: address already in use :::5000
@@ -5892,6 +7092,31 @@
   timestamp: '2025-10-22 15:11:22'
 }
 {
+  message: '✅ Database connected successfully',
+  level: 'info',
+  timestamp: '2025-10-22 15:11:26'
+}
+{
+  message: '✅ Database connected successfully',
+  level: 'info',
+  timestamp: '2025-10-22 15:11:26'
+}
+{
+  message: '🚀 Inventra Backend Server running on port 5000',
+  level: 'info',
+  timestamp: '2025-10-22 15:11:26'
+}
+{
+  message: '📍 Environment: development',
+  level: 'info',
+  timestamp: '2025-10-22 15:11:26'
+}
+{
+  message: '🌐 CORS enabled for: http://localhost:3000',
+  level: 'info',
+  timestamp: '2025-10-22 15:11:26'
+}
+{
   error: Error: listen EADDRINUSE: address already in use :::5000
       at Server.setupListenHandle [as _listen2] (node:net:1940:16)
       at listenInCluster (node:net:1997:12)
@@ -5996,6 +7221,11 @@
   timestamp: '2025-10-22 15:11:26'
 }
 {
+  message: '✅ Database connected successfully',
+  level: 'info',
+  timestamp: '2025-10-22 15:11:35'
+}
+{
   error: Error: listen EADDRINUSE: address already in use :::5000
       at Server.setupListenHandle [as _listen2] (node:net:1940:16)
       at listenInCluster (node:net:1997:12)
@@ -6098,4 +7328,24 @@
     }
   ],
   timestamp: '2025-10-22 15:11:35'
+}
+{
+  message: '✅ Database connected successfully',
+  level: 'info',
+  timestamp: '2025-10-22 15:22:17'
+}
+{
+  message: '🚀 Inventra Backend Server running on port 5000',
+  level: 'info',
+  timestamp: '2025-10-22 15:22:17'
+}
+{
+  message: '📍 Environment: development',
+  level: 'info',
+  timestamp: '2025-10-22 15:22:17'
+}
+{
+  message: '🌐 CORS enabled for: http://localhost:3000',
+  level: 'info',
+  timestamp: '2025-10-22 15:22:17'
 }

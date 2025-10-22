@@ -4,11 +4,36 @@
   box-sizing: border-box;
 }
 
+html {
+  font-size: 14px; /* Base font size for better scaling control */
+}
+
+/* Responsive font scaling for different screen resolutions */
+@media screen and (min-width: 1200px) {
+  html {
+    font-size: 14px; /* Standard size for large screens */
+  }
+}
+
+@media screen and (min-width: 1400px) {
+  html {
+    font-size: 15px; /* Slightly larger for very large screens */
+  }
+}
+
+@media screen and (max-width: 1199px) {
+  html {
+    font-size: 13px; /* Smaller for medium screens */
+  }
+}
+
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
   background-color: #f8f9fa;
   color: #333;
   overflow-x: hidden;
+  font-size: 1rem; /* 14px base */
+  line-height: 1.5;
 }
 
 .app-layout {
@@ -17,7 +42,7 @@ body {
 }
 
 .sidebar {
-  width: 250px;
+  width: 270px;
   background: linear-gradient(135deg, #2c3e50, #34495e);
   color: white;
   position: fixed;
@@ -52,7 +77,8 @@ body {
 }
 
 .nav-item {
-  display: block;
+  display: flex;
+  align-items: center;
   padding: 15px 25px;
   color: white;
   text-decoration: none;
@@ -62,9 +88,8 @@ body {
   width: 100%;
   text-align: left;
   cursor: pointer;
-  display: flex;
-  align-items: center;
   gap: 12px;
+  white-space: nowrap;
 }
 
 .nav-item:hover {
@@ -85,9 +110,9 @@ body {
 }
 
 .main-content {
-  margin-left: 250px;
-  padding: 30px;
-  width: calc(100% - 250px);
+  margin-left: 270px;
+  padding: 20px; /* Reduced from 30px */
+  width: calc(100% - 270px);
   min-height: 100vh;
   background-color: #f8f9fa;
 }
@@ -96,13 +121,13 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 30px;
-  padding-bottom: 20px;
+  margin-bottom: 20px; /* Reduced from 30px */
+  padding-bottom: 15px; /* Reduced from 20px */
   border-bottom: 2px solid #e9ecef;
 }
 
 .page-title {
-  font-size: 2rem;
+  font-size: 1.75rem; /* Reduced from 2rem (now 24.5px instead of 28px) */
   font-weight: 600;
   color: #2c3e50;
   margin: 0;
@@ -538,7 +563,12 @@ body {
 
 .action-buttons {
   display: flex;
-  gap: 8px;
+  gap: 10px;
+  min-width: 120px;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  flex-direction: row;
 }
 
 .empty-state {
@@ -891,6 +921,28 @@ input[type="checkbox"] {
   font-weight: 500;
 }
 
+/* Special styling for Actions column */
+.table td:last-child {
+  min-width: 320px;
+  width: 320px;
+  max-width: 320px;
+  overflow: visible;
+  white-space: nowrap;
+  padding: 12px 8px;
+  text-align: center;
+  vertical-align: middle;
+}
+
+.table th:last-child {
+  min-width: 320px;
+  width: 320px;
+  max-width: 320px;
+  text-align: center;
+  padding: 16px 8px;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+
 .table td span {
   display: inline-block;
   max-width: 100%;
@@ -965,24 +1017,35 @@ input[type="checkbox"] {
 /* Enhanced action buttons with better visibility */
 .action-buttons {
   display: flex;
-  gap: 8px;
-  min-width: 100px;
+  flex-direction: row;
+  gap: 6px;
+  width: 100%;
+  max-width: 300px;
   justify-content: center;
   align-items: center;
+  flex-wrap: nowrap;
+  overflow: visible;
+  margin: 0 auto;
+  padding: 4px 0;
 }
 
 .action-buttons .btn {
-  border-radius: 6px;
-  font-size: 0.8rem;
-  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  padding: 8px 10px;
   border: 2px solid transparent;
   transition: all 0.3s ease;
   text-decoration: none;
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  min-width: 36px;
+  justify-content: flex-start;
+  min-width: 40px;
   min-height: 36px;
+  font-weight: 600;
+  flex-shrink: 0;
+  text-align: left;
+  flex-grow: 0;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .action-buttons .btn-secondary {
@@ -995,6 +1058,20 @@ input[type="checkbox"] {
   background: linear-gradient(135deg, #2980b9, #1f618d);
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(52, 152, 219, 0.4);
+}
+
+.action-buttons .btn-primary {
+  background: linear-gradient(135deg, #27ae60, #2ecc71);
+  color: white;
+  border-color: #27ae60;
+  min-width: 75px;
+  gap: 4px;
+}
+
+.action-buttons .btn-primary:hover {
+  background: linear-gradient(135deg, #229954, #27ae60);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(39, 174, 96, 0.4);
 }
 
 .action-buttons .btn-danger {
@@ -1086,17 +1163,29 @@ input[type="checkbox"] {
     font-size: 0.8rem;
   }
   
+  .table td:last-child,
+  .table th:last-child {
+    min-width: 240px;
+    width: 240px;
+    max-width: 240px;
+  }
+  
   .action-buttons {
-    flex-direction: column;
+    flex-direction: row;
     gap: 4px;
-    min-width: 60px;
+    max-width: 220px;
+    flex-wrap: nowrap;
   }
   
   .action-buttons .btn {
-    min-width: 32px;
-    min-height: 32px;
+    min-width: 35px;
+    min-height: 35px;
     padding: 6px 8px;
-    font-size: 0.75rem;
+    font-size: 0.8rem;
+  }
+  
+  .action-buttons .btn-primary {
+    min-width: 60px;
   }
   
   .status-badge {
@@ -1306,5 +1395,91 @@ input[type="checkbox"] {
     font-size: 0.9rem;
     color: #495057;
     font-weight: 500;
+  }
+}
+
+/* Recent Assets Grid - Simplified Dashboard Display */
+.recent-assets-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.recent-asset-card {
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  padding: 16px;
+  transition: all 0.2s ease;
+}
+
+.recent-asset-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  border-color: #3498db;
+}
+
+.asset-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 12px;
+  gap: 10px;
+}
+
+.asset-name {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #2c3e50;
+  margin: 0;
+  flex: 1;
+  line-height: 1.3;
+}
+
+.asset-details {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.asset-detail {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.875rem;
+}
+
+.detail-label {
+  color: #6c757d;
+  font-weight: 500;
+  min-width: 70px;
+}
+
+.detail-value {
+  color: #495057;
+  font-weight: 400;
+  text-align: right;
+  flex: 1;
+  font-family: monospace;
+}
+
+/* Responsive design for recent assets */
+@media (max-width: 768px) {
+  .recent-assets-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  
+  .recent-asset-card {
+    padding: 12px;
+  }
+  
+  .asset-name {
+    font-size: 0.9rem;
+  }
+  
+  .asset-detail {
+    font-size: 0.8rem;
   }
 }

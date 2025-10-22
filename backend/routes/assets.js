@@ -2,9 +2,12 @@ const express = require('express');
 const { body } = require('express-validator');
 const {
   getAllAssets,
+  getAssetById,
   getAssetBySerialNumber,
+  getAssetDetail,
   createAsset,
   updateAsset,
+  updateAssetById,
   deleteAsset,
   getAssetStatistics,
   bulkImportAssets
@@ -82,6 +85,8 @@ const updateAssetValidationRules = [
 // Routes
 router.get('/', getAllAssets);
 router.get('/statistics', getAssetStatistics);
+router.get('/detail/:id', getAssetDetail);
+router.get('/id/:id', getAssetById); // Get asset by ID
 router.get('/:serialNumber', getAssetBySerialNumber);
 
 // Protected routes (require authentication)
@@ -90,6 +95,13 @@ router.post('/',
   assetValidationRules, 
   handleValidationErrors, 
   createAsset
+);
+
+router.put('/id/:id', 
+  // authenticateToken,  // Disabled for mock mode
+  updateAssetValidationRules, 
+  handleValidationErrors, 
+  updateAssetById
 );
 
 router.put('/:serialNumber', 

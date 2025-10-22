@@ -6,6 +6,13 @@ class ApiService {
     this.token = localStorage.getItem('authToken');
   }
 
+  // Development helper - get a valid token for testing
+  async setDevelopmentToken() {
+    // Skipping token generation since login is in mock mode
+    console.log('Token generation bypassed - login is in mock mode');
+    return true;
+  }
+
   // Set authentication token
   setToken(token) {
     this.token = token;
@@ -136,6 +143,70 @@ class ApiService {
     });
   }
 
+  async updateAssetById(assetId, assetData) {
+    return this.makeRequest(`assets/id/${assetId}`, {
+      method: 'PUT',
+      body: JSON.stringify(assetData)
+    });
+  }
+
+  async getAssetById(assetId) {
+    return this.makeRequest(`assets/id/${assetId}`);
+  }
+
+  // Direct methods for asset endpoints that don't follow the standard response format
+  async updateAssetByIdDirect(assetId, assetData) {
+    console.log('UpdateAssetByIdDirect - Bypassing authentication (mock mode)');
+    
+    const headers = {
+      'Content-Type': 'application/json',
+      // No authorization header since login is in mock mode
+    };
+
+    console.log('Request headers:', headers);
+    console.log('Request URL:', `${this.baseURL}/assets/id/${assetId}`);
+    console.log('Request body:', assetData);
+
+    const url = `${this.baseURL}/assets/id/${assetId}`;
+    const response = await fetch(url, {
+      method: 'PUT',
+      headers,
+      body: JSON.stringify(assetData)
+    });
+
+    console.log('Response status:', response.status);
+    console.log('Response headers:', response.headers);
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => null);
+      console.error('Error response:', errorData);
+      throw new Error(errorData?.error || errorData?.message || `HTTP error! status: ${response.status}`);
+    }
+
+    return await response.json();
+  }
+
+  async getAssetByIdDirect(assetId) {
+    console.log('GetAssetByIdDirect - Bypassing authentication (mock mode)');
+    
+    const headers = {
+      'Content-Type': 'application/json',
+      // No authorization header since login is in mock mode
+    };
+
+    const url = `${this.baseURL}/assets/id/${assetId}`;
+    const response = await fetch(url, {
+      headers,
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => null);
+      throw new Error(errorData?.error || `HTTP error! status: ${response.status}`);
+    }
+
+    return await response.json();
+  }
+
   async deleteAsset(serialNumber) {
     return this.makeRequest(`assets/${serialNumber}`, {
       method: 'DELETE'
@@ -191,6 +262,23 @@ class ApiService {
 
   async getProjects() {
     return this.getAllProjects();
+  }
+
+  // Inventory methods
+  async getInventoryByProject(projectId) {
+    return this.makeRequest(`inventory/project/${projectId}`);
+  }
+
+  async updateInventoryWithAsset(projectId, customerId, assetId) {
+    return this.makeRequest('inventory/update-asset', {
+      method: 'POST',
+      body: JSON.stringify({ projectId, customerId, assetId })
+    });
+  }
+
+  // Customer methods
+  async getCustomersByProject(projectId) {
+    return this.makeRequest(`customers/project/${projectId}`);
   }
 }
 
