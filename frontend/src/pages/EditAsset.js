@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Save, ArrowLeft, Info, AlertCircle } from 'lucide-react';
+import { Save, ArrowLeft, Info, AlertCircle, CheckCircle, X } from 'lucide-react';
 import apiService from '../services/apiService';
 
 const EditAsset = ({ onUpdate }) => {
@@ -9,6 +9,9 @@ const EditAsset = ({ onUpdate }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [currentAsset, setCurrentAsset] = useState(null);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [pendingChanges, setPendingChanges] = useState({});
+  const [updating, setUpdating] = useState(false);
   const [asset, setAsset] = useState({
     Asset_Serial_Number: '',
     Asset_Tag_ID: '',
@@ -78,12 +81,26 @@ const EditAsset = ({ onUpdate }) => {
 
       // If no fields were modified, show a message
       if (Object.keys(updateData).length === 0) {
-        alert('No changes made to update.');
+        setError('No changes made to update.');
         return;
       }
 
-      console.log('Attempting to update asset with data:', updateData);
-      const updatedAsset = await apiService.updateAssetByIdDirect(id, updateData);
+      // Store pending changes and show confirmation modal
+      setPendingChanges(updateData);
+      setShowConfirmModal(true);
+    } catch (err) {
+      console.error('Error preparing update:', err);
+      setError(`Failed to prepare update: ${err.message}`);
+    }
+  };
+
+  const handleConfirmUpdate = async () => {
+    try {
+      setUpdating(true);
+      setError(null);
+
+      console.log('Attempting to update asset with data:', pendingChanges);
+      const updatedAsset = await apiService.updateAssetByIdDirect(id, pendingChanges);
       console.log('Asset updated successfully:', updatedAsset);
 
       // Call the parent component's onUpdate if provided
@@ -91,16 +108,267 @@ const EditAsset = ({ onUpdate }) => {
         onUpdate(id, updatedAsset);
       }
 
-      alert('Asset updated successfully!');
+      setShowConfirmModal(false);
       navigate('/assets');
     } catch (err) {
       console.error('Error updating asset:', err);
       setError(`Failed to update asset: ${err.message}`);
+      setUpdating(false);
     }
+  };
+
+  const handleCancelUpdate = () => {
+    setShowConfirmModal(false);
+    setPendingChanges({});
+    console.log('Asset update cancelled by user');
   };
 
   const handleChange = (e) => {
     setAsset({ ...asset, [e.target.name]: e.target.value });
+  };
+
+  // Confirmation Modal Component
+  const ConfirmationModal = () => {
+    if (!showConfirmModal) return null;
+
+    const changedFields = Object.keys(pendingChanges).map(key => ({
+      field: key.replace(/_/g, ' '),
+      currentValue: currentAsset?.[key] || 'N/A',
+      newValue: pendingChanges[key]
+    }));
+
+    return (
+      <div style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: 'rgba(0, 0, 0, 0.6)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 9999,
+        backdropFilter: 'blur(4px)'
+      }}>
+        <div style={{
+          backgroundColor: 'white',
+          borderRadius: '12px',
+          padding: '32px',
+          maxWidth: '600px',
+          width: '90%',
+          maxHeight: '80vh',
+          overflowY: 'auto',
+          boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)',
+          border: '1px solid #e1e8ed'
+        }}>
+          {/* Header */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            marginBottom: '24px',
+            paddingBottom: '16px',
+            borderBottom: '2px solid #f1f5f9'
+          }}>
+            <div style={{
+              backgroundColor: '#fef3c7',
+              borderRadius: '50%',
+              padding: '12px',
+              marginRight: '16px'
+            }}>
+              <AlertCircle size={24} color="#d97706" />
+            </div>
+            <div>
+              <h3 style={{
+                margin: 0,
+                color: '#1f2937',
+                fontSize: '1.5rem',
+                fontWeight: '600'
+              }}>
+                Confirm Asset Update
+              </h3>
+              <p style={{
+                margin: '4px 0 0 0',
+                color: '#6b7280',
+                fontSize: '0.9rem'
+              }}>
+                Review the changes before updating the asset
+              </p>
+            </div>
+          </div>
+
+          {/* Changes List */}
+          <div style={{
+            marginBottom: '24px'
+          }}>
+            <h4 style={{
+              margin: '0 0 16px 0',
+              color: '#374151',
+              fontSize: '1.1rem',
+              fontWeight: '600'
+            }}>
+              Changes to be made:
+            </h4>
+            
+            <div style={{
+              backgroundColor: '#f8fafc',
+              border: '1px solid #e2e8f0',
+              borderRadius: '8px',
+              padding: '16px'
+            }}>
+              {changedFields.map((change, index) => (
+                <div key={index} style={{
+                  marginBottom: index < changedFields.length - 1 ? '12px' : '0',
+                  paddingBottom: index < changedFields.length - 1 ? '12px' : '0',
+                  borderBottom: index < changedFields.length - 1 ? '1px solid #e2e8f0' : 'none'
+                }}>
+                  <div style={{
+                    fontWeight: '600',
+                    color: '#374151',
+                    marginBottom: '4px',
+                    textTransform: 'capitalize'
+                  }}>
+                    {change.field}
+                  </div>
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    fontSize: '0.9rem'
+                  }}>
+                    <span style={{
+                      color: '#6b7280',
+                      backgroundColor: '#f1f5f9',
+                      padding: '4px 8px',
+                      borderRadius: '4px',
+                      fontFamily: 'monospace',
+                      maxWidth: '200px',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap'
+                    }}>
+                      {change.currentValue}
+                    </span>
+                    <ArrowLeft size={16} color="#6b7280" style={{ transform: 'rotate(180deg)' }} />
+                    <span style={{
+                      color: '#059669',
+                      backgroundColor: '#ecfdf5',
+                      padding: '4px 8px',
+                      borderRadius: '4px',
+                      fontFamily: 'monospace',
+                      fontWeight: '600',
+                      maxWidth: '200px',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap'
+                    }}>
+                      {change.newValue}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Warning */}
+          <div style={{
+            backgroundColor: '#fef2f2',
+            border: '1px solid #fecaca',
+            borderRadius: '6px',
+            padding: '12px',
+            marginBottom: '24px'
+          }}>
+            <p style={{
+              margin: 0,
+              color: '#dc2626',
+              fontSize: '0.9rem',
+              fontWeight: '500'
+            }}>
+              ⚠️ This action cannot be undone. Make sure all changes are correct.
+            </p>
+          </div>
+
+          {/* Action Buttons */}
+          <div style={{
+            display: 'flex',
+            gap: '12px',
+            justifyContent: 'flex-end'
+          }}>
+            <button
+              type="button"
+              onClick={handleCancelUpdate}
+              disabled={updating}
+              style={{
+                padding: '12px 24px',
+                backgroundColor: '#f3f4f6',
+                color: '#374151',
+                border: '1px solid #d1d5db',
+                borderRadius: '8px',
+                fontSize: '0.9rem',
+                fontWeight: '600',
+                cursor: updating ? 'not-allowed' : 'pointer',
+                transition: 'all 0.2s ease',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                opacity: updating ? 0.6 : 1
+              }}
+            >
+              <X size={16} />
+              Cancel
+            </button>
+            
+            <button
+              type="button"
+              onClick={handleConfirmUpdate}
+              disabled={updating}
+              style={{
+                padding: '12px 24px',
+                backgroundColor: updating ? '#9ca3af' : '#3b82f6',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                fontSize: '0.9rem',
+                fontWeight: '600',
+                cursor: updating ? 'not-allowed' : 'pointer',
+                transition: 'all 0.2s ease',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}
+            >
+              {updating ? (
+                <>
+                  <div style={{
+                    width: '16px',
+                    height: '16px',
+                    border: '2px solid #ffffff',
+                    borderTop: '2px solid transparent',
+                    borderRadius: '50%',
+                    animation: 'spin 1s linear infinite'
+                  }} />
+                  Updating...
+                </>
+              ) : (
+                <>
+                  <CheckCircle size={16} />
+                  Confirm Update
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+
+        <style>
+          {`
+            @keyframes spin {
+              0% { transform: rotate(0deg); }
+              100% { transform: rotate(360deg); }
+            }
+          `}
+        </style>
+      </div>
+    );
   };
 
   if (loading) {
@@ -467,6 +735,9 @@ const EditAsset = ({ onUpdate }) => {
           </div>
         </form>
       </div>
+
+      {/* Confirmation Modal */}
+      <ConfirmationModal />
     </div>
   );
 };
