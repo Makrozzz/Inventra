@@ -622,41 +622,45 @@ const Assets = ({ onDelete }) => {
                                 fontSize: '1rem',
                                 borderBottom: '2px solid #3498db',
                                 paddingBottom: '8px',
-                                wordWrap: 'break-word'
+                                wordWrap: 'break-word',
+                                textAlign: 'left'
                               }}>
                                 📋 Project Information
                               </h4>
                               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                                 <div style={{ minWidth: 0 }}>
-                                  <strong style={{ color: '#7f8c8d', display: 'block', marginBottom: '4px' }}>Project Ref:</strong>
+                                  <strong style={{ color: '#7f8c8d', display: 'block', marginBottom: '4px', textAlign: 'left' }}>Project Ref:</strong>
                                   <div style={{ 
                                     color: '#2c3e50', 
                                     wordWrap: 'break-word',
                                     overflowWrap: 'break-word',
-                                    wordBreak: 'break-word'
+                                    wordBreak: 'break-word',
+                                    textAlign: 'left'
                                   }}>
                                     {asset.Project_Ref_Number || 'N/A'}
                                   </div>
                                 </div>
                                 <div style={{ minWidth: 0 }}>
-                                  <strong style={{ color: '#7f8c8d', display: 'block', marginBottom: '4px' }}>Project Title:</strong>
+                                  <strong style={{ color: '#7f8c8d', display: 'block', marginBottom: '4px', textAlign: 'left' }}>Project Title:</strong>
                                   <div style={{ 
                                     color: '#2c3e50', 
                                     lineHeight: '1.5',
                                     wordWrap: 'break-word',
                                     overflowWrap: 'break-word',
                                     wordBreak: 'break-word',
-                                    whiteSpace: 'normal'
+                                    whiteSpace: 'normal',
+                                    textAlign: 'left'
                                   }}>
                                     {asset.Project_Title || 'N/A'}
                                   </div>
                                 </div>
                                 <div style={{ minWidth: 0 }}>
-                                  <strong style={{ color: '#7f8c8d', display: 'block', marginBottom: '4px' }}>Duration:</strong>
+                                  <strong style={{ color: '#7f8c8d', display: 'block', marginBottom: '4px', textAlign: 'left' }}>Duration:</strong>
                                   <div style={{ 
                                     color: '#2c3e50',
                                     wordWrap: 'break-word',
-                                    overflowWrap: 'break-word'
+                                    overflowWrap: 'break-word',
+                                    textAlign: 'left'
                                   }}>
                                     {asset.Start_Date && asset.End_Date 
                                       ? `${new Date(asset.Start_Date).toLocaleDateString()} - ${new Date(asset.End_Date).toLocaleDateString()}`
@@ -665,11 +669,12 @@ const Assets = ({ onDelete }) => {
                                   </div>
                                 </div>
                                 <div style={{ minWidth: 0 }}>
-                                  <strong style={{ color: '#7f8c8d', display: 'block', marginBottom: '4px' }}>Warranty:</strong>
+                                  <strong style={{ color: '#7f8c8d', display: 'block', marginBottom: '4px', textAlign: 'left' }}>Warranty:</strong>
                                   <div style={{ 
                                     color: '#2c3e50',
                                     wordWrap: 'break-word',
-                                    overflowWrap: 'break-word'
+                                    overflowWrap: 'break-word',
+                                    textAlign: 'left'
                                   }}>
                                     {asset.Warranty || 'N/A'}
                                   </div>
@@ -693,37 +698,41 @@ const Assets = ({ onDelete }) => {
                                 fontSize: '1rem',
                                 borderBottom: '2px solid #e74c3c',
                                 paddingBottom: '8px',
-                                wordWrap: 'break-word'
+                                wordWrap: 'break-word',
+                                textAlign: 'left'
                               }}>
                                 🏢 Customer Information
                               </h4>
                               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                                 <div style={{ minWidth: 0 }}>
-                                  <strong style={{ color: '#7f8c8d', display: 'block', marginBottom: '4px' }}>Customer:</strong>
+                                  <strong style={{ color: '#7f8c8d', display: 'block', marginBottom: '4px', textAlign: 'left' }}>Customer:</strong>
                                   <div style={{ 
                                     color: '#2c3e50',
                                     wordWrap: 'break-word',
-                                    overflowWrap: 'break-word'
+                                    overflowWrap: 'break-word',
+                                    textAlign: 'left'
                                   }}>
                                     {asset.Customer_Name || 'N/A'}
                                   </div>
                                 </div>
                                 <div style={{ minWidth: 0 }}>
-                                  <strong style={{ color: '#7f8c8d', display: 'block', marginBottom: '4px' }}>Branch:</strong>
+                                  <strong style={{ color: '#7f8c8d', display: 'block', marginBottom: '4px', textAlign: 'left' }}>Branch:</strong>
                                   <div style={{ 
                                     color: '#2c3e50',
                                     wordWrap: 'break-word',
-                                    overflowWrap: 'break-word'
+                                    overflowWrap: 'break-word',
+                                    textAlign: 'left'
                                   }}>
                                     {asset.Branch || 'N/A'}
                                   </div>
                                 </div>
                                 <div style={{ minWidth: 0 }}>
-                                  <strong style={{ color: '#7f8c8d', display: 'block', marginBottom: '4px' }}>Customer Ref:</strong>
+                                  <strong style={{ color: '#7f8c8d', display: 'block', marginBottom: '4px', textAlign: 'left' }}>Customer Ref:</strong>
                                   <div style={{ 
                                     color: '#2c3e50',
                                     wordWrap: 'break-word',
-                                    overflowWrap: 'break-word'
+                                    overflowWrap: 'break-word',
+                                    textAlign: 'left'
                                   }}>
                                     {asset.Customer_Ref_Number || 'N/A'}
                                   </div>
@@ -737,7 +746,8 @@ const Assets = ({ onDelete }) => {
                                 fontSize: '1rem',
                                 borderBottom: '2px solid #27ae60',
                                 paddingBottom: '8px',
-                                wordWrap: 'break-word'
+                                wordWrap: 'break-word',
+                                textAlign: 'left'
                               }}>
                                 🔧 Maintenance
                               </h4>
@@ -748,7 +758,8 @@ const Assets = ({ onDelete }) => {
                                 wordWrap: 'break-word',
                                 overflowWrap: 'break-word',
                                 wordBreak: 'break-word',
-                                whiteSpace: 'normal'
+                                whiteSpace: 'normal',
+                                textAlign: 'left'
                               }}>
                                 {asset.Preventive_Maintenance || 'No maintenance information available'}
                               </div>
@@ -765,14 +776,15 @@ const Assets = ({ onDelete }) => {
                             fontSize: '0.85rem',
                             overflow: 'hidden'
                           }}>
-                            <strong style={{ color: '#7f8c8d', display: 'block', marginBottom: '8px' }}>Solution Principal:</strong>
+                            <strong style={{ color: '#7f8c8d', display: 'block', marginBottom: '8px', textAlign: 'left' }}>Solution Principal:</strong>
                             <div style={{ 
                               color: '#2c3e50', 
                               lineHeight: '1.6',
                               wordWrap: 'break-word',
                               overflowWrap: 'break-word',
                               wordBreak: 'break-word',
-                              whiteSpace: 'normal'
+                              whiteSpace: 'normal',
+                              textAlign: 'left'
                             }}>
                               {asset.Solution_Principal || 'N/A'}
                             </div>
