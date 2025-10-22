@@ -528,23 +528,30 @@ const Assets = ({ onDelete }) => {
                               e.stopPropagation();
                               setExpandedRow(expandedRow === index ? null : index);
                             }}
-                            className="btn btn-secondary btn-sm"
+                            className="btn btn-secondary"
                             title="View Details"
+                            style={{
+                              padding: '12px 16px',
+                              fontSize: '1rem',
+                              minWidth: '50px',
+                              minHeight: '44px'
+                            }}
                           >
                             <Eye size={18} />
                           </button>
                           <Link 
                             to={`/asset-detail/${asset.Asset_ID}`} 
-                            className="btn btn-primary btn-sm"
+                            className="btn btn-primary"
                             title="View Full Details"
                             onClick={(e) => e.stopPropagation()}
                             style={{ 
                               display: 'inline-flex', 
                               alignItems: 'center', 
-                              gap: '6px',
-                              padding: '6px 12px',
-                              fontSize: '0.9rem',
-                              fontWeight: '600'
+                              gap: '8px',
+                              padding: '12px 16px',
+                              fontSize: '1rem',
+                              fontWeight: '600',
+                              minHeight: '44px'
                             }}
                           >
                             <FileText size={18} />
@@ -552,9 +559,18 @@ const Assets = ({ onDelete }) => {
                           </Link>
                           <Link 
                             to={`/edit-asset/${asset.Asset_ID}`} 
-                            className="btn btn-secondary btn-sm"
+                            className="btn btn-secondary"
                             title="Edit Asset"
                             onClick={(e) => e.stopPropagation()}
+                            style={{
+                              padding: '12px 16px',
+                              fontSize: '1rem',
+                              minWidth: '50px',
+                              minHeight: '44px',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              justifyContent: 'center'
+                            }}
                           >
                             <Edit size={18} />
                           </Link>
@@ -563,8 +579,14 @@ const Assets = ({ onDelete }) => {
                               e.stopPropagation();
                               onDelete && onDelete(asset.Asset_ID);
                             }} 
-                            className="btn btn-danger btn-sm"
+                            className="btn btn-danger"
                             title="Delete Asset"
+                            style={{
+                              padding: '12px 16px',
+                              fontSize: '1rem',
+                              minWidth: '50px',
+                              minHeight: '44px'
+                            }}
                           >
                             <Trash2 size={18} />
                           </button>

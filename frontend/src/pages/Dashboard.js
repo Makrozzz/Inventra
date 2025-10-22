@@ -185,42 +185,46 @@ const Dashboard = () => {
         </div>
 
         <div className="card">
-          <h2 style={{ marginBottom: '20px' }}>Recent Assets</h2>
-          <table className="table">
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Category</th>
-                <th>Status</th>
-                <th>Location</th>
-                <th>Value</th>
-              </tr>
-            </thead>
-            <tbody>
-              {recentAssets && recentAssets.length > 0 ? (
-                recentAssets.map(asset => (
-                  <tr key={asset.id}>
-                    <td>{asset.name}</td>
-                    <td>{asset.category}</td>
-                    <td>
-                      <span className={`status-badge status-${asset.status.toLowerCase()}`}>
-                        {asset.status}
-                      </span>
-                    </td>
-                    <td>{asset.location}</td>
-                    <td>${parseInt(asset.value).toLocaleString()}</td>
-                  </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan="5" style={{ textAlign: 'center', color: '#666' }}>
-                    No assets available
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-          <div style={{ textAlign: 'center', marginTop: '15px' }}>
+          <h2 style={{ marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <Package size={24} />
+            Recent Assets
+          </h2>
+          
+          {recentAssets && recentAssets.length > 0 ? (
+            <div className="recent-assets-grid">
+              {recentAssets.slice(0, 6).map(asset => (
+                <div key={asset.id} className="recent-asset-card">
+                  <div className="asset-header">
+                    <h3 className="asset-name">{asset.name}</h3>
+                    <span className={`status-badge status-${asset.status.toLowerCase()}`}>
+                      {asset.status}
+                    </span>
+                  </div>
+                  <div className="asset-details">
+                    <div className="asset-detail">
+                      <span className="detail-label">Category:</span>
+                      <span className="detail-value">{asset.category}</span>
+                    </div>
+                    <div className="asset-detail">
+                      <span className="detail-label">Location:</span>
+                      <span className="detail-value">{asset.location}</span>
+                    </div>
+                    <div className="asset-detail">
+                      <span className="detail-label">Serial:</span>
+                      <span className="detail-value">{asset.id}</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div style={{ textAlign: 'center', color: '#666', padding: '40px' }}>
+              <Package size={48} style={{ marginBottom: '16px', opacity: 0.3 }} />
+              <p>No recent assets available</p>
+            </div>
+          )}
+          
+          <div style={{ textAlign: 'center', marginTop: '20px', paddingTop: '20px', borderTop: '1px solid #eee' }}>
             <Link to="/assets" className="btn btn-secondary">
               View All Assets
             </Link>
