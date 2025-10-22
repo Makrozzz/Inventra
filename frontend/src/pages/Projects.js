@@ -511,6 +511,7 @@ const Projects = () => {
                       gap: '10px'
                     }}>
                       <button 
+                        onClick={() => navigate(`/projects/${project.Project_ID}`)}
                         style={{
                           flex: 1,
                           padding: '10px',
