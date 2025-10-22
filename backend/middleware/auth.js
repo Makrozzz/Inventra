@@ -7,24 +7,38 @@ const { executeQuery } = require('../config/database');
  */
 const authenticateToken = async (req, res, next) => {
   try {
+    console.log('=== AUTH MIDDLEWARE DEBUG ===');
+    console.log('Request URL:', req.url);
+    console.log('Request method:', req.method);
+    console.log('All headers:', req.headers);
+    
     const authHeader = req.headers.authorization;
+    console.log('Auth header:', authHeader);
+    
     const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
+    console.log('Extracted token:', token ? token.substring(0, 20) + '...' + token.substring(token.length - 20) : 'No token');
 
     if (!token) {
+      console.log('No token provided');
       return res.status(401).json(
         formatResponse(false, null, 'Access token required')
       );
     }
 
+    console.log('Attempting to verify token with JWT_SECRET:', process.env.JWT_SECRET ? 'Set' : 'Not set');
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    console.log('Token decoded successfully:', decoded);
     
     // Optional: Verify user still exists in database
+    console.log('Checking user in database with ID:', decoded.userId);
     const user = await executeQuery(
       'SELECT user_id, username, email, role FROM users WHERE user_id = ? AND is_active = 1',
       [decoded.userId]
     );
+    console.log('Database user query result:', user);
 
     if (user.length === 0) {
+      console.log('User not found in database');
       return res.status(401).json(
         formatResponse(false, null, 'Invalid token - user not found')
       );
@@ -37,8 +51,12 @@ const authenticateToken = async (req, res, next) => {
       role: decoded.role
     };
 
+    console.log('Authentication successful for user:', req.user);
     next();
   } catch (error) {
+    console.log('Authentication error:', error.message);
+    console.log('Error stack:', error.stack);
+    
     if (error.name === 'TokenExpiredError') {
       return res.status(401).json(
         formatResponse(false, null, 'Token expired')

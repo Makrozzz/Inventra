@@ -35,6 +35,31 @@ const getAllAssets = async (req, res, next) => {
 };
 
 /**
+ * Get single asset by ID
+ */
+const getAssetById = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    
+    const asset = await Asset.findById(id);
+
+    if (!asset) {
+      return res.status(404).json({
+        error: 'Asset not found'
+      });
+    }
+
+    res.status(200).json(asset);
+  } catch (error) {
+    logger.error('Error in getAssetById:', error);
+    res.status(500).json({
+      error: 'Failed to fetch asset',
+      message: error.message
+    });
+  }
+};
+
+/**
  * Get single asset by serial number
  */
 const getAssetBySerialNumber = async (req, res, next) => {
@@ -113,6 +138,57 @@ const createAsset = async (req, res, next) => {
   } catch (error) {
     logger.error('Error in createAsset:', error);
     next(error);
+  }
+};
+
+/**
+ * Update asset by ID
+ */
+const updateAssetById = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const updateData = req.body;
+
+    // Check if asset exists
+    const existingAsset = await Asset.findById(id);
+    if (!existingAsset) {
+      return res.status(404).json({
+        error: 'Asset not found'
+      });
+    }
+
+    // Handle updates - prioritize direct field updates over name-based lookups
+    const finalUpdateData = {};
+    
+    // Direct field updates
+    if (updateData.Asset_Serial_Number) finalUpdateData.Asset_Serial_Number = updateData.Asset_Serial_Number;
+    if (updateData.Asset_Tag_ID) finalUpdateData.Asset_Tag_ID = updateData.Asset_Tag_ID;
+    if (updateData.Item_Name) finalUpdateData.Item_Name = updateData.Item_Name;
+    if (updateData.Status) finalUpdateData.Status = updateData.Status;
+    
+    // For ID fields, use them directly if provided
+    if (updateData.Recipients_ID) finalUpdateData.Recipients_ID = updateData.Recipients_ID;
+    if (updateData.Category_ID) finalUpdateData.Category_ID = updateData.Category_ID;
+    if (updateData.Model_ID) finalUpdateData.Model_ID = updateData.Model_ID;
+
+    // Update the asset properties
+    Object.assign(existingAsset, finalUpdateData);
+    
+    // Save the updated asset
+    await existingAsset.update();
+    
+    // Fetch the updated asset to return with joined data
+    const updatedAsset = await Asset.findById(id);
+
+    logger.info(`Asset updated: ID ${id} by user ${req.user?.userId || 'unknown'}`);
+
+    res.status(200).json(updatedAsset);
+  } catch (error) {
+    logger.error('Error in updateAssetById:', error);
+    res.status(500).json({
+      error: 'Failed to update asset',
+      message: error.message
+    });
   }
 };
 
@@ -280,10 +356,12 @@ const bulkImportAssets = async (req, res, next) => {
 
 module.exports = {
   getAllAssets,
+  getAssetById,
   getAssetBySerialNumber,
   getAssetDetail,
   createAsset,
   updateAsset,
+  updateAssetById,
   deleteAsset,
   getAssetStatistics,
   bulkImportAssets
