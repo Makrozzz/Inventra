@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
   ArrowLeft, Building2, MapPin, FileText, Calendar, Shield, 
-  Wrench, User, Package, Eye, Edit, Trash2, Printer, Monitor 
+  Wrench, User, Package, Eye, Edit, Trash2, Printer, Monitor, Search 
 } from 'lucide-react';
 
 const ProjectDetail = () => {
@@ -13,6 +13,7 @@ const ProjectDetail = () => {
   const [assets, setAssets] = useState([]);
   const [branches, setBranches] = useState([]);
   const [selectedBranch, setSelectedBranch] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
   const [error, setError] = useState(null);
 
   useEffect(() => {
@@ -528,8 +529,51 @@ const ProjectDetail = () => {
               gap: '10px'
             }}>
               <Monitor size={24} style={{ color: '#667eea' }} />
-              Project Assets ({assets.length})
+              Project Assets ({assets.filter(asset => {
+                const searchLower = searchTerm.toLowerCase();
+                return (
+                  asset.Asset_Serial_Number?.toLowerCase().includes(searchLower) ||
+                  asset.Asset_Tag_ID?.toLowerCase().includes(searchLower) ||
+                  asset.Item_Name?.toLowerCase().includes(searchLower) ||
+                  asset.Category?.toLowerCase().includes(searchLower) ||
+                  asset.Model?.toLowerCase().includes(searchLower) ||
+                  asset.Branch?.toLowerCase().includes(searchLower) ||
+                  asset.Recipient_Name?.toLowerCase().includes(searchLower) ||
+                  asset.Department?.toLowerCase().includes(searchLower)
+                );
+              }).length})
             </h2>
+          </div>
+
+          {/* Search Box */}
+          <div style={{
+            marginBottom: '20px',
+            position: 'relative'
+          }}>
+            <Search size={20} style={{
+              position: 'absolute',
+              left: '16px',
+              top: '50%',
+              transform: 'translateY(-50%)',
+              color: '#9ca3af'
+            }} />
+            <input
+              type="text"
+              placeholder="Search assets by serial number, tag ID, item name, category, model, branch, recipient, or department..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '12px 16px 12px 48px',
+                border: '2px solid #e5e7eb',
+                borderRadius: '10px',
+                fontSize: '15px',
+                transition: 'border-color 0.3s ease',
+                outline: 'none'
+              }}
+              onFocus={(e) => e.target.style.borderColor = '#667eea'}
+              onBlur={(e) => e.target.style.borderColor = '#e5e7eb'}
+            />
           </div>
 
           {assets.length === 0 ? (
@@ -546,6 +590,32 @@ const ProjectDetail = () => {
                 {selectedBranch 
                   ? `No assets assigned to ${selectedBranch} branch yet.`
                   : 'No assets assigned to this project yet.'}
+              </p>
+            </div>
+          ) : assets.filter(asset => {
+            const searchLower = searchTerm.toLowerCase();
+            return (
+              asset.Asset_Serial_Number?.toLowerCase().includes(searchLower) ||
+              asset.Asset_Tag_ID?.toLowerCase().includes(searchLower) ||
+              asset.Item_Name?.toLowerCase().includes(searchLower) ||
+              asset.Category?.toLowerCase().includes(searchLower) ||
+              asset.Model?.toLowerCase().includes(searchLower) ||
+              asset.Branch?.toLowerCase().includes(searchLower) ||
+              asset.Recipient_Name?.toLowerCase().includes(searchLower) ||
+              asset.Department?.toLowerCase().includes(searchLower)
+            );
+          }).length === 0 ? (
+            <div style={{
+              textAlign: 'center',
+              padding: '60px 20px',
+              color: '#9ca3af'
+            }}>
+              <Search size={64} style={{ margin: '0 auto 20px', opacity: 0.3 }} />
+              <p style={{ fontSize: '18px', fontWeight: '600', marginBottom: '8px' }}>
+                No Results Found
+              </p>
+              <p style={{ fontSize: '14px' }}>
+                No assets match your search "{searchTerm}". Try different keywords.
               </p>
             </div>
           ) : (
@@ -632,6 +702,30 @@ const ProjectDetail = () => {
                     </th>
                     <th style={{
                       padding: '12px 16px',
+                      textAlign: 'left',
+                      fontWeight: '600',
+                      color: '#374151',
+                      borderBottom: '2px solid #e5e7eb',
+                      fontSize: '13px',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.5px'
+                    }}>
+                      Recipient Name
+                    </th>
+                    <th style={{
+                      padding: '12px 16px',
+                      textAlign: 'left',
+                      fontWeight: '600',
+                      color: '#374151',
+                      borderBottom: '2px solid #e5e7eb',
+                      fontSize: '13px',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.5px'
+                    }}>
+                      Department
+                    </th>
+                    <th style={{
+                      padding: '12px 16px',
                       textAlign: 'center',
                       fontWeight: '600',
                       color: '#374151',
@@ -657,7 +751,21 @@ const ProjectDetail = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {assets.map((asset, index) => (
+                  {assets
+                    .filter(asset => {
+                      const searchLower = searchTerm.toLowerCase();
+                      return (
+                        asset.Asset_Serial_Number?.toLowerCase().includes(searchLower) ||
+                        asset.Asset_Tag_ID?.toLowerCase().includes(searchLower) ||
+                        asset.Item_Name?.toLowerCase().includes(searchLower) ||
+                        asset.Category?.toLowerCase().includes(searchLower) ||
+                        asset.Model?.toLowerCase().includes(searchLower) ||
+                        asset.Branch?.toLowerCase().includes(searchLower) ||
+                        asset.Recipient_Name?.toLowerCase().includes(searchLower) ||
+                        asset.Department?.toLowerCase().includes(searchLower)
+                      );
+                    })
+                    .map((asset, index) => (
                     <tr 
                       key={asset.Asset_ID}
                       style={{
@@ -684,6 +792,12 @@ const ProjectDetail = () => {
                       </td>
                       <td style={{ padding: '14px 16px', borderBottom: '1px solid #e5e7eb', color: '#4b5563' }}>
                         {asset.Branch || 'N/A'}
+                      </td>
+                      <td style={{ padding: '14px 16px', borderBottom: '1px solid #e5e7eb', color: '#1f2937', fontWeight: '500' }}>
+                        {asset.Recipient_Name || 'N/A'}
+                      </td>
+                      <td style={{ padding: '14px 16px', borderBottom: '1px solid #e5e7eb', color: '#4b5563' }}>
+                        {asset.Department || 'N/A'}
                       </td>
                       <td style={{ padding: '14px 16px', borderBottom: '1px solid #e5e7eb', textAlign: 'center' }}>
                         <span style={{

@@ -134,10 +134,18 @@ class Inventory {
           c.Branch,
           a.Asset_Serial_Number,
           a.Asset_Tag_ID,
-          a.Item_Name
+          a.Item_Name,
+          a.Status,
+          cat.Category,
+          m.Model,
+          r.Recipient_Name,
+          r.Department
         FROM INVENTORY i
         LEFT JOIN CUSTOMER c ON i.Customer_ID = c.Customer_ID
         LEFT JOIN ASSET a ON i.Asset_ID = a.Asset_ID
+        LEFT JOIN CATEGORY cat ON a.Category_ID = cat.Category_ID
+        LEFT JOIN MODEL m ON a.Model_ID = m.Model_ID
+        LEFT JOIN RECIPIENTS r ON a.Recipients_ID = r.Recipients_ID
         WHERE i.Project_ID = ?
         ORDER BY c.Branch
       `, [projectId]);
