@@ -140,6 +140,157 @@ const createAsset = async (req, res, next) => {
     next(error);
   }
 };
+const createAssetWithDetails = async (req, res, next) => {
+  try {
+    const completeData = req.body;
+    console.log('Creating asset with complete details:', completeData);
+
+    // Validate required fields
+    if (!completeData.project_reference_num || !completeData.serial_number || 
+        !completeData.tag_id || !completeData.item_name) {
+      console.log('Validation failed - missing required fields');
+      return res.status(400).json({
+        success: false,
+        error: 'Missing required fields: project_reference_num, serial_number, tag_id, item_name'
+      });
+    }
+
+    console.log('Checking for existing asset with serial number:', completeData.serial_number);
+    
+    // Check if asset with same serial number already exists
+    const existingAsset = await Asset.findBySerialNumber(completeData.serial_number);
+    if (existingAsset) {
+      console.log('Asset already exists with serial number:', completeData.serial_number);
+      return res.status(400).json({
+        success: false,
+        error: 'Asset with this serial number already exists'
+      });
+    }
+
+    console.log('Creating recipient...');
+    // Step 1: Get or create recipient
+    let recipientId = null;
+    if (completeData.recipient_name && completeData.department_name) {
+      recipientId = await Asset.createRecipient(
+        completeData.recipient_name,
+        completeData.department_name
+      );
+      console.log('Recipient created with ID:', recipientId);
+    }
+
+    console.log('Creating/getting category...');
+    // Step 2: Get or create category
+    let categoryId = null;
+    if (completeData.category) {
+      categoryId = await Asset.getOrCreateCategory(completeData.category);
+      console.log('Category ID:', categoryId);
+    }
+
+    console.log('Creating/getting model...');
+    // Step 3: Get or create model
+    let modelId = null;
+    if (completeData.model) {
+      modelId = await Asset.getOrCreateModel(completeData.model);
+      console.log('Model ID:', modelId);
+    }
+
+    console.log('Creating asset record...');
+    // Step 4: Create the asset
+    const assetData = {
+      Asset_Serial_Number: completeData.serial_number,
+      Asset_Tag_ID: completeData.tag_id,
+      Item_Name: completeData.item_name,
+      Status: completeData.status || 'Active',
+      Recipients_ID: recipientId,
+      Category_ID: categoryId,
+      Model_ID: modelId
+    };
+
+    const newAsset = await Asset.create(assetData);
+    console.log('Asset created:', newAsset);
+
+    console.log('Creating peripherals...');
+    // Step 5: Create peripherals if provided
+    let peripheralIds = [];
+    if (completeData.peripherals && Array.isArray(completeData.peripherals)) {
+      for (const peripheral of completeData.peripherals) {
+        if (peripheral.peripheral_name) {
+          try {
+            const peripheralId = await Asset.createPeripheral(
+              newAsset.Asset_ID,
+              peripheral.peripheral_name,
+              peripheral.serial_code_name,
+              peripheral.condition || 'Good',
+              peripheral.remarks
+            );
+            peripheralIds.push(peripheralId);
+            console.log('Peripheral created with ID:', peripheralId);
+          } catch (peripheralError) {
+            console.log('Failed to create peripheral:', peripheralError.message);
+            // Continue with other peripherals
+          }
+        }
+      }
+    }
+
+    console.log('Linking to project...');
+    // Step 6: Link to project/customer via inventory
+    let inventoryId = null;
+    if (completeData.project_reference_num && completeData.customer_name && completeData.branch) {
+      try {
+        inventoryId = await Asset.linkToProject(
+          newAsset.Asset_ID,
+          completeData.project_reference_num,
+          completeData.customer_name,
+          completeData.branch
+        );
+        console.log('Linked to project with inventory ID:', inventoryId);
+      } catch (linkError) {
+        console.log('Failed to link to project:', linkError.message);
+        // Continue anyway
+      }
+    }
+
+    console.log('Creating PM record...');
+    // Step 7: Generate PM record
+    let pmId = null;
+    try {
+      pmId = await Asset.createPreventiveMaintenance(newAsset.Asset_ID);
+      console.log('PM record created with ID:', pmId);
+    } catch (pmError) {
+      console.log('Failed to create PM record:', pmError.message);
+      // Continue anyway
+    }
+
+    console.log('Fetching complete asset data...');
+    // Fetch the complete asset data to return
+    const completeAsset = await Asset.findDetailById(newAsset.Asset_ID);
+
+    logger.info(`Asset created with details: ${completeData.serial_number} by user ${req.user?.userId || 'system'}`);
+
+    console.log('Sending success response...');
+    res.status(201).json({
+      success: true,
+      data: {
+        ...completeAsset,
+        asset_id: newAsset.Asset_ID,
+        pmid: pmId,
+        inventory_id: inventoryId,
+        peripheral_ids: peripheralIds
+      },
+      message: 'Asset created successfully with all details'
+    });
+  } catch (error) {
+    logger.error('Error in createAssetWithDetails:', error);
+    console.error('Error creating asset with details:', error);
+    console.error('Error stack:', error.stack);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to create asset',
+      message: error.message
+    });
+  }
+};
 
 /**
  * Update asset by ID
@@ -436,6 +587,7 @@ module.exports = {
   getAssetBySerialNumber,
   getAssetDetail,
   createAsset,
+  createAssetWithDetails,
   updateAsset,
   updateAssetById,
   deleteAsset,

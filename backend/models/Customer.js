@@ -116,6 +116,34 @@ class Customer {
   }
 
   /**
+   * Get all branches for a customer name
+   */
+  static async findBranchesByCustomerName(customerName) {
+    try {
+      const [rows] = await pool.execute(`
+        SELECT DISTINCT
+          Customer_ID,
+          Customer_Ref_Number,
+          Customer_Name,
+          Branch
+        FROM CUSTOMER
+        WHERE Customer_Name = ?
+        ORDER BY Branch
+      `, [customerName]);
+      
+      return rows.map(row => ({
+        Customer_ID: row.Customer_ID,
+        Customer_Ref_Number: row.Customer_Ref_Number,
+        Customer_Name: row.Customer_Name,
+        Branch: row.Branch
+      }));
+    } catch (error) {
+      console.error('Error in Customer.findBranchesByCustomerName:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Delete customer by ID
    */
   static async delete(id) {
