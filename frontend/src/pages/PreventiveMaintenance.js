@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Clock, CheckCircle, AlertTriangle, Wrench, Filter, Building2, MapPin, Package, FileText, X } from 'lucide-react';
+import { Calendar, Clock, CheckCircle, AlertTriangle, Wrench, Filter, Building2, MapPin, Package, FileText, X, ClipboardCheck } from 'lucide-react';
 
 const PreventiveMaintenance = () => {
   const [selectedCustomer, setSelectedCustomer] = useState('');
@@ -10,6 +10,16 @@ const PreventiveMaintenance = () => {
   const [statistics, setStatistics] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  
+  // PM Form Modal States
+  const [showPMForm, setShowPMForm] = useState(false);
+  const [selectedAsset, setSelectedAsset] = useState(null);
+  const [checklistItems, setChecklistItems] = useState([]);
+  const [checklistResults, setChecklistResults] = useState({});
+  const [pmRemarks, setPmRemarks] = useState('');
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [showCancelDialog, setShowCancelDialog] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     fetchStatistics();
@@ -135,6 +145,104 @@ const PreventiveMaintenance = () => {
     if (!dateString) return 'N/A';
     const date = new Date(dateString);
     return date.toLocaleDateString('en-MY', { year: 'numeric', month: 'short', day: 'numeric' });
+  };
+
+  // PM Form Handlers
+  const handleOpenPMForm = async (asset) => {
+    setSelectedAsset(asset);
+    setShowPMForm(true);
+    setPmRemarks('');
+    setChecklistResults({});
+    
+    // Fetch checklist items for this asset's category
+    try {
+      const response = await fetch(`http://localhost:5000/api/v1/pm/all-checklist/${asset.Category_ID}`);
+      if (!response.ok) throw new Error('Failed to fetch checklist');
+      const data = await response.json();
+      setChecklistItems(data);
+      
+      // Initialize all checklist results to false (bad)
+      const initialResults = {};
+      data.forEach(item => {
+        initialResults[item.Checklist_ID] = false;
+      });
+      setChecklistResults(initialResults);
+    } catch (err) {
+      console.error('Error fetching checklist:', err);
+      alert('Failed to load checklist items');
+    }
+  };
+
+  const handleClosePMForm = () => {
+    setShowCancelDialog(true);
+  };
+
+  const handleConfirmCancel = () => {
+    setShowCancelDialog(false);
+    setShowPMForm(false);
+    setSelectedAsset(null);
+    setChecklistItems([]);
+    setChecklistResults({});
+    setPmRemarks('');
+  };
+
+  const handleChecklistChange = (checklistId, isOk) => {
+    setChecklistResults(prev => ({
+      ...prev,
+      [checklistId]: isOk
+    }));
+  };
+
+  const handleSubmitPMForm = () => {
+    setShowConfirmDialog(true);
+  };
+
+  const handleConfirmSubmit = async () => {
+    setSubmitting(true);
+    setShowConfirmDialog(false);
+
+    try {
+      // Prepare checklist results array
+      const resultsArray = Object.keys(checklistResults).map(checklistId => ({
+        Checklist_ID: parseInt(checklistId),
+        Is_OK_bool: checklistResults[checklistId] ? 1 : 0,
+        Remarks: null
+      }));
+
+      // Submit PM record
+      const response = await fetch('http://localhost:5000/api/v1/pm', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          assetId: selectedAsset.Asset_ID,
+          pmDate: new Date().toISOString().split('T')[0],
+          remarks: pmRemarks || null,
+          checklistResults: resultsArray,
+          status: 'In-Process'
+        })
+      });
+
+      if (!response.ok) throw new Error('Failed to submit PM record');
+
+      alert('PM record submitted successfully!');
+      
+      // Refresh PM records
+      await fetchPMRecords(selectedCustomer, selectedBranch);
+      
+      // Close form
+      setShowPMForm(false);
+      setSelectedAsset(null);
+      setChecklistItems([]);
+      setChecklistResults({});
+      setPmRemarks('');
+    } catch (err) {
+      console.error('Error submitting PM record:', err);
+      alert('Failed to submit PM record. Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -300,7 +408,8 @@ const PreventiveMaintenance = () => {
                 <table className="table" style={{ minWidth: '1200px' }}>
                   <thead>
                     <tr>
-                      <th style={{ position: 'sticky', left: 0, background: 'white', zIndex: 10, minWidth: '120px' }}>Asset Tag ID</th>
+                      <th style={{ position: 'sticky', left: 0, background: 'white', zIndex: 10, minWidth: '140px' }}>Actions</th>
+                      <th style={{ minWidth: '120px' }}>Asset Tag ID</th>
                       <th style={{ minWidth: '150px' }}>Item Name</th>
                       <th style={{ minWidth: '150px' }}>Serial Number</th>
                       <th style={{ minWidth: '100px' }}>PM Date</th>
@@ -329,13 +438,38 @@ const PreventiveMaintenance = () => {
                       return (
                         <tr key={record.PM_ID}>
                           <td style={{ 
-                            fontFamily: 'monospace', 
-                            fontSize: '0.9rem',
-                            fontWeight: '600',
                             position: 'sticky',
                             left: 0,
                             background: 'white',
                             zIndex: 5
+                          }}>
+                            <button
+                              onClick={() => handleOpenPMForm(record)}
+                              style={{
+                                padding: '8px 16px',
+                                background: '#3498db',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '6px',
+                                cursor: 'pointer',
+                                fontSize: '0.9rem',
+                                fontWeight: '600',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '6px',
+                                transition: 'background 0.2s'
+                              }}
+                              onMouseOver={(e) => e.target.style.background = '#2980b9'}
+                              onMouseOut={(e) => e.target.style.background = '#3498db'}
+                            >
+                              <ClipboardCheck size={16} />
+                              PM
+                            </button>
+                          </td>
+                          <td style={{ 
+                            fontFamily: 'monospace', 
+                            fontSize: '0.9rem',
+                            fontWeight: '600'
                           }}>
                             {record.Asset_Tag_ID || 'N/A'}
                           </td>
@@ -394,6 +528,379 @@ const PreventiveMaintenance = () => {
             </div>
           );
         })
+      )}
+
+      {/* PM Form Modal */}
+      {showPMForm && selectedAsset && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+          padding: '20px'
+        }}>
+          <div style={{
+            background: 'white',
+            borderRadius: '12px',
+            maxWidth: '800px',
+            width: '100%',
+            maxHeight: '90vh',
+            overflow: 'auto',
+            boxShadow: '0 10px 40px rgba(0, 0, 0, 0.3)'
+          }}>
+            {/* Modal Header */}
+            <div style={{
+              padding: '24px',
+              borderBottom: '2px solid #e0e0e0',
+              background: '#f8f9fa',
+              borderRadius: '12px 12px 0 0'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <ClipboardCheck size={32} color="#3498db" />
+                  <div>
+                    <h2 style={{ margin: 0, color: '#2c3e50', fontSize: '1.5rem' }}>
+                      Preventive Maintenance Form
+                    </h2>
+                    <p style={{ margin: '5px 0 0 0', color: '#7f8c8d', fontSize: '0.9rem' }}>
+                      Complete checklist for this asset
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={handleClosePMForm}
+                  style={{
+                    background: 'transparent',
+                    border: 'none',
+                    cursor: 'pointer',
+                    padding: '8px',
+                    borderRadius: '6px',
+                    transition: 'background 0.2s'
+                  }}
+                  onMouseOver={(e) => e.target.style.background = '#f0f0f0'}
+                  onMouseOut={(e) => e.target.style.background = 'transparent'}
+                >
+                  <X size={24} color="#666" />
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Body */}
+            <div style={{ padding: '24px' }}>
+              {/* Asset Information */}
+              <div style={{
+                background: '#f8f9fa',
+                padding: '20px',
+                borderRadius: '8px',
+                marginBottom: '24px',
+                border: '1px solid #e0e0e0'
+              }}>
+                <h3 style={{ margin: '0 0 16px 0', color: '#2c3e50', fontSize: '1.1rem', fontWeight: '600' }}>
+                  Asset Information
+                </h3>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
+                  <div>
+                    <span style={{ color: '#7f8c8d', fontSize: '0.85rem', display: 'block', marginBottom: '4px' }}>Serial Number:</span>
+                    <strong style={{ color: '#2c3e50', fontSize: '1rem' }}>{selectedAsset.Asset_Serial_Number}</strong>
+                  </div>
+                  <div>
+                    <span style={{ color: '#7f8c8d', fontSize: '0.85rem', display: 'block', marginBottom: '4px' }}>Asset Tag ID:</span>
+                    <strong style={{ color: '#2c3e50', fontSize: '1rem' }}>{selectedAsset.Asset_Tag_ID}</strong>
+                  </div>
+                  <div>
+                    <span style={{ color: '#7f8c8d', fontSize: '0.85rem', display: 'block', marginBottom: '4px' }}>Item Name:</span>
+                    <strong style={{ color: '#2c3e50', fontSize: '1rem' }}>{selectedAsset.Item_Name}</strong>
+                  </div>
+                  <div>
+                    <span style={{ color: '#7f8c8d', fontSize: '0.85rem', display: 'block', marginBottom: '4px' }}>Category:</span>
+                    <strong style={{ color: '#2c3e50', fontSize: '1rem' }}>{selectedAsset.Category}</strong>
+                  </div>
+                  <div>
+                    <span style={{ color: '#7f8c8d', fontSize: '0.85rem', display: 'block', marginBottom: '4px' }}>Recipient Name:</span>
+                    <strong style={{ color: '#2c3e50', fontSize: '1rem' }}>{selectedAsset.Recipient_Name || 'N/A'}</strong>
+                  </div>
+                  <div>
+                    <span style={{ color: '#7f8c8d', fontSize: '0.85rem', display: 'block', marginBottom: '4px' }}>Department:</span>
+                    <strong style={{ color: '#2c3e50', fontSize: '1rem' }}>{selectedAsset.Department || 'N/A'}</strong>
+                  </div>
+                  <div>
+                    <span style={{ color: '#7f8c8d', fontSize: '0.85rem', display: 'block', marginBottom: '4px' }}>Model:</span>
+                    <strong style={{ color: '#2c3e50', fontSize: '1rem' }}>{selectedAsset.Model || 'N/A'}</strong>
+                  </div>
+                </div>
+              </div>
+
+              {/* Checklist Items */}
+              <div style={{ marginBottom: '24px' }}>
+                <h3 style={{ margin: '0 0 16px 0', color: '#2c3e50', fontSize: '1.1rem', fontWeight: '600' }}>
+                  PM Checklist ({checklistItems.length} items)
+                </h3>
+                <div style={{
+                  border: '1px solid #e0e0e0',
+                  borderRadius: '8px',
+                  overflow: 'hidden'
+                }}>
+                  {checklistItems.map((item, index) => (
+                    <div
+                      key={item.Checklist_ID}
+                      style={{
+                        padding: '16px',
+                        borderBottom: index < checklistItems.length - 1 ? '1px solid #e0e0e0' : 'none',
+                        background: index % 2 === 0 ? 'white' : '#f8f9fa',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: '16px'
+                      }}
+                    >
+                      <div style={{ flex: 1 }}>
+                        <span style={{ color: '#7f8c8d', fontSize: '0.75rem', marginRight: '8px' }}>
+                          #{index + 1}
+                        </span>
+                        <span style={{ color: '#2c3e50', fontSize: '0.95rem', fontWeight: '500' }}>
+                          {item.Check_Item}
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', gap: '12px' }}>
+                        <button
+                          onClick={() => handleChecklistChange(item.Checklist_ID, true)}
+                          style={{
+                            padding: '8px 20px',
+                            border: checklistResults[item.Checklist_ID] === true ? '2px solid #27ae60' : '2px solid #ddd',
+                            borderRadius: '6px',
+                            background: checklistResults[item.Checklist_ID] === true ? '#27ae60' : 'white',
+                            color: checklistResults[item.Checklist_ID] === true ? 'white' : '#666',
+                            cursor: 'pointer',
+                            fontSize: '0.9rem',
+                            fontWeight: '600',
+                            transition: 'all 0.2s',
+                            minWidth: '80px'
+                          }}
+                        >
+                          Good
+                        </button>
+                        <button
+                          onClick={() => handleChecklistChange(item.Checklist_ID, false)}
+                          style={{
+                            padding: '8px 20px',
+                            border: checklistResults[item.Checklist_ID] === false ? '2px solid #e74c3c' : '2px solid #ddd',
+                            borderRadius: '6px',
+                            background: checklistResults[item.Checklist_ID] === false ? '#e74c3c' : 'white',
+                            color: checklistResults[item.Checklist_ID] === false ? 'white' : '#666',
+                            cursor: 'pointer',
+                            fontSize: '0.9rem',
+                            fontWeight: '600',
+                            transition: 'all 0.2s',
+                            minWidth: '80px'
+                          }}
+                        >
+                          Bad
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Remarks */}
+              <div style={{ marginBottom: '24px' }}>
+                <label style={{ display: 'block', marginBottom: '8px', color: '#2c3e50', fontWeight: '600', fontSize: '0.95rem' }}>
+                  Remarks (Optional)
+                </label>
+                <textarea
+                  value={pmRemarks}
+                  onChange={(e) => setPmRemarks(e.target.value)}
+                  placeholder="Enter any additional remarks or notes..."
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    border: '2px solid #ddd',
+                    borderRadius: '6px',
+                    fontSize: '0.95rem',
+                    resize: 'vertical',
+                    minHeight: '80px',
+                    fontFamily: 'inherit'
+                  }}
+                />
+              </div>
+
+              {/* Form Actions */}
+              <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+                <button
+                  onClick={handleClosePMForm}
+                  disabled={submitting}
+                  style={{
+                    padding: '12px 24px',
+                    background: 'white',
+                    color: '#666',
+                    border: '2px solid #ddd',
+                    borderRadius: '6px',
+                    cursor: submitting ? 'not-allowed' : 'pointer',
+                    fontSize: '1rem',
+                    fontWeight: '600',
+                    transition: 'all 0.2s',
+                    opacity: submitting ? 0.5 : 1
+                  }}
+                  onMouseOver={(e) => !submitting && (e.target.style.background = '#f5f5f5')}
+                  onMouseOut={(e) => !submitting && (e.target.style.background = 'white')}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSubmitPMForm}
+                  disabled={submitting}
+                  style={{
+                    padding: '12px 32px',
+                    background: submitting ? '#95a5a6' : '#27ae60',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '6px',
+                    cursor: submitting ? 'not-allowed' : 'pointer',
+                    fontSize: '1rem',
+                    fontWeight: '600',
+                    transition: 'background 0.2s'
+                  }}
+                  onMouseOver={(e) => !submitting && (e.target.style.background = '#229954')}
+                  onMouseOut={(e) => !submitting && (e.target.style.background = '#27ae60')}
+                >
+                  {submitting ? 'Submitting...' : 'Submit'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Confirm Submit Dialog */}
+      {showConfirmDialog && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.6)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1100
+        }}>
+          <div style={{
+            background: 'white',
+            borderRadius: '12px',
+            padding: '32px',
+            maxWidth: '400px',
+            boxShadow: '0 10px 40px rgba(0, 0, 0, 0.3)'
+          }}>
+            <h3 style={{ margin: '0 0 16px 0', color: '#2c3e50', fontSize: '1.3rem' }}>
+              Confirm Submission
+            </h3>
+            <p style={{ margin: '0 0 24px 0', color: '#666', fontSize: '1rem', lineHeight: '1.5' }}>
+              Are you sure you want to submit this PM record? This action cannot be undone.
+            </p>
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => setShowConfirmDialog(false)}
+                style={{
+                  padding: '10px 20px',
+                  background: 'white',
+                  color: '#666',
+                  border: '2px solid #ddd',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: '0.95rem',
+                  fontWeight: '600'
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmSubmit}
+                style={{
+                  padding: '10px 20px',
+                  background: '#27ae60',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: '0.95rem',
+                  fontWeight: '600'
+                }}
+              >
+                Yes, Submit
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Cancel Confirmation Dialog */}
+      {showCancelDialog && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.6)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1100
+        }}>
+          <div style={{
+            background: 'white',
+            borderRadius: '12px',
+            padding: '32px',
+            maxWidth: '400px',
+            boxShadow: '0 10px 40px rgba(0, 0, 0, 0.3)'
+          }}>
+            <h3 style={{ margin: '0 0 16px 0', color: '#2c3e50', fontSize: '1.3rem' }}>
+              Cancel Form?
+            </h3>
+            <p style={{ margin: '0 0 24px 0', color: '#666', fontSize: '1rem', lineHeight: '1.5' }}>
+              Are you sure you want to cancel? All your changes will be lost.
+            </p>
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => setShowCancelDialog(false)}
+                style={{
+                  padding: '10px 20px',
+                  background: 'white',
+                  color: '#666',
+                  border: '2px solid #ddd',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: '0.95rem',
+                  fontWeight: '600'
+                }}
+              >
+                Keep Editing
+              </button>
+              <button
+                onClick={handleConfirmCancel}
+                style={{
+                  padding: '10px 20px',
+                  background: '#e74c3c',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: '0.95rem',
+                  fontWeight: '600'
+                }}
+              >
+                Yes, Cancel
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

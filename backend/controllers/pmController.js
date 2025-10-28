@@ -166,6 +166,43 @@ const getDetailedPM = async (req, res, next) => {
   }
 };
 
+/**
+ * Create new PM record with checklist results
+ */
+const createPM = async (req, res, next) => {
+  try {
+    const { assetId, pmDate, remarks, checklistResults, status } = req.body;
+
+    // Validate required fields
+    if (!assetId || !pmDate || !checklistResults || !Array.isArray(checklistResults)) {
+      return res.status(400).json({
+        error: 'Asset ID, PM Date, and checklist results are required'
+      });
+    }
+
+    // Create PM with results
+    const pmId = await PMaintenance.createWithResults(
+      assetId, 
+      pmDate, 
+      remarks || null, 
+      checklistResults,
+      status || 'In-Process'
+    );
+
+    res.status(201).json({
+      success: true,
+      message: 'PM record created successfully',
+      data: { pmId }
+    });
+  } catch (error) {
+    logger.error('Error in createPM:', error);
+    res.status(500).json({
+      error: 'Failed to create PM record',
+      message: error.message
+    });
+  }
+};
+
 module.exports = {
   getAllPM,
   getPMStatistics,
@@ -175,5 +212,6 @@ module.exports = {
   getChecklistByCategory,
   getAllChecklistByCategory,
   getResultsByPMId,
-  getDetailedPM
+  getDetailedPM,
+  createPM
 };

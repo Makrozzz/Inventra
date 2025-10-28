@@ -353,6 +353,79 @@ class PMaintenance {
       throw error;
     }
   }
+
+  // Create new PM record
+  static async create(assetId, pmDate, remarks, status = 'In-Process') {
+    try {
+      const [result] = await pool.execute(`
+        INSERT INTO PMAINTENANCE (Asset_ID, PM_Date, Remarks, Status)
+        VALUES (?, ?, ?, ?)
+      `, [assetId, pmDate, remarks, status]);
+      
+      return result.insertId;
+    } catch (error) {
+      console.error('Error in PMaintenance.create:', error);
+      throw error;
+    }
+  }
+
+  // Create PM results for a PM record
+  static async createResults(pmId, checklistResults) {
+    const connection = await pool.getConnection();
+    try {
+      await connection.beginTransaction();
+
+      // checklistResults is an array of { Checklist_ID, Is_OK_bool, Remarks }
+      for (const result of checklistResults) {
+        await connection.execute(`
+          INSERT INTO PM_RESULT (PM_ID, Checklist_ID, Is_OK_bool, Remarks)
+          VALUES (?, ?, ?, ?)
+        `, [pmId, result.Checklist_ID, result.Is_OK_bool, result.Remarks || null]);
+      }
+
+      await connection.commit();
+      return true;
+    } catch (error) {
+      await connection.rollback();
+      console.error('Error in PMaintenance.createResults:', error);
+      throw error;
+    } finally {
+      connection.release();
+    }
+  }
+
+  // Create PM record with results in one transaction
+  static async createWithResults(assetId, pmDate, remarks, checklistResults, status = 'In-Process') {
+    const connection = await pool.getConnection();
+    try {
+      await connection.beginTransaction();
+
+      // Create PM record
+      const [pmResult] = await connection.execute(`
+        INSERT INTO PMAINTENANCE (Asset_ID, PM_Date, Remarks, Status)
+        VALUES (?, ?, ?, ?)
+      `, [assetId, pmDate, remarks, status]);
+
+      const pmId = pmResult.insertId;
+
+      // Create PM results
+      for (const result of checklistResults) {
+        await connection.execute(`
+          INSERT INTO PM_RESULT (PM_ID, Checklist_ID, Is_OK_bool, Remarks)
+          VALUES (?, ?, ?, ?)
+        `, [pmId, result.Checklist_ID, result.Is_OK_bool, result.Remarks || null]);
+      }
+
+      await connection.commit();
+      return pmId;
+    } catch (error) {
+      await connection.rollback();
+      console.error('Error in PMaintenance.createWithResults:', error);
+      throw error;
+    } finally {
+      connection.release();
+    }
+  }
 }
 
 module.exports = PMaintenance;
