@@ -271,19 +271,12 @@ const createAssetWithDetails = async (req, res, next) => {
       }
     }
 
-<<<<<<< HEAD
-    // NOTE: PM_ID is NOT created automatically anymore
-    // PM records are only created when actual preventive maintenance is performed
-    // This prevents "ghost" PM records with no checklist results
-    let pmId = null;
-=======
     // Step 7: PM record creation - DISABLED (PM records should be created manually only)
     // console.log('Creating PM record...');
     let pmId = null;
     // PM records are no longer automatically created for new assets
     // They should be created manually through the Preventive Maintenance module
     console.log('Skipping automatic PM record creation - PM records should be created manually');
->>>>>>> fotoh
 
     console.log('Fetching complete asset data...');
     // Fetch the complete asset data to return

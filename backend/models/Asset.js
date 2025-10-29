@@ -713,13 +713,7 @@ class Asset {
   }
 
   // Helper method to create preventive maintenance record
-<<<<<<< HEAD
-  // DEPRECATED: No longer used - PM records are created only when actual PM is performed
-  // This prevents ghost PM_ID records without checklist results
-  /*
-=======
   // NOTE: This should only be called manually through the PM system, not automatically
->>>>>>> fotoh
   static async createPreventiveMaintenance(assetId) {
     try {
       const [result] = await pool.execute(
@@ -732,9 +726,6 @@ class Asset {
       throw error;
     }
   }
-<<<<<<< HEAD
-  */
-=======
 
   // Helper method to fix orphaned assets by creating inventory links
   // NOTE: This method should NOT automatically assign default customers
@@ -773,7 +764,6 @@ class Asset {
       throw error;
     }
   }
->>>>>>> fotoh
 }
 
 module.exports = Asset;
