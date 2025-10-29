@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { Search, Filter, Edit, Trash2, Upload, Plus, Download, Eye, FileText } from 'lucide-react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { Search, Filter, Edit, Trash2, Upload, Plus, Download, Eye, FileText, RefreshCw } from 'lucide-react';
 import Pagination from '../components/Pagination';
 
 const Assets = ({ onDelete }) => {
+  const navigate = useNavigate();
+  const location = useLocation();
   const [columns, setColumns] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -22,13 +24,19 @@ const Assets = ({ onDelete }) => {
   
   // State for expanded row details
   const [expandedRow, setExpandedRow] = useState(null);
+  
+  // Sorting state
+  const [sortField, setSortField] = useState('Inventory_ID');
+  const [sortDirection, setSortDirection] = useState('desc'); // Show newest first
+  
+  // Success message state
+  const [successMessage, setSuccessMessage] = useState('');
 
-  // Fetch all assets from database (once)
-  useEffect(() => {
-    const fetchAssets = async () => {
-      try {
-        setLoading(true);
-        setError(null);
+  // Fetch all assets from database
+  const fetchAssets = async () => {
+    try {
+      setLoading(true);
+      setError(null);
         
         // Use direct fetch with correct API endpoint
         const response = await fetch('http://localhost:5000/api/v1/assets');
@@ -70,25 +78,65 @@ const Assets = ({ onDelete }) => {
       }
     };
 
+  // Load assets on component mount
+  useEffect(() => {
     fetchAssets();
-  }, []); // Only fetch once
+  }, []); // Only fetch once on mount
 
-  // Filter assets based on search and column-specific filters
-  const filteredAssets = allAssets.filter(asset => {
-    // Global search filter
-    const searchableFields = Object.values(asset).join(' ').toLowerCase();
-    const matchesSearch = searchableFields.includes(searchTerm.toLowerCase());
-    
-    // Column-specific filters
-    const matchesColumnFilters = Object.keys(columnFilters).every(columnKey => {
-      if (!columnFilters[columnKey]) return true; // Empty filter = no filtering
-      const assetValue = (asset[columnKey] || '').toString().toLowerCase();
-      const filterValue = columnFilters[columnKey].toLowerCase();
-      return assetValue.includes(filterValue);
+  // Refresh data when coming from CSV import or when explicitly requested
+  useEffect(() => {
+    // Check if we're coming from CSV import (via state or URL param)
+    if (location.state?.refresh || location.search.includes('refresh=true')) {
+      console.log('Refreshing assets due to CSV import navigation');
+      setSuccessMessage('Asset data refreshed - showing newly imported assets');
+      fetchAssets();
+      // Clear the state to prevent infinite refreshing
+      if (location.state?.refresh) {
+        navigate(location.pathname, { replace: true, state: {} });
+      }
+      // Clear success message after 5 seconds
+      setTimeout(() => setSuccessMessage(''), 5000);
+    }
+  }, [location, navigate, fetchAssets]);
+
+  // Refresh function to be called from external components
+  const refreshAssets = () => {
+    fetchAssets();
+  };
+
+  // Filter and sort assets based on search, column-specific filters, and sort settings
+  const filteredAssets = allAssets
+    .filter(asset => {
+      // Global search filter
+      const searchableFields = Object.values(asset).join(' ').toLowerCase();
+      const matchesSearch = searchableFields.includes(searchTerm.toLowerCase());
+      
+      // Column-specific filters
+      const matchesColumnFilters = Object.keys(columnFilters).every(columnKey => {
+        if (!columnFilters[columnKey]) return true; // Empty filter = no filtering
+        const assetValue = (asset[columnKey] || '').toString().toLowerCase();
+        const filterValue = columnFilters[columnKey].toLowerCase();
+        return assetValue.includes(filterValue);
+      });
+      
+      return matchesSearch && matchesColumnFilters;
+    })
+    .sort((a, b) => {
+      // Sort by the selected field and direction
+      const aValue = a[sortField] || '';
+      const bValue = b[sortField] || '';
+      
+      // Handle numeric fields (like Inventory_ID)
+      if (sortField === 'Inventory_ID') {
+        const aNum = parseInt(aValue) || 0;
+        const bNum = parseInt(bValue) || 0;
+        return sortDirection === 'asc' ? aNum - bNum : bNum - aNum;
+      }
+      
+      // Handle string fields
+      const comparison = aValue.toString().localeCompare(bValue.toString());
+      return sortDirection === 'asc' ? comparison : -comparison;
     });
-    
-    return matchesSearch && matchesColumnFilters;
-  });
 
   // Client-side pagination calculations
   const totalItems = filteredAssets.length;
@@ -194,17 +242,7 @@ const Assets = ({ onDelete }) => {
     return value;
   };
 
-  const handleImportCSV = (event) => {
-    const file = event.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        console.log('CSV imported:', e.target.result);
-        alert('CSV import functionality would be implemented here');
-      };
-      reader.readAsText(file);
-    }
-  };
+
 
   const handleExportCSV = () => {
     if (displayColumns.length === 0 || allAssets.length === 0) {
@@ -267,23 +305,35 @@ const Assets = ({ onDelete }) => {
             </p>
           </div>
           <div className="actions">
-            <input
-              type="file"
-              accept=".csv"
-              onChange={handleImportCSV}
-              style={{ display: 'none' }}
-              id="csv-import"
-            />
-            <label htmlFor="csv-import" className="btn btn-secondary" style={{
-              backgroundColor: 'rgba(255, 255, 255, 0.2)',
-              color: 'white',
-              border: '1px solid rgba(255, 255, 255, 0.3)',
-              backdropFilter: 'blur(10px)',
-              marginRight: '10px'
-            }}>
+            <button 
+              onClick={refreshAssets}
+              className="btn btn-secondary" 
+              style={{
+                backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                color: 'white',
+                border: '1px solid rgba(255, 255, 255, 0.3)',
+                backdropFilter: 'blur(10px)',
+                marginRight: '10px'
+              }}
+              disabled={loading}
+            >
+              <RefreshCw size={16} style={{ marginRight: '5px' }} className={loading ? 'animate-spin' : ''} />
+              Refresh
+            </button>
+            <button 
+              onClick={() => navigate('/assets/import')}
+              className="btn btn-secondary" 
+              style={{
+                backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                color: 'white',
+                border: '1px solid rgba(255, 255, 255, 0.3)',
+                backdropFilter: 'blur(10px)',
+                marginRight: '10px'
+              }}
+            >
               <Upload size={16} style={{ marginRight: '5px' }} />
               Import CSV
-            </label>
+            </button>
             <button onClick={handleExportCSV} className="btn btn-secondary" style={{
               backgroundColor: 'rgba(255, 255, 255, 0.2)',
               color: 'white',
@@ -306,6 +356,24 @@ const Assets = ({ onDelete }) => {
           </div>
         </div>
       </div>
+
+      {/* Success Message */}
+      {successMessage && (
+        <div style={{
+          backgroundColor: '#d4edda',
+          border: '1px solid #c3e6cb',
+          color: '#155724',
+          padding: '15px 20px',
+          margin: '0 40px 20px 40px',
+          borderRadius: '8px',
+          fontWeight: '500',
+          maxWidth: '1320px',
+          marginLeft: 'auto',
+          marginRight: 'auto'
+        }}>
+          {successMessage}
+        </div>
+      )}
 
       <div style={{ padding: '0 40px', maxWidth: '1400px', margin: '0 auto' }}>
         <div className="card">

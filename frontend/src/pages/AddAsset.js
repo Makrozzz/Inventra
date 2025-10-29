@@ -33,9 +33,6 @@ const AddAsset = () => {
   const [projectSearchTerm, setProjectSearchTerm] = useState('');
   const [showProjectDropdown, setShowProjectDropdown] = useState(false);
   const [branches, setBranches] = useState([]);
-  const [categories, setCategories] = useState([]);
-  const [models, setModels] = useState([]);
-  const [peripheralTypes, setPeripheralTypes] = useState([]);
   const [recipients, setRecipients] = useState([]);
   
   // Form data
@@ -71,9 +68,6 @@ const AddAsset = () => {
   // Fetch initial data on mount
   useEffect(() => {
     fetchAvailableProjects();
-    fetchCategories();
-    fetchModels();
-    fetchPeripheralTypes();
     fetchRecipients();
   }, []);
 
@@ -275,70 +269,7 @@ const AddAsset = () => {
     }
   };
 
-  const fetchCategories = async () => {
-    try {
-      const response = await apiService.getCategories();
-      setCategories(response.data || [
-        { Category_ID: 1, Category: 'Desktop' },
-        { Category_ID: 2, Category: 'Printer' },
-        { Category_ID: 3, Category: 'Laptop' },
-        { Category_ID: 4, Category: 'Server' }
-      ]);
-    } catch (err) {
-      console.error('Error fetching categories:', err);
-      // Fallback to hardcoded categories
-      setCategories([
-        { Category_ID: 1, Category: 'Desktop' },
-        { Category_ID: 2, Category: 'Printer' },
-        { Category_ID: 3, Category: 'Laptop' },
-        { Category_ID: 4, Category: 'Server' }
-      ]);
-    }
-  };
 
-  const fetchModels = async () => {
-    try {
-      const response = await apiService.getModels();
-      setModels(response.data || [
-        { Model_ID: 1, Model: 'Dell OptiPlex All-in-One Plus 7420' },
-        { Model_ID: 2, Model: 'HP Color LaserJet Enterprise MFP M480f' },
-        { Model_ID: 3, Model: 'Lenovo ThinkPad X1 Carbon' },
-        { Model_ID: 4, Model: 'Dell PowerEdge R740' }
-      ]);
-    } catch (err) {
-      console.error('Error fetching models:', err);
-      // Fallback to hardcoded models
-      setModels([
-        { Model_ID: 1, Model: 'Dell OptiPlex All-in-One Plus 7420' },
-        { Model_ID: 2, Model: 'HP Color LaserJet Enterprise MFP M480f' },
-        { Model_ID: 3, Model: 'Lenovo ThinkPad X1 Carbon' },
-        { Model_ID: 4, Model: 'Dell PowerEdge R740' }
-      ]);
-    }
-  };
-
-  const fetchPeripheralTypes = async () => {
-    try {
-      const response = await apiService.getPeripheralTypes();
-      setPeripheralTypes(response.data || [
-        { Peripheral_Type_ID: 1, Peripheral_Type_Name: 'Keyboard' },
-        { Peripheral_Type_ID: 2, Peripheral_Type_Name: 'Mouse' },
-        { Peripheral_Type_ID: 3, Peripheral_Type_Name: 'Monitor' },
-        { Peripheral_Type_ID: 4, Peripheral_Type_Name: 'Ethernet Cable' },
-        { Peripheral_Type_ID: 5, Peripheral_Type_Name: 'Power Cable' }
-      ]);
-    } catch (err) {
-      console.error('Error fetching peripheral types:', err);
-      // Fallback to hardcoded peripheral types
-      setPeripheralTypes([
-        { Peripheral_Type_ID: 1, Peripheral_Type_Name: 'Keyboard' },
-        { Peripheral_Type_ID: 2, Peripheral_Type_Name: 'Mouse' },
-        { Peripheral_Type_ID: 3, Peripheral_Type_Name: 'Monitor' },
-        { Peripheral_Type_ID: 4, Peripheral_Type_Name: 'Ethernet Cable' },
-        { Peripheral_Type_ID: 5, Peripheral_Type_Name: 'Power Cable' }
-      ]);
-    }
-  };
 
   const fetchRecipients = async () => {
     try {
@@ -907,34 +838,28 @@ const AddAsset = () => {
                 </div>
 
                 <div className="form-group">
-                  <SearchableDropdown
-                    label="Category"
-                    required={true}
-                    options={categories}
+                  <label>
+                    Category <span style={{ color: '#f44336' }}>*</span>
+                  </label>
+                  <input
+                    type="text"
                     value={asset.category}
-                    onChange={(value) => setAsset({ ...asset, category: value })}
-                    placeholder="Select Category"
-                    searchPlaceholder="Search categories..."
-                    getOptionLabel={(option) => option.Category}
-                    getOptionValue={(option) => option.Category}
-                    maxHeight={250}
-                    clearable={true}
+                    onChange={(e) => setAsset({ ...asset, category: e.target.value })}
+                    placeholder="Enter category (e.g., Desktop, Laptop, Server)"
+                    required
                   />
                 </div>
 
                 <div className="form-group">
-                  <SearchableDropdown
-                    label="Model"
-                    required={true}
-                    options={models}
+                  <label>
+                    Model <span style={{ color: '#f44336' }}>*</span>
+                  </label>
+                  <input
+                    type="text"
                     value={asset.model}
-                    onChange={(value) => setAsset({ ...asset, model: value })}
-                    placeholder="Select Model"
-                    searchPlaceholder="Search models..."
-                    getOptionLabel={(option) => option.Model}
-                    getOptionValue={(option) => option.Model}
-                    maxHeight={250}
-                    clearable={true}
+                    onChange={(e) => setAsset({ ...asset, model: e.target.value })}
+                    placeholder="Enter model (e.g., Dell OptiPlex 7420, HP M480f)"
+                    required
                   />
                 </div>
               </div>
@@ -1074,20 +999,13 @@ const AddAsset = () => {
                         Peripheral Name
                         {peripheral.peripheral_name.trim() !== '' && <span style={{ color: '#4caf50' }}> ✓</span>}
                       </label>
-                      <select 
-                        value={peripheral.peripheral_name} 
+                      <input
+                        type="text"
+                        value={peripheral.peripheral_name}
                         onChange={(e) => handlePeripheralChange(index, 'peripheral_name', e.target.value)}
-                        style={{
-                          borderColor: peripheral.peripheral_name.trim() && !peripheral.serial_code_name.trim() ? '#ff9800' : ''
-                        }}
-                      >
-                        <option value="">Select Peripheral</option>
-                        {peripheralTypes.map(type => (
-                          <option key={type.Peripheral_Type_ID} value={type.Peripheral_Type_Name}>
-                            {type.Peripheral_Type_Name}
-                          </option>
-                        ))}
-                      </select>
+                        placeholder="Enter peripheral type (e.g., Keyboard, Mouse, Monitor)"
+                        className={peripheral.peripheral_name.trim() && !peripheral.serial_code_name.trim() ? 'peripheral-warning' : ''}
+                      />
                     </div>
 
                     <div className="form-group" style={{ marginBottom: '10px' }}>

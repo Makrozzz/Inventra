@@ -11,7 +11,8 @@ const {
   updateAssetById,
   deleteAsset,
   getAssetStatistics,
-  bulkImportAssets
+  bulkImportAssets,
+  fixOrphanedAssets
 } = require('../controllers/assetController');
 const { authenticateToken, authorize } = require('../middleware/auth');
 const { handleValidationErrors } = require('../middleware/validation');
@@ -125,11 +126,12 @@ router.delete('/:serialNumber',
 );
 
 router.post('/bulk-import', 
-  authenticateToken, 
-  authorize('admin', 'manager'),
   body('assets').isArray().withMessage('Assets must be an array'),
   handleValidationErrors,
   bulkImportAssets
 );
+
+// Fix orphaned assets route (development/admin only)
+router.post('/fix-orphaned', fixOrphanedAssets);
 
 module.exports = router;

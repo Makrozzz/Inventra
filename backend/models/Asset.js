@@ -21,6 +21,31 @@ class Asset {
   // Get all assets with complete inventory information (Project, Customer, Recipients, Category, Model)
   static async findAll() {
     try {
+      // First, let's check all assets and their inventory status
+      console.log('=== Asset.findAll() DEBUG ===');
+      
+      // Check total assets in ASSET table
+      const [assetCount] = await pool.execute('SELECT COUNT(*) as total FROM ASSET');
+      console.log(`Total assets in ASSET table: ${assetCount[0].total}`);
+      
+      // Check total inventory records
+      const [inventoryCount] = await pool.execute('SELECT COUNT(*) as total FROM INVENTORY WHERE Asset_ID IS NOT NULL');
+      console.log(`Total inventory records with Asset_ID: ${inventoryCount[0].total}`);
+      
+      // Check assets without inventory linkage
+      const [orphanAssets] = await pool.execute(`
+        SELECT a.Asset_ID, a.Asset_Serial_Number, a.Asset_Tag_ID, a.Item_Name 
+        FROM ASSET a 
+        WHERE a.Asset_ID NOT IN (SELECT DISTINCT Asset_ID FROM INVENTORY WHERE Asset_ID IS NOT NULL)
+      `);
+      
+      if (orphanAssets.length > 0) {
+        console.log(`WARNING: Found ${orphanAssets.length} assets without inventory links:`);
+        orphanAssets.forEach(asset => {
+          console.log(`  - Asset_ID: ${asset.Asset_ID}, Serial: ${asset.Asset_Serial_Number}, Tag: ${asset.Asset_Tag_ID}`);
+        });
+      }
+
       const [rows] = await pool.execute(`
         SELECT 
           i.Inventory_ID,
@@ -54,6 +79,16 @@ class Asset {
         LEFT JOIN CUSTOMER cust ON i.Customer_ID = cust.Customer_ID
         ORDER BY i.Inventory_ID DESC
       `);
+      
+      console.log(`Query returned ${rows.length} assets with inventory links`);
+      
+      if (rows.length > 0) {
+        const inventoryIds = rows.map(row => row.Inventory_ID).sort((a, b) => a - b);
+        console.log(`Inventory_ID range: ${inventoryIds[0]} - ${inventoryIds[inventoryIds.length - 1]}`);
+        console.log(`Latest 5 Inventory_IDs: ${inventoryIds.slice(-5).join(', ')}`);
+      }
+      
+      console.log('=== End Asset.findAll() DEBUG ===');
       
       // Return rows with all joined data
       return rows;
@@ -420,79 +455,165 @@ class Asset {
     }
   }
 
-  // Helper method to get or create category
+  // Helper method to get or create category - ENHANCED with hybrid functionality
   static async getOrCreateCategory(categoryName) {
     try {
-      // First try to find existing category
+      if (!categoryName || typeof categoryName !== 'string' || categoryName.trim() === '') {
+        throw new Error('Category name is required and must be a non-empty string');
+      }
+
+      const cleanCategoryName = categoryName.trim();
+      console.log(`Getting or creating category: "${cleanCategoryName}"`);
+
+      // First try to find existing category (case-insensitive)
       const [existing] = await pool.execute(
-        'SELECT Category_ID FROM CATEGORY WHERE Category = ?',
-        [categoryName]
+        'SELECT Category_ID, Category FROM CATEGORY WHERE LOWER(Category) = LOWER(?)',
+        [cleanCategoryName]
       );
       
       if (existing.length > 0) {
+        console.log(`Found existing category: ID=${existing[0].Category_ID}, Name="${existing[0].Category}"`);
         return existing[0].Category_ID;
       }
       
       // Create new category
       const [result] = await pool.execute(
         'INSERT INTO CATEGORY (Category) VALUES (?)',
-        [categoryName]
+        [cleanCategoryName]
       );
-      return result.insertId;
+      
+      const newCategoryId = result.insertId;
+      console.log(`✅ Created new category: ID=${newCategoryId}, Name="${cleanCategoryName}"`);
+      return newCategoryId;
     } catch (error) {
+      // Handle duplicate key error (race condition)
+      if (error.code === 'ER_DUP_ENTRY') {
+        try {
+          const [existing] = await pool.execute(
+            'SELECT Category_ID FROM CATEGORY WHERE LOWER(Category) = LOWER(?)',
+            [categoryName.trim()]
+          );
+          if (existing.length > 0) {
+            return existing[0].Category_ID;
+          }
+        } catch (retryError) {
+          console.error('Error in retry after duplicate:', retryError);
+        }
+      }
       console.error('Error in getOrCreateCategory:', error);
       throw error;
     }
   }
 
-  // Helper method to get or create model
+  // Helper method to get or create model - ENHANCED with hybrid functionality
   static async getOrCreateModel(modelName) {
     try {
-      // First try to find existing model
+      if (!modelName || typeof modelName !== 'string' || modelName.trim() === '') {
+        throw new Error('Model name is required and must be a non-empty string');
+      }
+
+      const cleanModelName = modelName.trim();
+      console.log(`Getting or creating model: "${cleanModelName}"`);
+
+      // First try to find existing model (case-insensitive)
       const [existing] = await pool.execute(
-        'SELECT Model_ID FROM MODEL WHERE Model = ?',
-        [modelName]
+        'SELECT Model_ID, Model FROM MODEL WHERE LOWER(Model) = LOWER(?)',
+        [cleanModelName]
       );
       
       if (existing.length > 0) {
+        console.log(`Found existing model: ID=${existing[0].Model_ID}, Name="${existing[0].Model}"`);
         return existing[0].Model_ID;
       }
       
       // Create new model
       const [result] = await pool.execute(
         'INSERT INTO MODEL (Model) VALUES (?)',
-        [modelName]
+        [cleanModelName]
       );
-      return result.insertId;
+      
+      const newModelId = result.insertId;
+      console.log(`✅ Created new model: ID=${newModelId}, Name="${cleanModelName}"`);
+      return newModelId;
     } catch (error) {
+      // Handle duplicate key error (race condition)
+      if (error.code === 'ER_DUP_ENTRY') {
+        try {
+          const [existing] = await pool.execute(
+            'SELECT Model_ID FROM MODEL WHERE LOWER(Model) = LOWER(?)',
+            [modelName.trim()]
+          );
+          if (existing.length > 0) {
+            return existing[0].Model_ID;
+          }
+        } catch (retryError) {
+          console.error('Error in retry after duplicate:', retryError);
+        }
+      }
       console.error('Error in getOrCreateModel:', error);
       throw error;
     }
   }
 
-  // Helper method to create peripheral
+  // Helper method to create peripheral - ENHANCED with hybrid functionality
   static async createPeripheral(assetId, peripheralTypeName, serialCode, condition, remarks) {
     try {
-      // Get peripheral type ID
-      const [typeResult] = await pool.execute(
-        'SELECT Peripheral_Type_ID FROM PERIPHERAL_TYPE WHERE Peripheral_Type_Name = ?',
-        [peripheralTypeName]
+      if (!peripheralTypeName || typeof peripheralTypeName !== 'string' || peripheralTypeName.trim() === '') {
+        throw new Error('Peripheral type name is required and must be a non-empty string');
+      }
+
+      const cleanPeripheralTypeName = peripheralTypeName.trim();
+      console.log(`Creating peripheral: "${cleanPeripheralTypeName}" for Asset_ID: ${assetId}`);
+
+      // Get or create peripheral type (case-insensitive)
+      let peripheralTypeId;
+      const [existingType] = await pool.execute(
+        'SELECT Peripheral_Type_ID FROM PERIPHERAL_TYPE WHERE LOWER(Peripheral_Type_Name) = LOWER(?)',
+        [cleanPeripheralTypeName]
       );
       
-      if (typeResult.length === 0) {
-        throw new Error(`Peripheral type '${peripheralTypeName}' not found`);
+      if (existingType.length > 0) {
+        peripheralTypeId = existingType[0].Peripheral_Type_ID;
+        console.log(`Found existing peripheral type: ID=${peripheralTypeId}, Name="${cleanPeripheralTypeName}"`);
+      } else {
+        // Create new peripheral type
+        const [typeResult] = await pool.execute(
+          'INSERT INTO PERIPHERAL_TYPE (Peripheral_Type_Name) VALUES (?)',
+          [cleanPeripheralTypeName]
+        );
+        peripheralTypeId = typeResult.insertId;
+        console.log(`✅ Created new peripheral type: ID=${peripheralTypeId}, Name="${cleanPeripheralTypeName}"`);
       }
       
-      const peripheralTypeId = typeResult[0].Peripheral_Type_ID;
-      
-      // Create peripheral
+      // Create peripheral record
       const [result] = await pool.execute(
         'INSERT INTO PERIPHERAL (Peripheral_Type_ID, Asset_ID, Serial_Code, `Condition`, Remarks) VALUES (?, ?, ?, ?, ?)',
-        [peripheralTypeId, assetId, serialCode, condition, remarks]
+        [peripheralTypeId, assetId, serialCode || null, condition || 'Good', remarks || '']
       );
       
-      return result.insertId;
+      const peripheralId = result.insertId;
+      console.log(`✅ Created peripheral: ID=${peripheralId}, Asset_ID=${assetId}, Type="${cleanPeripheralTypeName}"`);
+      return peripheralId;
     } catch (error) {
+      // Handle duplicate key error for peripheral type (race condition)
+      if (error.code === 'ER_DUP_ENTRY' && error.message.includes('PERIPHERAL_TYPE')) {
+        try {
+          const [existingType] = await pool.execute(
+            'SELECT Peripheral_Type_ID FROM PERIPHERAL_TYPE WHERE LOWER(Peripheral_Type_Name) = LOWER(?)',
+            [peripheralTypeName.trim()]
+          );
+          if (existingType.length > 0) {
+            // Retry creating the peripheral with the existing type
+            const [result] = await pool.execute(
+              'INSERT INTO PERIPHERAL (Peripheral_Type_ID, Asset_ID, Serial_Code, `Condition`, Remarks) VALUES (?, ?, ?, ?, ?)',
+              [existingType[0].Peripheral_Type_ID, assetId, serialCode || null, condition || 'Good', remarks || '']
+            );
+            return result.insertId;
+          }
+        } catch (retryError) {
+          console.error('Error in retry after duplicate peripheral type:', retryError);
+        }
+      }
       console.error('Error in createPeripheral:', error);
       throw error;
     }
@@ -501,7 +622,7 @@ class Asset {
   // Helper method to link asset to project via inventory
   static async linkToProject(assetId, projectRefNum, customerName, branch) {
     try {
-      // Find project and customer IDs
+      // Find project ID first
       const [projectResult] = await pool.execute(
         'SELECT Project_ID FROM PROJECT WHERE Project_Ref_Number = ?',
         [projectRefNum]
@@ -513,16 +634,54 @@ class Asset {
       
       const projectId = projectResult[0].Project_ID;
       
-      const [customerResult] = await pool.execute(
-        'SELECT Customer_ID FROM CUSTOMER WHERE Customer_Name = ? AND Branch = ?',
+      // Try to find exact customer/branch match
+      let [customerResult] = await pool.execute(
+        'SELECT Customer_ID, Customer_Ref_Number FROM CUSTOMER WHERE Customer_Name = ? AND Branch = ?',
         [customerName, branch]
       );
       
-      if (customerResult.length === 0) {
-        throw new Error(`Customer '${customerName}' with branch '${branch}' not found`);
-      }
+      let customerId;
+      let customerRefNumber;
       
-      const customerId = customerResult[0].Customer_ID;
+      if (customerResult.length === 0) {
+        console.log(`⚠️ Customer '${customerName}' with branch '${branch}' not found - looking for alternatives`);
+        
+        // Strategy 1: Try to find customer with same name but different branch
+        const [altCustomerResult] = await pool.execute(
+          'SELECT Customer_ID, Customer_Ref_Number, Branch FROM CUSTOMER WHERE Customer_Name = ? LIMIT 1',
+          [customerName]
+        );
+        
+        if (altCustomerResult.length > 0) {
+          // Found customer with same name but different branch - use it
+          customerId = altCustomerResult[0].Customer_ID;
+          customerRefNumber = altCustomerResult[0].Customer_Ref_Number;
+          console.log(`✅ Using existing customer with different branch: '${altCustomerResult[0].Branch}' → '${branch}'`);
+        } else {
+          // Strategy 2: Create new customer record
+          console.log(`📝 Creating new customer record for '${customerName}' in branch '${branch}'`);
+          
+          // Generate a customer reference number (you can modify this logic as needed)
+          const [maxCustomerRef] = await pool.execute(
+            'SELECT MAX(CAST(SUBSTRING(Customer_Ref_Number, 2) AS UNSIGNED)) as max_ref FROM CUSTOMER WHERE Customer_Ref_Number REGEXP "^M[0-9]+$"'
+          );
+          
+          const nextRefNum = maxCustomerRef[0]?.max_ref ? `M${String(maxCustomerRef[0].max_ref + 1).padStart(5, '0')}` : 'M24001';
+          
+          const [insertResult] = await pool.execute(
+            'INSERT INTO CUSTOMER (Project_ID, Customer_Ref_Number, Customer_Name, Branch) VALUES (?, ?, ?, ?)',
+            [projectId, nextRefNum, customerName, branch]
+          );
+          
+          customerId = insertResult.insertId;
+          customerRefNumber = nextRefNum;
+          console.log(`✅ Created new customer: ID=${customerId}, Ref=${nextRefNum}, Name='${customerName}', Branch='${branch}'`);
+        }
+      } else {
+        customerId = customerResult[0].Customer_ID;
+        customerRefNumber = customerResult[0].Customer_Ref_Number;
+        console.log(`✅ Found exact customer match: ID=${customerId}, Ref=${customerRefNumber}`);
+      }
       
       // Update existing inventory record or create new one
       const [existingInventory] = await pool.execute(
@@ -536,6 +695,7 @@ class Asset {
           'UPDATE INVENTORY SET Asset_ID = ? WHERE Inventory_ID = ?',
           [assetId, existingInventory[0].Inventory_ID]
         );
+        console.log(`✅ LINKED TO PROJECT: Asset_ID ${assetId} → Inventory_ID ${existingInventory[0].Inventory_ID} (Customer_Ref: ${customerRefNumber})`);
         return existingInventory[0].Inventory_ID;
       } else {
         // Create new inventory record
@@ -543,6 +703,7 @@ class Asset {
           'INSERT INTO INVENTORY (Project_ID, Customer_ID, Asset_ID) VALUES (?, ?, ?)',
           [projectId, customerId, assetId]
         );
+        console.log(`✅ LINKED TO PROJECT: Asset_ID ${assetId} → Inventory_ID ${result.insertId} (Customer_Ref: ${customerRefNumber})`);
         return result.insertId;
       }
     } catch (error) {
@@ -552,9 +713,13 @@ class Asset {
   }
 
   // Helper method to create preventive maintenance record
+<<<<<<< HEAD
   // DEPRECATED: No longer used - PM records are created only when actual PM is performed
   // This prevents ghost PM_ID records without checklist results
   /*
+=======
+  // NOTE: This should only be called manually through the PM system, not automatically
+>>>>>>> fotoh
   static async createPreventiveMaintenance(assetId) {
     try {
       const [result] = await pool.execute(
@@ -567,7 +732,48 @@ class Asset {
       throw error;
     }
   }
+<<<<<<< HEAD
   */
+=======
+
+  // Helper method to fix orphaned assets by creating inventory links
+  // NOTE: This method should NOT automatically assign default customers
+  // Orphaned assets should be manually assigned to proper customers/projects
+  static async fixOrphanedAssets() {
+    try {
+      console.log('=== Checking for orphaned assets ===');
+      
+      // Find assets without inventory links
+      const [orphanAssets] = await pool.execute(`
+        SELECT a.Asset_ID, a.Asset_Serial_Number, a.Asset_Tag_ID, a.Item_Name 
+        FROM ASSET a 
+        WHERE a.Asset_ID NOT IN (SELECT DISTINCT Asset_ID FROM INVENTORY WHERE Asset_ID IS NOT NULL)
+      `);
+      
+      if (orphanAssets.length === 0) {
+        console.log('No orphaned assets found');
+        return { fixed: 0, orphaned: 0 };
+      }
+      
+      console.log(`Found ${orphanAssets.length} orphaned assets:`);
+      orphanAssets.forEach(asset => {
+        console.log(`  - Asset_ID: ${asset.Asset_ID}, Serial: ${asset.Asset_Serial_Number}, Tag: ${asset.Asset_Tag_ID}`);
+      });
+      
+      console.log('⚠️  ORPHANED ASSETS DETECTED - Manual assignment required');
+      console.log('⚠️  These assets were not assigned to default customers to preserve data integrity');
+      console.log('⚠️  Please manually assign these assets to correct customers/projects through the UI');
+      
+      // Do NOT auto-fix with default values - this was causing the NADMA/Putrajaya problem
+      // Assets should be manually assigned to correct customers based on their actual source
+      
+      return { fixed: 0, orphaned: orphanAssets.length };
+    } catch (error) {
+      console.error('Error in fixOrphanedAssets:', error);
+      throw error;
+    }
+  }
+>>>>>>> fotoh
 }
 
 module.exports = Asset;
