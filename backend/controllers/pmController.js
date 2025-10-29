@@ -167,6 +167,23 @@ const getDetailedPM = async (req, res, next) => {
 };
 
 /**
+ * Get PM records by asset ID
+ */
+const getPMByAssetId = async (req, res, next) => {
+  try {
+    const { assetId } = req.params;
+    const pmRecords = await PMaintenance.findByAssetId(assetId);
+    res.status(200).json(pmRecords);
+  } catch (error) {
+    logger.error('Error in getPMByAssetId:', error);
+    res.status(500).json({
+      error: 'Failed to fetch PM records for asset',
+      message: error.message
+    });
+  }
+};
+
+/**
  * Create new PM record with checklist results
  */
 const createPM = async (req, res, next) => {
@@ -213,5 +230,6 @@ module.exports = {
   getAllChecklistByCategory,
   getResultsByPMId,
   getDetailedPM,
+  getPMByAssetId,
   createPM
 };

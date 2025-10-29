@@ -9,6 +9,7 @@ const {
   getAllChecklistByCategory,
   getResultsByPMId,
   getDetailedPM,
+  getPMByAssetId,
   createPM
 } = require('../controllers/pmController');
 
@@ -24,6 +25,7 @@ router.get('/checklist/:categoryId', getChecklistByCategory);
 router.get('/all-checklist/:categoryId', getAllChecklistByCategory);
 router.get('/results/:pmId', getResultsByPMId);
 router.get('/detail/:pmId', getDetailedPM);
+router.get('/asset/:assetId', getPMByAssetId);
 router.post('/', createPM);
 
 module.exports = router;

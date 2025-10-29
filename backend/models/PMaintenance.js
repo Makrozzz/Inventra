@@ -354,6 +354,27 @@ class PMaintenance {
     }
   }
 
+  // Get PM records for a specific asset
+  static async findByAssetId(assetId) {
+    try {
+      const [rows] = await pool.execute(`
+        SELECT 
+          pm.PM_ID,
+          pm.Asset_ID,
+          pm.PM_Date,
+          pm.Remarks,
+          pm.Status
+        FROM PMAINTENANCE pm
+        WHERE pm.Asset_ID = ?
+        ORDER BY pm.PM_Date DESC
+      `, [assetId]);
+      return rows;
+    } catch (error) {
+      console.error('Error in PMaintenance.findByAssetId:', error);
+      throw error;
+    }
+  }
+
   // Create new PM record
   static async create(assetId, pmDate, remarks, status = 'In-Process') {
     try {
