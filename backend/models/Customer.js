@@ -120,6 +120,8 @@ class Customer {
    */
   static async findBranchesByCustomerName(customerName) {
     try {
+      console.log('🔍 Customer.findBranchesByCustomerName called with:', customerName);
+      
       const [rows] = await pool.execute(`
         SELECT DISTINCT
           Customer_ID,
@@ -130,6 +132,8 @@ class Customer {
         WHERE Customer_Name = ?
         ORDER BY Branch
       `, [customerName]);
+      
+      console.log(`📊 Found ${rows.length} branches for customer "${customerName}":`, rows);
       
       return rows.map(row => ({
         Customer_ID: row.Customer_ID,

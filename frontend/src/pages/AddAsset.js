@@ -200,6 +200,8 @@ const AddAsset = () => {
   const fetchBranchesByCustomer = async (customerName) => {
     try {
       console.log('🔄 Fetching branches for customer:', customerName);
+      console.log('🔍 Customer name type:', typeof customerName);
+      console.log('🔍 Customer name exact value:', JSON.stringify(customerName));
       setLoading(true);
       
       const response = await apiService.getBranchesByCustomer(customerName);

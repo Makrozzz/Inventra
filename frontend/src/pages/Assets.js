@@ -275,17 +275,20 @@ const Assets = ({ onDelete }) => {
       {/* Header Section with Gradient */}
       <div style={{
         background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-        padding: '30px 40px',
+        padding: '30px 20px',
         marginBottom: '30px',
         borderRadius: '0 0 20px 20px',
-        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)'
+        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)',
+        width: '100%',
+        boxSizing: 'border-box'
       }}>
         <div style={{ 
           display: 'flex', 
           justifyContent: 'space-between', 
           alignItems: 'center',
-          maxWidth: '1400px',
-          margin: '0 auto'
+          flexWrap: 'wrap',
+          gap: '15px',
+          width: '100%'
         }}>
           <div>
             <h1 style={{ 
@@ -364,19 +367,17 @@ const Assets = ({ onDelete }) => {
           border: '1px solid #c3e6cb',
           color: '#155724',
           padding: '15px 20px',
-          margin: '0 40px 20px 40px',
+          margin: '0 20px 20px 20px',
           borderRadius: '8px',
-          fontWeight: '500',
-          maxWidth: '1320px',
-          marginLeft: 'auto',
-          marginRight: 'auto'
+          fontWeight: '500'
         }}>
           {successMessage}
         </div>
       )}
 
-      <div style={{ padding: '0 40px', maxWidth: '1400px', margin: '0 auto' }}>
-        <div className="card">
+      {/* Full Width Asset Table Section */}
+      <div style={{ padding: '0 20px', width: '100%', boxSizing: 'border-box' }}>
+        <div className="card" style={{ width: '100%' }}>
         <div className="search-bar">
           <div style={{ position: 'relative', flex: 1 }}>
             <Search size={16} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#666' }} />

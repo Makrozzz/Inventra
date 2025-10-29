@@ -410,16 +410,72 @@ class Asset {
   // Get asset statistics
   static async getStatistics() {
     try {
+      console.log('=== Asset.getStatistics() CALLED ===');
+      
       const [totalResult] = await pool.execute('SELECT COUNT(*) as total FROM ASSET');
+      console.log('Total query result:', totalResult);
+      
       const [statusResult] = await pool.execute('SELECT Status, COUNT(*) as count FROM ASSET GROUP BY Status');
+      console.log('Status query result:', statusResult);
+      
       const [categoryResult] = await pool.execute(`
         SELECT c.Category, COUNT(*) as count 
         FROM ASSET a 
         LEFT JOIN CATEGORY c ON a.Category_ID = c.Category_ID 
         GROUP BY c.Category
       `);
+      console.log('Category query result:', categoryResult);
       
-      return {
+      // Get customer distribution (assets per customer)
+      const [customerResult] = await pool.execute(`
+        SELECT 
+          c.Customer_Name,
+          COUNT(DISTINCT a.Asset_ID) as asset_count
+        FROM CUSTOMER c
+        LEFT JOIN INVENTORY i ON c.Customer_ID = i.Customer_ID
+        LEFT JOIN ASSET a ON i.Asset_ID = a.Asset_ID
+        WHERE a.Asset_ID IS NOT NULL
+        GROUP BY c.Customer_Name
+        HAVING asset_count > 0
+        ORDER BY asset_count DESC
+      `);
+      console.log('Customer distribution query result:', customerResult);
+      
+      // Get customer distribution by category (for stacked bar chart)
+      const [customerByCategoryResult] = await pool.execute(`
+        SELECT 
+          c.Customer_Name,
+          cat.Category,
+          COUNT(DISTINCT a.Asset_ID) as asset_count
+        FROM CUSTOMER c
+        LEFT JOIN INVENTORY i ON c.Customer_ID = i.Customer_ID
+        LEFT JOIN ASSET a ON i.Asset_ID = a.Asset_ID
+        LEFT JOIN CATEGORY cat ON a.Category_ID = cat.Category_ID
+        WHERE a.Asset_ID IS NOT NULL
+        GROUP BY c.Customer_Name, cat.Category
+        ORDER BY c.Customer_Name, asset_count DESC
+      `);
+      console.log('Customer by category query result:', customerByCategoryResult);
+      
+      // Group customer data by category for stacked bars
+      const customersByCategory = {};
+      customerByCategoryResult.forEach(item => {
+        const customerName = item.Customer_Name || 'Unknown';
+        if (!customersByCategory[customerName]) {
+          customersByCategory[customerName] = {
+            total: 0,
+            categories: []
+          };
+        }
+        customersByCategory[customerName].categories.push({
+          category: item.Category || 'Unknown',
+          count: item.asset_count
+        });
+        customersByCategory[customerName].total += item.asset_count;
+      });
+      console.log('Grouped customers by category:', customersByCategory);
+      
+      const result = {
         total: totalResult[0].total,
         byStatus: statusResult.map(item => ({
           status: item.Status || 'Unknown',
@@ -428,15 +484,27 @@ class Asset {
         byCategory: categoryResult.map(item => ({
           category: item.Category || 'Unknown',
           count: item.count
-        }))
+        })),
+        byCustomer: customerResult.map(item => ({
+          customer: item.Customer_Name || 'Unknown',
+          count: item.asset_count
+        })),
+        customersByCategory: customersByCategory
       };
+      
+      console.log('Final statistics result:', result);
+      console.log('====================================');
+      
+      return result;
     } catch (error) {
       console.error('Error in Asset.getStatistics:', error);
       // Return fallback data if database query fails
       return {
         total: 0,
         byStatus: [],
-        byCategory: []
+        byCategory: [],
+        byCustomer: [],
+        customersByCategory: {}
       };
     }
   }

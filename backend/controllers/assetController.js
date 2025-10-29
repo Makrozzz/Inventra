@@ -502,13 +502,20 @@ const deleteAsset = async (req, res, next) => {
  */
 const getAssetStatistics = async (req, res, next) => {
   try {
+    console.log('=== getAssetStatistics CONTROLLER CALLED ===');
+    
     const Project = require('../models/Project');
     
     const statistics = await Asset.getStatistics();
+    console.log('Statistics from Asset.getStatistics():', statistics);
+    
     const projectStats = await Project.getStatistics();
+    console.log('Project statistics:', projectStats);
     
     // Add project count as total customers (1 project = 1 customer)
     statistics.totalProjects = projectStats.total;
+
+    console.log('Final statistics to send:', statistics);
 
     res.status(200).json(
       formatResponse(true, statistics, 'Asset statistics retrieved successfully')
