@@ -8,17 +8,17 @@ const AddAsset = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
-  
+
   // Dropdowns data
   const [projects, setProjects] = useState([]);
   const [branches, setBranches] = useState([]);
   const [categories, setCategories] = useState([]);
   const [models, setModels] = useState([]);
-  
+
   // Form data
   const [selectedProject, setSelectedProject] = useState('');
   const [selectedBranch, setSelectedBranch] = useState('');
-  
+
   const [asset, setAsset] = useState({
     Asset_Serial_Number: '',
     Asset_Tag_ID: '',
@@ -59,7 +59,7 @@ const AddAsset = () => {
     try {
       // Get inventory records for this project to find branches
       const response = await apiService.getInventoryByProject(projectId);
-      
+
       // Extract unique branches from inventory
       const uniqueBranches = response.reduce((acc, inv) => {
         const key = `${inv.Customer_ID}-${inv.Branch}`;
@@ -74,7 +74,7 @@ const AddAsset = () => {
         }
         return acc;
       }, []);
-      
+
       setBranches(uniqueBranches);
     } catch (err) {
       console.error('Error fetching branches:', err);
@@ -114,39 +114,39 @@ const AddAsset = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (!selectedProject) {
       setError('Please select a project');
       return;
     }
-    
+
     if (!selectedBranch) {
       setError('Please select a branch');
       return;
     }
-    
+
     setLoading(true);
     setError(null);
-    
+
     try {
       // Step 1: Create the asset
       const assetResponse = await apiService.createAsset(asset);
       console.log('Asset created:', assetResponse);
-      
+
       // Step 2: Update INVENTORY record with the new Asset_ID
       const selectedBranchData = branches.find(b => b.key === selectedBranch);
-      
+
       await apiService.updateInventoryWithAsset(
         selectedProject,
         selectedBranchData.Customer_ID,
         assetResponse.data.Asset_ID
       );
-      
+
       setSuccess(true);
       setTimeout(() => {
         navigate('/assets');
       }, 1500);
-      
+
     } catch (err) {
       console.error('Error creating asset:', err);
       setError(err.message || 'Failed to create asset');
@@ -161,10 +161,10 @@ const AddAsset = () => {
   if (success) {
     return (
       <div style={{ textAlign: 'center', padding: '40px' }}>
-        <div style={{ 
-          backgroundColor: '#d4edda', 
-          color: '#155724', 
-          padding: '20px', 
+        <div style={{
+          backgroundColor: '#d4edda',
+          color: '#155724',
+          padding: '20px',
           borderRadius: '8px',
           maxWidth: '500px',
           margin: '0 auto'
@@ -186,10 +186,10 @@ const AddAsset = () => {
       </div>
 
       {error && (
-        <div style={{ 
-          backgroundColor: '#f8d7da', 
-          color: '#721c24', 
-          padding: '15px', 
+        <div style={{
+          backgroundColor: '#f8d7da',
+          color: '#721c24',
+          padding: '15px',
           borderRadius: '8px',
           marginBottom: '20px'
         }}>
@@ -200,28 +200,28 @@ const AddAsset = () => {
       <div className="card">
         <form onSubmit={handleSubmit}>
           {/* Project and Branch Selection Section */}
-          <div style={{ 
-            backgroundColor: '#e3f2fd', 
-            padding: '20px', 
-            borderRadius: '8px', 
-            marginBottom: '25px' 
+          <div style={{
+            backgroundColor: '#e3f2fd',
+            padding: '20px',
+            borderRadius: '8px',
+            marginBottom: '25px'
           }}>
-            <h3 style={{ 
-              color: '#1976d2', 
-              marginBottom: '15px', 
-              display: 'flex', 
-              alignItems: 'center', 
-              gap: '10px' 
+            <h3 style={{
+              color: '#1976d2',
+              marginBottom: '15px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px'
             }}>
               <Building2 size={20} />
               Project & Branch Information
             </h3>
-            
+
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
               <div className="form-group">
                 <label>Project *</label>
-                <select 
-                  value={selectedProject} 
+                <select
+                  value={selectedProject}
                   onChange={(e) => setSelectedProject(e.target.value)}
                   required
                 >
@@ -236,8 +236,8 @@ const AddAsset = () => {
 
               <div className="form-group">
                 <label>Branch *</label>
-                <select 
-                  value={selectedBranch} 
+                <select
+                  value={selectedBranch}
                   onChange={(e) => setSelectedBranch(e.target.value)}
                   required
                   disabled={!selectedProject}
@@ -259,23 +259,23 @@ const AddAsset = () => {
           </div>
 
           {/* Asset Information Section */}
-          <div style={{ 
-            backgroundColor: '#f3e5f5', 
-            padding: '20px', 
-            borderRadius: '8px', 
-            marginBottom: '25px' 
+          <div style={{
+            backgroundColor: '#f3e5f5',
+            padding: '20px',
+            borderRadius: '8px',
+            marginBottom: '25px'
           }}>
-            <h3 style={{ 
-              color: '#7b1fa2', 
-              marginBottom: '15px', 
-              display: 'flex', 
-              alignItems: 'center', 
-              gap: '10px' 
+            <h3 style={{
+              color: '#7b1fa2',
+              marginBottom: '15px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px'
             }}>
               <Package size={20} />
               Asset Information
             </h3>
-            
+
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
               <div className="form-group">
                 <label>Serial Number *</label>
@@ -325,10 +325,10 @@ const AddAsset = () => {
 
               <div className="form-group">
                 <label>Category *</label>
-                <select 
-                  name="Category_ID" 
-                  value={asset.Category_ID} 
-                  onChange={handleChange} 
+                <select
+                  name="Category_ID"
+                  value={asset.Category_ID}
+                  onChange={handleChange}
                   required
                 >
                   <option value="">Select Category</option>
@@ -342,10 +342,10 @@ const AddAsset = () => {
 
               <div className="form-group">
                 <label>Model *</label>
-                <select 
-                  name="Model_ID" 
-                  value={asset.Model_ID} 
-                  onChange={handleChange} 
+                <select
+                  name="Model_ID"
+                  value={asset.Model_ID}
+                  onChange={handleChange}
                   required
                 >
                   <option value="">Select Model</option>
@@ -360,17 +360,17 @@ const AddAsset = () => {
           </div>
 
           <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
-            <button 
-              type="submit" 
+            <button
+              type="submit"
               className="btn btn-primary"
               disabled={loading}
             >
               <Save size={16} style={{ marginRight: '5px' }} />
               {loading ? 'Saving...' : 'Save Asset'}
             </button>
-            <button 
-              type="button" 
-              onClick={() => navigate('/assets')} 
+            <button
+              type="button"
+              onClick={() => navigate('/assets')}
               className="btn btn-secondary"
               disabled={loading}
             >

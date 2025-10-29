@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Sidebar from './components/Sidebar';
-import Login from './pages/Login';
+import Login from './pages/LoginWithMicrosoft';
 import Dashboard from './pages/Dashboard';
 import Projects from './pages/Projects';
 import AddProject from './pages/AddProject';
@@ -15,9 +15,17 @@ import DatabaseTest from './components/DatabaseTest';
 import apiService from './services/apiService';
 
 function App() {
-  const [isAuthenticated, setIsAuthenticated] = useState(true); // Set to true for testing
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [assets, setAssets] = useState([]);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    // Check if user is authenticated on app load
+    const token = localStorage.getItem('authToken');
+    if (token) {
+      setIsAuthenticated(true);
+    }
+  }, []);
 
   const handleLogin = () => {
     setIsAuthenticated(true);
