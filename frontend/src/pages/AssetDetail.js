@@ -103,9 +103,9 @@ const AssetDetail = () => {
     return (
       <div className="page-container">
         <div className="page-header">
-          <button onClick={() => navigate('/assets')} className="btn btn-secondary">
+          <button onClick={() => navigate(-1)} className="btn btn-secondary">
             <ArrowLeft size={16} style={{ marginRight: '5px' }} />
-            Back to Assets
+            Back
           </button>
         </div>
         <div className="card" style={{ textAlign: 'center', padding: '60px 20px' }}>
@@ -121,9 +121,9 @@ const AssetDetail = () => {
     return (
       <div className="page-container">
         <div className="page-header">
-          <button onClick={() => navigate('/assets')} className="btn btn-secondary">
+          <button onClick={() => navigate(-1)} className="btn btn-secondary">
             <ArrowLeft size={16} style={{ marginRight: '5px' }} />
-            Back to Assets
+            Back
           </button>
         </div>
         <div className="card" style={{ textAlign: 'center', padding: '60px 20px' }}>
@@ -142,9 +142,9 @@ const AssetDetail = () => {
     return (
       <div className="page-container">
         <div className="page-header">
-          <button onClick={() => navigate('/assets')} className="btn btn-secondary">
+          <button onClick={() => navigate(-1)} className="btn btn-secondary">
             <ArrowLeft size={16} style={{ marginRight: '5px' }} />
-            Back to Assets
+            Back
           </button>
         </div>
         <div className="card" style={{ textAlign: 'center', padding: '60px 20px' }}>
@@ -160,9 +160,9 @@ const AssetDetail = () => {
       {/* Header with Back Button */}
       <div className="page-header" style={{ marginBottom: '20px' }}>
         <div>
-          <button onClick={() => navigate('/assets')} className="btn btn-secondary" style={{ marginBottom: '10px' }}>
+          <button onClick={() => navigate(-1)} className="btn btn-secondary" style={{ marginBottom: '10px' }}>
             <ArrowLeft size={16} style={{ marginRight: '5px' }} />
-            Back to Assets
+            Back
           </button>
           <h1 className="page-title" style={{ marginTop: '10px', marginBottom: '5px' }}>Asset Details</h1>
           <p style={{ color: '#7f8c8d', fontSize: '0.9rem', margin: 0 }}>

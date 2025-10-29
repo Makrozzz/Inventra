@@ -109,7 +109,7 @@ const EditAsset = ({ onUpdate }) => {
       }
 
       setShowConfirmModal(false);
-      navigate('/assets');
+      navigate(-1);
     } catch (err) {
       console.error('Error updating asset:', err);
       setError(`Failed to update asset: ${err.message}`);
@@ -375,7 +375,7 @@ const EditAsset = ({ onUpdate }) => {
     return (
       <div>
         <div style={{ display: 'flex', alignItems: 'center', marginBottom: '20px' }}>
-          <button onClick={() => navigate('/assets')} className="btn btn-secondary" style={{ marginRight: '15px' }}>
+          <button onClick={() => navigate(-1)} className="btn btn-secondary" style={{ marginRight: '15px' }}>
             <ArrowLeft size={16} />
           </button>
           <h1>Edit Asset</h1>
@@ -393,7 +393,7 @@ const EditAsset = ({ onUpdate }) => {
     return (
       <div>
         <div style={{ display: 'flex', alignItems: 'center', marginBottom: '20px' }}>
-          <button onClick={() => navigate('/assets')} className="btn btn-secondary" style={{ marginRight: '15px' }}>
+          <button onClick={() => navigate(-1)} className="btn btn-secondary" style={{ marginRight: '15px' }}>
             <ArrowLeft size={16} />
           </button>
           <h1>Edit Asset</h1>
@@ -402,8 +402,8 @@ const EditAsset = ({ onUpdate }) => {
           <div style={{ textAlign: 'center', padding: '40px', color: '#e74c3c' }}>
             <AlertCircle size={48} style={{ marginBottom: '20px' }} />
             <p style={{ fontSize: '1.1rem', marginBottom: '20px' }}>Error: {error}</p>
-            <button onClick={() => navigate('/assets')} className="btn btn-primary">
-              Back to Assets
+            <button onClick={() => navigate(-1)} className="btn btn-primary">
+              Back
             </button>
           </div>
         </div>
@@ -414,7 +414,7 @@ const EditAsset = ({ onUpdate }) => {
   return (
     <div>
       <div style={{ display: 'flex', alignItems: 'center', marginBottom: '20px' }}>
-        <button onClick={() => navigate('/assets')} className="btn btn-secondary" style={{ marginRight: '15px' }}>
+        <button onClick={() => navigate(-1)} className="btn btn-secondary" style={{ marginRight: '15px' }}>
           <ArrowLeft size={16} />
         </button>
         <h1>Edit Asset: {currentAsset?.Item_Name}</h1>
