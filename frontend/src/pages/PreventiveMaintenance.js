@@ -1,9 +1,12 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Calendar, Clock, CheckCircle, AlertTriangle, Wrench, Filter, Building2, MapPin, Package, FileText, X, ClipboardCheck } from 'lucide-react';
 
 const PreventiveMaintenance = () => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const isInitialMount = useRef(true);
+  const savedBranch = useRef(null);
   const [selectedCustomer, setSelectedCustomer] = useState('');
   const [selectedBranch, setSelectedBranch] = useState('');
   const [customers, setCustomers] = useState([]);
@@ -23,7 +26,19 @@ const PreventiveMaintenance = () => {
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
+  // Initialize from URL parameters on mount
   useEffect(() => {
+    const customerParam = searchParams.get('customer');
+    const branchParam = searchParams.get('branch');
+    
+    if (customerParam) {
+      setSelectedCustomer(customerParam);
+      if (branchParam) {
+        // Save branch to restore after branches are fetched
+        savedBranch.current = branchParam;
+      }
+    }
+    
     fetchStatistics();
     fetchCustomers();
   }, []);
@@ -31,7 +46,11 @@ const PreventiveMaintenance = () => {
   useEffect(() => {
     if (selectedCustomer) {
       fetchBranches(selectedCustomer);
-      setSelectedBranch('');
+      
+      // Only clear branch if not initial mount with saved branch
+      if (!isInitialMount.current || !savedBranch.current) {
+        setSelectedBranch('');
+      }
       setPmRecords([]);
     } else {
       setBranches([]);
@@ -39,6 +58,15 @@ const PreventiveMaintenance = () => {
       setPmRecords([]);
     }
   }, [selectedCustomer]);
+
+  // Restore branch from URL after branches are fetched
+  useEffect(() => {
+    if (isInitialMount.current && savedBranch.current && branches.length > 0) {
+      setSelectedBranch(savedBranch.current);
+      savedBranch.current = null;
+      isInitialMount.current = false;
+    }
+  }, [branches]);
 
   useEffect(() => {
     if (selectedCustomer && selectedBranch) {
@@ -198,6 +226,31 @@ const PreventiveMaintenance = () => {
     if (!dateString) return 'N/A';
     const date = new Date(dateString);
     return date.toLocaleDateString('en-MY', { year: 'numeric', month: 'short', day: 'numeric' });
+  };
+
+  // Handlers for customer and branch selection with URL parameter updates
+  const handleCustomerChange = (e) => {
+    const newCustomer = e.target.value;
+    setSelectedCustomer(newCustomer);
+    
+    // Update URL parameters
+    if (newCustomer) {
+      setSearchParams({ customer: newCustomer });
+    } else {
+      setSearchParams({});
+    }
+  };
+
+  const handleBranchChange = (e) => {
+    const newBranch = e.target.value;
+    setSelectedBranch(newBranch);
+    
+    // Update URL parameters (keep customer parameter)
+    if (newBranch && selectedCustomer) {
+      setSearchParams({ customer: selectedCustomer, branch: newBranch });
+    } else if (selectedCustomer) {
+      setSearchParams({ customer: selectedCustomer });
+    }
   };
 
   // PM Form Handlers
@@ -367,7 +420,7 @@ const PreventiveMaintenance = () => {
               <Building2 size={18} color="#3498db" />
               Step 1: Select Customer
             </label>
-            <select value={selectedCustomer} onChange={(e) => setSelectedCustomer(e.target.value)} style={{ width: '100%', padding: '12px', border: '2px solid #ddd', borderRadius: '6px', fontSize: '1rem', backgroundColor: 'white', cursor: 'pointer', transition: 'border-color 0.2s' }} onFocus={(e) => e.target.style.borderColor = '#3498db'} onBlur={(e) => e.target.style.borderColor = '#ddd'}>
+            <select value={selectedCustomer} onChange={handleCustomerChange} style={{ width: '100%', padding: '12px', border: '2px solid #ddd', borderRadius: '6px', fontSize: '1rem', backgroundColor: 'white', cursor: 'pointer', transition: 'border-color 0.2s' }} onFocus={(e) => e.target.style.borderColor = '#3498db'} onBlur={(e) => e.target.style.borderColor = '#ddd'}>
               <option value="">-- Select Customer --</option>
               {customers.map((customer) => (
                 <option key={customer.Customer_ID} value={customer.Customer_ID}>
@@ -387,7 +440,7 @@ const PreventiveMaintenance = () => {
               <MapPin size={18} color="#e74c3c" />
               Step 2: Select Branch
             </label>
-            <select value={selectedBranch} onChange={(e) => setSelectedBranch(e.target.value)} disabled={!selectedCustomer} style={{ width: '100%', padding: '12px', border: '2px solid #ddd', borderRadius: '6px', fontSize: '1rem', backgroundColor: selectedCustomer ? 'white' : '#f5f5f5', cursor: selectedCustomer ? 'pointer' : 'not-allowed', opacity: selectedCustomer ? 1 : 0.6, transition: 'border-color 0.2s' }} onFocus={(e) => selectedCustomer && (e.target.style.borderColor = '#e74c3c')} onBlur={(e) => e.target.style.borderColor = '#ddd'}>
+            <select value={selectedBranch} onChange={handleBranchChange} disabled={!selectedCustomer} style={{ width: '100%', padding: '12px', border: '2px solid #ddd', borderRadius: '6px', fontSize: '1rem', backgroundColor: selectedCustomer ? 'white' : '#f5f5f5', cursor: selectedCustomer ? 'pointer' : 'not-allowed', opacity: selectedCustomer ? 1 : 0.6, transition: 'border-color 0.2s' }} onFocus={(e) => selectedCustomer && (e.target.style.borderColor = '#e74c3c')} onBlur={(e) => e.target.style.borderColor = '#ddd'}>
               <option value="">-- Select Branch --</option>
               {branches.map((branch, index) => (
                 <option key={index} value={branch}>
