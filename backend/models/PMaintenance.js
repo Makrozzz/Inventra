@@ -456,6 +456,95 @@ class PMaintenance {
       connection.release();
     }
   }
+
+  // ============ CHECKLIST MANAGEMENT ============
+  
+  // Get all categories
+  static async getAllCategories() {
+    try {
+      const [rows] = await pool.execute(`
+        SELECT Category_ID, Category
+        FROM CATEGORY
+        ORDER BY Category
+      `);
+      return rows;
+    } catch (error) {
+      console.error('Error in PMaintenance.getAllCategories:', error);
+      throw error;
+    }
+  }
+
+  // Create new checklist item
+  static async createChecklistItem(categoryId, checkItem) {
+    try {
+      const [result] = await pool.execute(`
+        INSERT INTO PM_CHECKLIST (Category_ID, Check_Item)
+        VALUES (?, ?)
+      `, [categoryId, checkItem]);
+      
+      return result.insertId;
+    } catch (error) {
+      console.error('Error in PMaintenance.createChecklistItem:', error);
+      throw error;
+    }
+  }
+
+  // Update checklist item
+  static async updateChecklistItem(checklistId, checkItem) {
+    try {
+      const [result] = await pool.execute(`
+        UPDATE PM_CHECKLIST
+        SET Check_Item = ?
+        WHERE Checklist_ID = ?
+      `, [checkItem, checklistId]);
+      
+      return result.affectedRows > 0;
+    } catch (error) {
+      console.error('Error in PMaintenance.updateChecklistItem:', error);
+      throw error;
+    }
+  }
+
+  // Delete checklist item
+  static async deleteChecklistItem(checklistId) {
+    try {
+      // First check if this checklist item is used in any PM results
+      const [pmResults] = await pool.execute(`
+        SELECT COUNT(*) as count
+        FROM PM_RESULT
+        WHERE Checklist_ID = ?
+      `, [checklistId]);
+
+      if (pmResults[0].count > 0) {
+        throw new Error(`Cannot delete checklist item: it is used in ${pmResults[0].count} PM record(s)`);
+      }
+
+      const [result] = await pool.execute(`
+        DELETE FROM PM_CHECKLIST
+        WHERE Checklist_ID = ?
+      `, [checklistId]);
+      
+      return result.affectedRows > 0;
+    } catch (error) {
+      console.error('Error in PMaintenance.deleteChecklistItem:', error);
+      throw error;
+    }
+  }
+
+  // Create new category
+  static async createCategory(categoryName) {
+    try {
+      const [result] = await pool.execute(`
+        INSERT INTO CATEGORY (Category)
+        VALUES (?)
+      `, [categoryName]);
+      
+      return result.insertId;
+    } catch (error) {
+      console.error('Error in PMaintenance.createCategory:', error);
+      throw error;
+    }
+  }
 }
 
 module.exports = PMaintenance;
