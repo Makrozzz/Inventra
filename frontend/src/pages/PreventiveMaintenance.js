@@ -408,11 +408,11 @@ const PreventiveMaintenance = () => {
                 <table className="table" style={{ minWidth: '1200px' }}>
                   <thead>
                     <tr>
-                      <th style={{ position: 'sticky', left: 0, background: 'white', zIndex: 10, minWidth: '140px' }}>Actions</th>
-                      <th style={{ minWidth: '120px' }}>Asset Tag ID</th>
-                      <th style={{ minWidth: '150px' }}>Item Name</th>
-                      <th style={{ minWidth: '150px' }}>Serial Number</th>
-                      <th style={{ minWidth: '100px' }}>PM Date</th>
+                      <th style={{ position: 'sticky', left: 0, background: 'white', zIndex: 10, minWidth: '120px', textAlign: 'center' }}>Asset Tag ID</th>
+                      <th style={{ minWidth: '150px', textAlign: 'center' }}>Item Name</th>
+                      <th style={{ minWidth: '150px', textAlign: 'center' }}>Serial Number</th>
+                      <th style={{ minWidth: '100px', textAlign: 'center' }}>PM Date</th>
+                      <th style={{ minWidth: '140px', textAlign: 'center' }}>Actions</th>
                       {checklistItems.map((item) => (
                         <th key={item.Checklist_ID} style={{ 
                           minWidth: '120px', 
@@ -438,11 +438,28 @@ const PreventiveMaintenance = () => {
                       return (
                         <tr key={record.PM_ID}>
                           <td style={{ 
+                            fontFamily: 'monospace', 
+                            fontSize: '0.9rem',
+                            fontWeight: '600',
                             position: 'sticky',
                             left: 0,
                             background: 'white',
-                            zIndex: 5
+                            zIndex: 5,
+                            textAlign: 'center'
                           }}>
+                            {record.Asset_Tag_ID || 'N/A'}
+                          </td>
+                          <td style={{ fontWeight: '500', textAlign: 'center' }}>{record.Item_Name || 'N/A'}</td>
+                          <td style={{ fontFamily: 'monospace', fontSize: '0.85rem', color: '#666', textAlign: 'center' }}>
+                            {record.Asset_Serial_Number || 'N/A'}
+                          </td>
+                          <td style={{ textAlign: 'center' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '5px', justifyContent: 'center' }}>
+                              <Calendar size={14} color="#666" />
+                              {formatDate(record.PM_Date)}
+                            </div>
+                          </td>
+                          <td style={{ textAlign: 'center' }}>
                             <button
                               onClick={() => handleOpenPMForm(record)}
                               style={{
@@ -454,7 +471,7 @@ const PreventiveMaintenance = () => {
                                 cursor: 'pointer',
                                 fontSize: '0.9rem',
                                 fontWeight: '600',
-                                display: 'flex',
+                                display: 'inline-flex',
                                 alignItems: 'center',
                                 gap: '6px',
                                 transition: 'background 0.2s'
@@ -465,23 +482,6 @@ const PreventiveMaintenance = () => {
                               <ClipboardCheck size={16} />
                               PM
                             </button>
-                          </td>
-                          <td style={{ 
-                            fontFamily: 'monospace', 
-                            fontSize: '0.9rem',
-                            fontWeight: '600'
-                          }}>
-                            {record.Asset_Tag_ID || 'N/A'}
-                          </td>
-                          <td style={{ fontWeight: '500' }}>{record.Item_Name || 'N/A'}</td>
-                          <td style={{ fontFamily: 'monospace', fontSize: '0.85rem', color: '#666' }}>
-                            {record.Asset_Serial_Number || 'N/A'}
-                          </td>
-                          <td>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                              <Calendar size={14} color="#666" />
-                              {formatDate(record.PM_Date)}
-                            </div>
                           </td>
                           {checklistItems.map((item) => (
                             <td key={item.Checklist_ID} style={{ 
