@@ -53,7 +53,9 @@ const AssetDetail = () => {
       if (response.ok) {
         const data = await response.json();
         console.log('PM Records:', data);
-        setPmRecords(data);
+        // Sort PM records by date (ascending - earliest date = PM 1)
+        const sortedData = data.sort((a, b) => new Date(a.PM_Date) - new Date(b.PM_Date));
+        setPmRecords(sortedData);
       } else {
         console.log('No PM records found or error fetching PM records');
         setPmRecords([]);

@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Calendar, Clock, CheckCircle, AlertTriangle, Wrench, Filter, Building2, MapPin, Package, FileText, X, ClipboardCheck } from 'lucide-react';
 
 const PreventiveMaintenance = () => {
+  const navigate = useNavigate();
   const [selectedCustomer, setSelectedCustomer] = useState('');
   const [selectedBranch, setSelectedBranch] = useState('');
   const [customers, setCustomers] = useState([]);
@@ -99,20 +101,56 @@ const PreventiveMaintenance = () => {
     }
   };
 
-  // Group PM records by category and collect checklist items
+  // Group PM records by category and asset, keeping only latest PM per asset
   const groupedByCategory = pmRecords.reduce((acc, record) => {
     const category = record.Category || 'Uncategorized';
     if (!acc[category]) {
       acc[category] = {
-        records: [],
+        assets: {}, // Changed from records to assets (keyed by Asset_ID)
         checklistItems: []
       };
     }
-    acc[category].records.push(record);
+    
+    const assetId = record.Asset_ID;
+    
+    // Skip if no Asset_ID
+    if (!assetId) return acc;
+    
+    // If this asset doesn't exist yet, or if this record is newer, update it
+    if (!acc[category].assets[assetId]) {
+      acc[category].assets[assetId] = {
+        ...record,
+        pmCount: 1,
+        latestPMDate: record.PM_Date,
+        allPMRecords: [{ PM_ID: record.PM_ID, PM_Date: record.PM_Date }]
+      };
+    } else {
+      // Store current values
+      const currentPmCount = acc[category].assets[assetId].pmCount;
+      const currentAllPMRecords = acc[category].assets[assetId].allPMRecords;
+      
+      // Increment PM count and add new PM record
+      acc[category].assets[assetId].pmCount = currentPmCount + 1;
+      acc[category].assets[assetId].allPMRecords = [...currentAllPMRecords, { PM_ID: record.PM_ID, PM_Date: record.PM_Date }];
+      
+      // If this PM is newer, update to use its checklist results
+      const existingDate = new Date(acc[category].assets[assetId].latestPMDate);
+      const currentDate = new Date(record.PM_Date);
+      
+      if (currentDate > existingDate) {
+        acc[category].assets[assetId] = {
+          ...record,
+          pmCount: currentPmCount + 1,
+          latestPMDate: record.PM_Date,
+          allPMRecords: [...currentAllPMRecords, { PM_ID: record.PM_ID, PM_Date: record.PM_Date }]
+        };
+      }
+    }
     
     // Collect unique checklist items for this category
-    if (record.checklist_results && record.checklist_results.length > 0) {
+    if (record.checklist_results && Array.isArray(record.checklist_results)) {
       record.checklist_results.forEach(item => {
+        if (!item || !item.Checklist_ID) return;
         const exists = acc[category].checklistItems.find(
           ci => ci.Checklist_ID === item.Checklist_ID
         );
@@ -388,7 +426,11 @@ const PreventiveMaintenance = () => {
         </div>
       ) : (
         Object.keys(groupedByCategory).map((category) => {
-          const { records, checklistItems } = groupedByCategory[category];
+          const { assets = {}, checklistItems = [] } = groupedByCategory[category] || {};
+          const assetsList = Object.values(assets);
+          
+          // Skip if no assets in this category
+          if (assetsList.length === 0) return null;
           
           return (
             <div key={category} className="card" style={{ marginBottom: '30px' }}>
@@ -396,7 +438,7 @@ const PreventiveMaintenance = () => {
                 <Wrench size={28} color="#27ae60" />
                 <div>
                   <h2 style={{ margin: 0, color: '#2c3e50', fontSize: '1.4rem' }}>
-                    {category} ({records.length})
+                    {category} ({assetsList.length})
                   </h2>
                   <p style={{ margin: '5px 0 0 0', color: '#7f8c8d', fontSize: '0.9rem' }}>
                     Preventive maintenance checklist results for {category.toLowerCase()} assets
@@ -411,9 +453,11 @@ const PreventiveMaintenance = () => {
                       <th style={{ position: 'sticky', left: 0, background: 'white', zIndex: 10, minWidth: '120px', textAlign: 'center' }}>Asset Tag ID</th>
                       <th style={{ minWidth: '150px', textAlign: 'center' }}>Item Name</th>
                       <th style={{ minWidth: '150px', textAlign: 'center' }}>Serial Number</th>
-                      <th style={{ minWidth: '100px', textAlign: 'center' }}>PM Date</th>
+                      <th style={{ minWidth: '120px', textAlign: 'center' }}>Latest PM Date</th>
+                      <th style={{ minWidth: '80px', textAlign: 'center' }}>PM Count</th>
+                      <th style={{ minWidth: '200px', textAlign: 'center' }}>PM Records</th>
                       <th style={{ minWidth: '140px', textAlign: 'center' }}>Actions</th>
-                      {checklistItems.map((item) => (
+                      {Array.isArray(checklistItems) && checklistItems.map((item) => (
                         <th key={item.Checklist_ID} style={{ 
                           minWidth: '120px', 
                           fontSize: '0.85rem',
@@ -426,17 +470,19 @@ const PreventiveMaintenance = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {records.map((record) => {
+                    {assetsList.map((asset) => {
                       // Create a map of checklist results for quick lookup
                       const resultsMap = {};
-                      if (record.checklist_results) {
-                        record.checklist_results.forEach(result => {
-                          resultsMap[result.Checklist_ID] = result.Is_OK_bool;
+                      if (asset.checklist_results && Array.isArray(asset.checklist_results)) {
+                        asset.checklist_results.forEach(result => {
+                          if (result && result.Checklist_ID !== undefined) {
+                            resultsMap[result.Checklist_ID] = result.Is_OK_bool;
+                          }
                         });
                       }
 
                       return (
-                        <tr key={record.PM_ID}>
+                        <tr key={`${category}-${asset.Asset_ID}`}>
                           <td style={{ 
                             fontFamily: 'monospace', 
                             fontSize: '0.9rem',
@@ -447,21 +493,80 @@ const PreventiveMaintenance = () => {
                             zIndex: 5,
                             textAlign: 'center'
                           }}>
-                            {record.Asset_Tag_ID || 'N/A'}
+                            {asset.Asset_Tag_ID || 'N/A'}
                           </td>
-                          <td style={{ fontWeight: '500', textAlign: 'center' }}>{record.Item_Name || 'N/A'}</td>
+                          <td style={{ fontWeight: '500', textAlign: 'center' }}>{asset.Item_Name || 'N/A'}</td>
                           <td style={{ fontFamily: 'monospace', fontSize: '0.85rem', color: '#666', textAlign: 'center' }}>
-                            {record.Asset_Serial_Number || 'N/A'}
+                            {asset.Asset_Serial_Number || 'N/A'}
                           </td>
                           <td style={{ textAlign: 'center' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '5px', justifyContent: 'center' }}>
                               <Calendar size={14} color="#666" />
-                              {formatDate(record.PM_Date)}
+                              {formatDate(asset.latestPMDate)}
+                            </div>
+                          </td>
+                          <td style={{ textAlign: 'center' }}>
+                            {/* PM Count Badge */}
+                            <span style={{
+                              padding: '6px 12px',
+                              borderRadius: '12px',
+                              fontSize: '0.9rem',
+                              fontWeight: '700',
+                              background: '#e3f2fd',
+                              color: '#1565c0',
+                              border: '1px solid #90caf9',
+                              minWidth: '35px',
+                              display: 'inline-block'
+                            }}>
+                              {asset.pmCount}
+                            </span>
+                          </td>
+                          <td style={{ textAlign: 'center' }}>
+                            {/* Individual PM Buttons */}
+                            <div style={{ display: 'flex', gap: '6px', justifyContent: 'center', flexWrap: 'wrap' }}>
+                              {asset.allPMRecords && asset.allPMRecords
+                                .sort((a, b) => new Date(a.PM_Date) - new Date(b.PM_Date))
+                                .map((pm, index) => (
+                                  <button
+                                    key={pm.PM_ID}
+                                    onClick={() => navigate(`/maintenance/detail/${pm.PM_ID}`)}
+                                    style={{
+                                      padding: '6px 12px',
+                                      background: '#27ae60',
+                                      color: 'white',
+                                      border: 'none',
+                                      borderRadius: '6px',
+                                      cursor: 'pointer',
+                                      fontSize: '0.85rem',
+                                      fontWeight: '600',
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      gap: '5px',
+                                      transition: 'all 0.2s',
+                                      minWidth: '70px',
+                                      boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                                    }}
+                                    onMouseOver={(e) => {
+                                      e.currentTarget.style.background = '#229954';
+                                      e.currentTarget.style.transform = 'translateY(-1px)';
+                                      e.currentTarget.style.boxShadow = '0 4px 6px rgba(0,0,0,0.15)';
+                                    }}
+                                    onMouseOut={(e) => {
+                                      e.currentTarget.style.background = '#27ae60';
+                                      e.currentTarget.style.transform = 'translateY(0)';
+                                      e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
+                                    }}
+                                    title={`View PM ${index + 1} details - ${new Date(pm.PM_Date).toLocaleDateString('en-MY', { year: 'numeric', month: 'short', day: 'numeric' })}`}
+                                  >
+                                    <FileText size={14} />
+                                    PM{index + 1}
+                                  </button>
+                                ))}
                             </div>
                           </td>
                           <td style={{ textAlign: 'center' }}>
                             <button
-                              onClick={() => handleOpenPMForm(record)}
+                              onClick={() => handleOpenPMForm(asset)}
                               style={{
                                 padding: '8px 16px',
                                 background: '#3498db',
@@ -483,7 +588,7 @@ const PreventiveMaintenance = () => {
                               PM
                             </button>
                           </td>
-                          {checklistItems.map((item) => (
+                          {Array.isArray(checklistItems) && checklistItems.map((item) => (
                             <td key={item.Checklist_ID} style={{ 
                               textAlign: 'center',
                               background: resultsMap[item.Checklist_ID] === 1 ? '#f0f9f4' : '#fef2f2'
@@ -508,7 +613,13 @@ const PreventiveMaintenance = () => {
                   <div>
                     <span style={{ color: '#7f8c8d', fontSize: '0.85rem' }}>Total Assets:</span>
                     <strong style={{ marginLeft: '8px', color: '#2c3e50', fontSize: '1.1rem' }}>
-                      {records.length}
+                      {assetsList.length}
+                    </strong>
+                  </div>
+                  <div>
+                    <span style={{ color: '#7f8c8d', fontSize: '0.85rem' }}>Total PM Records:</span>
+                    <strong style={{ marginLeft: '8px', color: '#27ae60', fontSize: '1.1rem' }}>
+                      {assetsList.reduce((sum, asset) => sum + (asset.pmCount || 0), 0)}
                     </strong>
                   </div>
                   <div>
@@ -518,9 +629,9 @@ const PreventiveMaintenance = () => {
                     </strong>
                   </div>
                   <div>
-                    <span style={{ color: '#7f8c8d', fontSize: '0.85rem' }}>PM Date:</span>
+                    <span style={{ color: '#7f8c8d', fontSize: '0.85rem' }}>Latest PM Date:</span>
                     <strong style={{ marginLeft: '8px', color: '#7f8c8d', fontSize: '1rem' }}>
-                      {formatDate(records[0]?.PM_Date)}
+                      {formatDate(assetsList[0]?.latestPMDate)}
                     </strong>
                   </div>
                 </div>
