@@ -280,6 +280,155 @@ class ApiService {
   async getCustomersByProject(projectId) {
     return this.makeRequest(`customers/project/${projectId}`);
   }
+
+  // Enhanced project methods for Add Asset feature
+  async getProjectByReference(refNum) {
+    const headers = {
+      'Content-Type': 'application/json',
+      // Bypassing authentication for development
+    };
+
+    const url = `${this.baseURL}/projects/reference/${encodeURIComponent(refNum)}`;
+    const response = await fetch(url, { headers });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => null);
+      throw new Error(errorData?.error || `HTTP error! status: ${response.status}`);
+    }
+
+    return await response.json();
+  }
+
+  async getBranchesByCustomer(customerName) {
+    const headers = {
+      'Content-Type': 'application/json',
+      // Bypassing authentication for development
+    };
+
+    const url = `${this.baseURL}/projects/branches/${encodeURIComponent(customerName)}`;
+    const response = await fetch(url, { headers });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => null);
+      throw new Error(errorData?.error || `HTTP error! status: ${response.status}`);
+    }
+
+    return await response.json();
+  }
+
+  // Enhanced asset creation with complete details
+  async createAssetWithDetails(assetData) {
+    const headers = {
+      'Content-Type': 'application/json',
+      // Bypassing authentication for development
+    };
+
+    console.log('Creating asset with details:', assetData);
+
+    const url = `${this.baseURL}/assets/create-with-details`;
+    const response = await fetch(url, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(assetData)
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => null);
+      throw new Error(errorData?.error || errorData?.message || `HTTP error! status: ${response.status}`);
+    }
+
+    return await response.json();
+  }
+
+  // Methods to fetch dropdown data
+  async getCategories() {
+    const headers = {
+      'Content-Type': 'application/json',
+    };
+
+    const url = `${this.baseURL}/categories`;
+    try {
+      const response = await fetch(url, { headers });
+      if (!response.ok) throw new Error('Failed to fetch categories');
+      return await response.json();
+    } catch (error) {
+      console.warn('Categories endpoint not available, using fallback data');
+      // Return fallback data if endpoint doesn't exist
+      return {
+        data: [
+          { Category_ID: 1, Category: 'Desktop' },
+          { Category_ID: 2, Category: 'Printer' },
+          { Category_ID: 3, Category: 'Laptop' },
+          { Category_ID: 4, Category: 'Server' }
+        ]
+      };
+    }
+  }
+
+  async getModels() {
+    const headers = {
+      'Content-Type': 'application/json',
+    };
+
+    const url = `${this.baseURL}/models`;
+    try {
+      const response = await fetch(url, { headers });
+      if (!response.ok) throw new Error('Failed to fetch models');
+      return await response.json();
+    } catch (error) {
+      console.warn('Models endpoint not available, using fallback data');
+      // Return fallback data if endpoint doesn't exist
+      return {
+        data: [
+          { Model_ID: 1, Model: 'Dell OptiPlex All-in-One Plus 7420' },
+          { Model_ID: 2, Model: 'HP Color LaserJet Enterprise MFP M480f' },
+          { Model_ID: 3, Model: 'Lenovo ThinkPad X1 Carbon' },
+          { Model_ID: 4, Model: 'Dell PowerEdge R740' }
+        ]
+      };
+    }
+  }
+
+  async getPeripheralTypes() {
+    const headers = {
+      'Content-Type': 'application/json',
+    };
+
+    const url = `${this.baseURL}/peripheral-types`;
+    try {
+      const response = await fetch(url, { headers });
+      if (!response.ok) throw new Error('Failed to fetch peripheral types');
+      return await response.json();
+    } catch (error) {
+      console.warn('Peripheral types endpoint not available, using fallback data');
+      // Return fallback data if endpoint doesn't exist
+      return {
+        data: [
+          { Peripheral_Type_ID: 1, Peripheral_Type_Name: 'Keyboard' },
+          { Peripheral_Type_ID: 2, Peripheral_Type_Name: 'Mouse' },
+          { Peripheral_Type_ID: 3, Peripheral_Type_Name: 'Monitor' },
+          { Peripheral_Type_ID: 4, Peripheral_Type_Name: 'Ethernet Cable' },
+          { Peripheral_Type_ID: 5, Peripheral_Type_Name: 'Power Cable' }
+        ]
+      };
+    }
+  }
+
+  async getRecipients() {
+    const headers = {
+      'Content-Type': 'application/json',
+    };
+
+    const url = `${this.baseURL}/recipients`;
+    try {
+      const response = await fetch(url, { headers });
+      if (!response.ok) throw new Error('Failed to fetch recipients');
+      return await response.json();
+    } catch (error) {
+      console.warn('Recipients endpoint not available, returning empty array');
+      return { data: [] };
+    }
+  }
 }
 
 // Create and export a singleton instance

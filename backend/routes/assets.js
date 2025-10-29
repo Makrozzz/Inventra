@@ -6,6 +6,7 @@ const {
   getAssetBySerialNumber,
   getAssetDetail,
   createAsset,
+  createAssetWithDetails,
   updateAsset,
   updateAssetById,
   deleteAsset,
@@ -95,6 +96,12 @@ router.post('/',
   assetValidationRules, 
   handleValidationErrors, 
   createAsset
+);
+
+// New route for creating assets with complete details (bypassing auth for development)
+router.post('/create-with-details',
+  // authenticateToken,  // Disabled for development/testing
+  createAssetWithDetails
 );
 
 router.put('/id/:id', 

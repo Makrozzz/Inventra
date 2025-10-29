@@ -68,6 +68,37 @@ class Project {
     }
   }
 
+  // Get project by reference number with customer data
+  static async findByReferenceWithCustomer(refNum) {
+    try {
+      const [rows] = await pool.execute(`
+        SELECT 
+          p.Project_ID,
+          p.Project_Ref_Number,
+          p.Project_Title,
+          p.Solution_Principal,
+          p.Warranty,
+          p.Preventive_Maintenance,
+          p.Start_Date,
+          p.End_Date,
+          c.Customer_Name,
+          c.Customer_Ref_Number
+        FROM PROJECT p
+        LEFT JOIN CUSTOMER c ON p.Project_ID = c.Project_ID
+        WHERE p.Project_Ref_Number = ?
+        LIMIT 1
+      `, [refNum]);
+      
+      if (rows.length > 0) {
+        return rows[0];
+      }
+      return null;
+    } catch (error) {
+      console.error('Error in Project.findByReferenceWithCustomer:', error);
+      throw error;
+    }
+  }
+
   // Create new project
   static async create(projectData) {
     try {

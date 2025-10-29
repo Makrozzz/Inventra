@@ -3,18 +3,21 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { 
   ArrowLeft, Package, FileText, Building2, Users, Wrench, 
   Calendar, CheckCircle, AlertCircle, Info, Monitor, Mouse, 
-  Keyboard, Cable, Shield
+  Keyboard, Cable, Shield, Eye, ClipboardList
 } from 'lucide-react';
 
 const AssetDetail = () => {
   const { assetId } = useParams();
   const navigate = useNavigate();
   const [assetData, setAssetData] = useState(null);
+  const [pmRecords, setPmRecords] = useState([]);
+  const [loadingPM, setLoadingPM] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
     fetchAssetDetail();
+    fetchPMRecords();
   }, [assetId]);
 
   const fetchAssetDetail = async () => {
@@ -38,6 +41,41 @@ const AssetDetail = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const fetchPMRecords = async () => {
+    try {
+      setLoadingPM(true);
+      
+      // Fetch PM records for this asset
+      const response = await fetch(`http://localhost:5000/api/v1/pm/asset/${assetId}`);
+      
+      if (response.ok) {
+        const data = await response.json();
+        console.log('PM Records:', data);
+        // Sort PM records by date (ascending - earliest date = PM 1)
+        const sortedData = data.sort((a, b) => new Date(a.PM_Date) - new Date(b.PM_Date));
+        setPmRecords(sortedData);
+      } else {
+        console.log('No PM records found or error fetching PM records');
+        setPmRecords([]);
+      }
+    } catch (err) {
+      console.error('Error fetching PM records:', err);
+      setPmRecords([]);
+    } finally {
+      setLoadingPM(false);
+    }
+  };
+
+  const formatDate = (dateString) => {
+    if (!dateString) return 'N/A';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-MY', { 
+      year: 'numeric', 
+      month: 'short', 
+      day: 'numeric' 
+    });
   };
 
   const getStatusBadgeStyle = (status) => {
@@ -65,9 +103,9 @@ const AssetDetail = () => {
     return (
       <div className="page-container">
         <div className="page-header">
-          <button onClick={() => navigate('/assets')} className="btn btn-secondary">
+          <button onClick={() => navigate(-1)} className="btn btn-secondary">
             <ArrowLeft size={16} style={{ marginRight: '5px' }} />
-            Back to Assets
+            Back
           </button>
         </div>
         <div className="card" style={{ textAlign: 'center', padding: '60px 20px' }}>
@@ -83,9 +121,9 @@ const AssetDetail = () => {
     return (
       <div className="page-container">
         <div className="page-header">
-          <button onClick={() => navigate('/assets')} className="btn btn-secondary">
+          <button onClick={() => navigate(-1)} className="btn btn-secondary">
             <ArrowLeft size={16} style={{ marginRight: '5px' }} />
-            Back to Assets
+            Back
           </button>
         </div>
         <div className="card" style={{ textAlign: 'center', padding: '60px 20px' }}>
@@ -104,9 +142,9 @@ const AssetDetail = () => {
     return (
       <div className="page-container">
         <div className="page-header">
-          <button onClick={() => navigate('/assets')} className="btn btn-secondary">
+          <button onClick={() => navigate(-1)} className="btn btn-secondary">
             <ArrowLeft size={16} style={{ marginRight: '5px' }} />
-            Back to Assets
+            Back
           </button>
         </div>
         <div className="card" style={{ textAlign: 'center', padding: '60px 20px' }}>
@@ -122,9 +160,9 @@ const AssetDetail = () => {
       {/* Header with Back Button */}
       <div className="page-header" style={{ marginBottom: '20px' }}>
         <div>
-          <button onClick={() => navigate('/assets')} className="btn btn-secondary" style={{ marginBottom: '10px' }}>
+          <button onClick={() => navigate(-1)} className="btn btn-secondary" style={{ marginBottom: '10px' }}>
             <ArrowLeft size={16} style={{ marginRight: '5px' }} />
-            Back to Assets
+            Back
           </button>
           <h1 className="page-title" style={{ marginTop: '10px', marginBottom: '5px' }}>Asset Details</h1>
           <p style={{ color: '#7f8c8d', fontSize: '0.9rem', margin: 0 }}>
@@ -352,18 +390,154 @@ const AssetDetail = () => {
           borderBottom: '2px solid #27ae60'
         }}>
           <Wrench size={24} color="#27ae60" />
-          <h3 style={{ margin: 0, color: '#2c3e50', fontSize: '1.2rem' }}>Preventive Maintenance Schedule</h3>
+          <h3 style={{ margin: 0, color: '#2c3e50', fontSize: '1.2rem' }}>Preventive Maintenance</h3>
         </div>
         
-        <div style={{ 
-          padding: '15px', 
-          background: '#f8f9fa', 
-          borderRadius: '8px',
-          border: '1px solid #e9ecef',
-          lineHeight: '1.8',
-          color: '#2c3e50'
-        }}>
-          {assetData.Preventive_Maintenance || 'No preventive maintenance schedule available'}
+        {/* PM Schedule Description */}
+        <div style={{ marginBottom: '24px' }}>
+          <h4 style={{ 
+            margin: '0 0 12px 0', 
+            color: '#2c3e50', 
+            fontSize: '1rem', 
+            fontWeight: '600',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px'
+          }}>
+            <Calendar size={18} color="#27ae60" />
+            Maintenance Schedule
+          </h4>
+          <div style={{ 
+            padding: '15px', 
+            background: '#f0f9f4', 
+            borderRadius: '8px',
+            border: '1px solid #c3e6cb',
+            lineHeight: '1.8',
+            color: '#2c3e50'
+          }}>
+            {assetData.Preventive_Maintenance || 'No preventive maintenance schedule available'}
+          </div>
+        </div>
+
+        {/* PM Records Table */}
+        <div>
+          <h4 style={{ 
+            margin: '0 0 15px 0', 
+            color: '#2c3e50', 
+            fontSize: '1rem', 
+            fontWeight: '600',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px'
+          }}>
+            <ClipboardList size={18} color="#27ae60" />
+            PM Records ({pmRecords.length})
+          </h4>
+
+          {loadingPM ? (
+            <div style={{ 
+              textAlign: 'center', 
+              padding: '40px', 
+              background: '#f8f9fa',
+              borderRadius: '8px'
+            }}>
+              <p style={{ color: '#666', margin: 0 }}>Loading PM records...</p>
+            </div>
+          ) : pmRecords.length === 0 ? (
+            <div style={{ 
+              textAlign: 'center', 
+              padding: '40px', 
+              background: '#f8f9fa',
+              borderRadius: '8px',
+              border: '1px solid #e9ecef'
+            }}>
+              <ClipboardList size={48} color="#95a5a6" style={{ marginBottom: '15px' }} />
+              <h4 style={{ color: '#7f8c8d', margin: '0 0 10px 0' }}>No PM Records</h4>
+              <p style={{ color: '#95a5a6', margin: 0, fontSize: '0.9rem' }}>
+                No preventive maintenance has been recorded for this asset yet
+              </p>
+            </div>
+          ) : (
+            <div style={{ 
+              border: '1px solid #e9ecef', 
+              borderRadius: '8px', 
+              overflow: 'hidden' 
+            }}>
+              <table className="table" style={{ marginBottom: 0 }}>
+                <thead style={{ background: '#f8f9fa' }}>
+                  <tr>
+                    <th style={{ width: '80px', textAlign: 'center' }}>#</th>
+                    <th>PM Record</th>
+                    <th style={{ width: '150px' }}>Date</th>
+                    <th style={{ width: '120px' }}>Status</th>
+                    <th style={{ width: '120px', textAlign: 'center' }}>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pmRecords.map((pm, index) => (
+                    <tr key={pm.PM_ID}>
+                      <td style={{ textAlign: 'center', fontWeight: '600', color: '#7f8c8d' }}>
+                        {index + 1}
+                      </td>
+                      <td>
+                        <div style={{ fontWeight: '600', color: '#2c3e50', marginBottom: '4px' }}>
+                          Preventive Maintenance {index + 1}
+                        </div>
+                        {pm.Remarks && (
+                          <div style={{ fontSize: '0.85rem', color: '#7f8c8d', fontStyle: 'italic' }}>
+                            {pm.Remarks}
+                          </div>
+                        )}
+                      </td>
+                      <td>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <Calendar size={14} color="#666" />
+                          <span>{formatDate(pm.PM_Date)}</span>
+                        </div>
+                      </td>
+                      <td>
+                        <span style={{
+                          padding: '4px 12px',
+                          borderRadius: '12px',
+                          fontSize: '0.85rem',
+                          fontWeight: '600',
+                          background: pm.Status === 'Completed' ? '#d4edda' : '#fff3cd',
+                          color: pm.Status === 'Completed' ? '#155724' : '#856404',
+                          border: pm.Status === 'Completed' ? '1px solid #c3e6cb' : '1px solid #ffeeba'
+                        }}>
+                          {pm.Status || 'In-Process'}
+                        </span>
+                      </td>
+                      <td style={{ textAlign: 'center' }}>
+                        <button
+                          onClick={() => navigate(`/maintenance/detail/${pm.PM_ID}`)}
+                          style={{
+                            padding: '6px 14px',
+                            background: '#3498db',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '6px',
+                            cursor: 'pointer',
+                            fontSize: '0.85rem',
+                            fontWeight: '600',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            transition: 'background 0.2s'
+                          }}
+                          onMouseOver={(e) => e.target.style.background = '#2980b9'}
+                          onMouseOut={(e) => e.target.style.background = '#3498db'}
+                        >
+                          <Eye size={14} />
+                          Details
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       </div>
 

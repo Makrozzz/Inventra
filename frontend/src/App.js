@@ -4,10 +4,13 @@ import Sidebar from './components/Sidebar';
 import Login from './pages/LoginWithMicrosoft';
 import Dashboard from './pages/Dashboard';
 import Projects from './pages/Projects';
+import ProjectDetail from './pages/ProjectDetail';
 import AddProject from './pages/AddProject';
+import EditProject from './pages/EditProject';
 import Assets from './pages/Assets';
 import AssetDetail from './pages/AssetDetail';
 import PreventiveMaintenance from './pages/PreventiveMaintenance';
+import PMDetail from './pages/PMDetail';
 import AccountSettings from './pages/AccountSettings';
 import AddAsset from './pages/AddAsset';
 import EditAsset from './pages/EditAsset';
@@ -80,9 +83,12 @@ function App() {
             <Route path="/" element={<Dashboard />} />
             <Route path="/projects" element={<Projects />} />
             <Route path="/projects/add" element={<AddProject />} />
+            <Route path="/projects/edit/:id" element={<EditProject />} />
+            <Route path="/projects/:id" element={<ProjectDetail />} />
             <Route path="/assets" element={<Assets onDelete={deleteAsset} />} />
             <Route path="/asset-detail/:assetId" element={<AssetDetail />} />
             <Route path="/maintenance" element={<PreventiveMaintenance assets={assets} />} />
+            <Route path="/maintenance/detail/:pmId" element={<PMDetail />} />
             <Route path="/settings" element={<AccountSettings />} />
             <Route path="/add-asset" element={<AddAsset onAdd={addAsset} />} />
             <Route path="/edit-asset/:id" element={<EditAsset assets={assets} onUpdate={updateAsset} />} />

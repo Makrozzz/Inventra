@@ -140,6 +140,151 @@ const createAsset = async (req, res, next) => {
     next(error);
   }
 };
+const createAssetWithDetails = async (req, res, next) => {
+  try {
+    const completeData = req.body;
+    console.log('Creating asset with complete details:', completeData);
+
+    // Validate required fields
+    if (!completeData.project_reference_num || !completeData.serial_number || 
+        !completeData.tag_id || !completeData.item_name) {
+      console.log('Validation failed - missing required fields');
+      return res.status(400).json({
+        success: false,
+        error: 'Missing required fields: project_reference_num, serial_number, tag_id, item_name'
+      });
+    }
+
+    console.log('Checking for existing asset with serial number:', completeData.serial_number);
+    
+    // Check if asset with same serial number already exists
+    const existingAsset = await Asset.findBySerialNumber(completeData.serial_number);
+    if (existingAsset) {
+      console.log('Asset already exists with serial number:', completeData.serial_number);
+      return res.status(400).json({
+        success: false,
+        error: 'Asset with this serial number already exists'
+      });
+    }
+
+    console.log('Creating recipient...');
+    // Step 1: Get or create recipient
+    let recipientId = null;
+    if (completeData.recipient_name && completeData.department_name) {
+      recipientId = await Asset.createRecipient(
+        completeData.recipient_name,
+        completeData.department_name
+      );
+      console.log('Recipient created with ID:', recipientId);
+    }
+
+    console.log('Creating/getting category...');
+    // Step 2: Get or create category
+    let categoryId = null;
+    if (completeData.category) {
+      categoryId = await Asset.getOrCreateCategory(completeData.category);
+      console.log('Category ID:', categoryId);
+    }
+
+    console.log('Creating/getting model...');
+    // Step 3: Get or create model
+    let modelId = null;
+    if (completeData.model) {
+      modelId = await Asset.getOrCreateModel(completeData.model);
+      console.log('Model ID:', modelId);
+    }
+
+    console.log('Creating asset record...');
+    // Step 4: Create the asset
+    const assetData = {
+      Asset_Serial_Number: completeData.serial_number,
+      Asset_Tag_ID: completeData.tag_id,
+      Item_Name: completeData.item_name,
+      Status: completeData.status || 'Active',
+      Recipients_ID: recipientId,
+      Category_ID: categoryId,
+      Model_ID: modelId
+    };
+
+    const newAsset = await Asset.create(assetData);
+    console.log('Asset created:', newAsset);
+
+    console.log('Creating peripherals...');
+    // Step 5: Create peripherals if provided
+    let peripheralIds = [];
+    if (completeData.peripherals && Array.isArray(completeData.peripherals)) {
+      for (const peripheral of completeData.peripherals) {
+        if (peripheral.peripheral_name) {
+          try {
+            const peripheralId = await Asset.createPeripheral(
+              newAsset.Asset_ID,
+              peripheral.peripheral_name,
+              peripheral.serial_code_name,
+              peripheral.condition || 'Good',
+              peripheral.remarks
+            );
+            peripheralIds.push(peripheralId);
+            console.log('Peripheral created with ID:', peripheralId);
+          } catch (peripheralError) {
+            console.log('Failed to create peripheral:', peripheralError.message);
+            // Continue with other peripherals
+          }
+        }
+      }
+    }
+
+    console.log('Linking to project...');
+    // Step 6: Link to project/customer via inventory
+    let inventoryId = null;
+    if (completeData.project_reference_num && completeData.customer_name && completeData.branch) {
+      try {
+        inventoryId = await Asset.linkToProject(
+          newAsset.Asset_ID,
+          completeData.project_reference_num,
+          completeData.customer_name,
+          completeData.branch
+        );
+        console.log('Linked to project with inventory ID:', inventoryId);
+      } catch (linkError) {
+        console.log('Failed to link to project:', linkError.message);
+        // Continue anyway
+      }
+    }
+
+    // NOTE: PM_ID is NOT created automatically anymore
+    // PM records are only created when actual preventive maintenance is performed
+    // This prevents "ghost" PM records with no checklist results
+    let pmId = null;
+
+    console.log('Fetching complete asset data...');
+    // Fetch the complete asset data to return
+    const completeAsset = await Asset.findDetailById(newAsset.Asset_ID);
+
+    logger.info(`Asset created with details: ${completeData.serial_number} by user ${req.user?.userId || 'system'}`);
+
+    console.log('Sending success response...');
+    res.status(201).json({
+      success: true,
+      data: {
+        ...completeAsset,
+        asset_id: newAsset.Asset_ID,
+        pmid: pmId,
+        inventory_id: inventoryId,
+        peripheral_ids: peripheralIds
+      },
+      message: 'Asset created successfully with all details'
+    });
+  } catch (error) {
+    logger.error('Error in createAssetWithDetails:', error);
+    console.error('Error creating asset with details:', error);
+    console.error('Error stack:', error.stack);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to create asset',
+      message: error.message
+    });
+  }
+};
 
 /**
  * Update asset by ID
@@ -148,6 +293,9 @@ const updateAssetById = async (req, res, next) => {
   try {
     const { id } = req.params;
     const updateData = req.body;
+
+    console.log('Updating asset ID:', id);
+    console.log('Update data received:', updateData);
 
     // Check if asset exists
     const existingAsset = await Asset.findById(id);
@@ -171,20 +319,86 @@ const updateAssetById = async (req, res, next) => {
     if (updateData.Category_ID) finalUpdateData.Category_ID = updateData.Category_ID;
     if (updateData.Model_ID) finalUpdateData.Model_ID = updateData.Model_ID;
 
+    // Handle name-based updates by updating existing records in-place
+    if (updateData.Recipient_Name || updateData.Department) {
+      try {
+        const recipientId = await Asset.updateRecipientInfo(
+          updateData.Recipient_Name,
+          updateData.Department,
+          existingAsset.Recipients_ID
+        );
+        if (recipientId) {
+          finalUpdateData.Recipients_ID = recipientId;
+          console.log('Updated Recipients_ID to:', recipientId);
+        }
+      } catch (error) {
+        console.warn('Could not update recipient information:', error.message);
+      }
+    }
+
+    if (updateData.Category) {
+      try {
+        const categoryId = await Asset.updateCategoryInfo(updateData.Category, existingAsset.Category_ID);
+        if (categoryId) {
+          finalUpdateData.Category_ID = categoryId;
+          console.log('Updated Category_ID to:', categoryId);
+        }
+      } catch (error) {
+        console.warn('Could not update category:', error.message);
+      }
+    }
+
+    if (updateData.Model) {
+      try {
+        const modelId = await Asset.updateModelInfo(updateData.Model, existingAsset.Model_ID);
+        if (modelId) {
+          finalUpdateData.Model_ID = modelId;
+          console.log('Updated Model_ID to:', modelId);
+        }
+      } catch (error) {
+        console.warn('Could not update model:', error.message);
+      }
+    }
+
+    console.log('Final update data:', finalUpdateData);
+
+    // Ensure we have data to update
+    if (Object.keys(finalUpdateData).length === 0) {
+      console.log('No valid updates to apply');
+      return res.status(400).json({
+        error: 'No valid updates provided'
+      });
+    }
+
     // Update the asset properties
     Object.assign(existingAsset, finalUpdateData);
     
     // Save the updated asset
+    console.log('Executing update for Asset_ID:', existingAsset.Asset_ID);
     await existingAsset.update();
     
     // Fetch the updated asset to return with joined data
     const updatedAsset = await Asset.findById(id);
+
+    console.log('Asset updated successfully:', updatedAsset);
+
+    // Verify the update was applied correctly
+    if (updatedAsset) {
+      const verificationLog = {};
+      if (finalUpdateData.Asset_Serial_Number) verificationLog.Serial = `${existingAsset.Asset_Serial_Number} -> ${updatedAsset.Asset_Serial_Number}`;
+      if (finalUpdateData.Recipients_ID) verificationLog.Recipient = `ID ${finalUpdateData.Recipients_ID} -> ${updatedAsset.Recipient_Name}`;
+      if (finalUpdateData.Category_ID) verificationLog.Category = `ID ${finalUpdateData.Category_ID} -> ${updatedAsset.Category}`;
+      if (finalUpdateData.Model_ID) verificationLog.Model = `ID ${finalUpdateData.Model_ID} -> ${updatedAsset.Model}`;
+      
+      console.log('Update verification:', verificationLog);
+    }
 
     logger.info(`Asset updated: ID ${id} by user ${req.user?.userId || 'unknown'}`);
 
     res.status(200).json(updatedAsset);
   } catch (error) {
     logger.error('Error in updateAssetById:', error);
+    console.error('Error updating asset:', error);
     res.status(500).json({
       error: 'Failed to update asset',
       message: error.message
@@ -367,6 +581,7 @@ module.exports = {
   getAssetBySerialNumber,
   getAssetDetail,
   createAsset,
+  createAssetWithDetails,
   updateAsset,
   updateAssetById,
   deleteAsset,

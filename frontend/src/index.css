@@ -279,13 +279,17 @@ body {
   display: flex;
   gap: 10px;
   margin-bottom: 20px;
+  width: 100%;
+  max-width: 1200px; /* Make search bar container even wider */
 }
 
 .search-bar input {
   flex: 1;
-  padding: 10px;
+  padding: 12px 15px; /* Increase padding for better appearance */
   border: 1px solid #ddd;
-  border-radius: 4px;
+  border-radius: 6px; /* Slightly more rounded corners */
+  font-size: 16px; /* Larger text */
+  min-width: 600px; /* Increased minimum width for longer search bar */
 }
 
 .filters {

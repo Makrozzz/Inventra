@@ -154,11 +154,7 @@ class PMaintenance {
     try {
       const [rows] = await pool.execute(`
         SELECT 
-          pm.PM_ID,
-          pm.Asset_ID,
-          pm.PM_Date,
-          pm.Remarks,
-          pm.Status as PM_Status,
+          a.Asset_ID,
           a.Asset_Serial_Number,
           a.Asset_Tag_ID,
           a.Item_Name,
@@ -174,17 +170,21 @@ class PMaintenance {
           cust.Customer_ID,
           cust.Customer_Name,
           cust.Branch,
-          cust.Customer_Ref_Number
-        FROM PMAINTENANCE pm
-        LEFT JOIN ASSET a ON pm.Asset_ID = a.Asset_ID
+          cust.Customer_Ref_Number,
+          pm.PM_ID,
+          pm.PM_Date,
+          pm.Remarks,
+          pm.Status as PM_Status
+        FROM ASSET a
         LEFT JOIN CATEGORY c ON a.Category_ID = c.Category_ID
         LEFT JOIN MODEL m ON a.Model_ID = m.Model_ID
         LEFT JOIN RECIPIENTS r ON a.Recipients_ID = r.Recipients_ID
-        LEFT JOIN INVENTORY i ON a.Asset_ID = i.Asset_ID
+        INNER JOIN INVENTORY i ON a.Asset_ID = i.Asset_ID
+        INNER JOIN CUSTOMER cust ON i.Customer_ID = cust.Customer_ID
         LEFT JOIN PROJECT p ON i.Project_ID = p.Project_ID
-        LEFT JOIN CUSTOMER cust ON i.Customer_ID = cust.Customer_ID
+        LEFT JOIN PMAINTENANCE pm ON a.Asset_ID = pm.Asset_ID
         WHERE cust.Customer_Ref_Number = ? AND cust.Branch = ?
-        ORDER BY c.Category, pm.PM_Date DESC
+        ORDER BY c.Category, a.Asset_ID, pm.PM_Date ASC
       `, [customerRefNumber, branch]);
       return rows;
     } catch (error) {
@@ -276,15 +276,11 @@ class PMaintenance {
   // Get PM data with checklist results grouped by category
   static async getPMWithChecklistByCustomerAndBranch(customerRefNumber, branch) {
     try {
-      // First get all PM records for this customer reference number and branch
-      // customerId is now Customer_Ref_Number (e.g., "M24050")
-      const [pmRows] = await pool.execute(`
+      // First get all ASSETS for this customer reference number and branch
+      // This includes assets WITH and WITHOUT PM records
+      const [assetRows] = await pool.execute(`
         SELECT 
-          pm.PM_ID,
-          pm.Asset_ID,
-          pm.PM_Date,
-          pm.Remarks as PM_Remarks,
-          pm.Status as PM_Status,
+          a.Asset_ID,
           a.Asset_Serial_Number,
           a.Asset_Tag_ID,
           a.Item_Name,
@@ -292,21 +288,34 @@ class PMaintenance {
           c.Category,
           m.Model,
           r.Recipient_Name,
-          r.Department
-        FROM PMAINTENANCE pm
-        LEFT JOIN ASSET a ON pm.Asset_ID = a.Asset_ID
+          r.Department,
+          pm.PM_ID,
+          pm.PM_Date,
+          pm.Remarks as PM_Remarks,
+          pm.Status as PM_Status
+        FROM ASSET a
         LEFT JOIN CATEGORY c ON a.Category_ID = c.Category_ID
         LEFT JOIN MODEL m ON a.Model_ID = m.Model_ID
         LEFT JOIN RECIPIENTS r ON a.Recipients_ID = r.Recipients_ID
-        LEFT JOIN INVENTORY i ON a.Asset_ID = i.Asset_ID
-        LEFT JOIN CUSTOMER cust ON i.Customer_ID = cust.Customer_ID
+        INNER JOIN INVENTORY i ON a.Asset_ID = i.Asset_ID
+        INNER JOIN CUSTOMER cust ON i.Customer_ID = cust.Customer_ID
+        LEFT JOIN PMAINTENANCE pm ON a.Asset_ID = pm.Asset_ID
         WHERE cust.Customer_Ref_Number = ? AND cust.Branch = ?
-        ORDER BY c.Category, a.Asset_Tag_ID
+        ORDER BY c.Category, a.Asset_Tag_ID, pm.PM_Date ASC
       `, [customerRefNumber, branch]);
 
-      // For each PM record, get its checklist results
+      // For each row, get its checklist results (only if PM_ID exists)
       const pmWithChecklists = await Promise.all(
-        pmRows.map(async (pm) => {
+        assetRows.map(async (row) => {
+          // If this row has no PM_ID, return it as-is with empty checklist
+          if (!row.PM_ID) {
+            return {
+              ...row,
+              checklist_results: []
+            };
+          }
+
+          // Otherwise, fetch checklist results for this PM
           const [checklistResults] = await pool.execute(`
             SELECT 
               pmr.PM_Result_ID,
@@ -319,10 +328,10 @@ class PMaintenance {
             LEFT JOIN PM_CHECKLIST pmc ON pmr.Checklist_ID = pmc.Checklist_ID
             WHERE pmr.PM_ID = ?
             ORDER BY pmc.Checklist_ID
-          `, [pm.PM_ID]);
+          `, [row.PM_ID]);
 
           return {
-            ...pm,
+            ...row,
             checklist_results: checklistResults
           };
         })
@@ -350,6 +359,189 @@ class PMaintenance {
       return rows;
     } catch (error) {
       console.error('Error in PMaintenance.getAllChecklistItemsByCategory:', error);
+      throw error;
+    }
+  }
+
+  // Get PM records for a specific asset
+  static async findByAssetId(assetId) {
+    try {
+      const [rows] = await pool.execute(`
+        SELECT 
+          pm.PM_ID,
+          pm.Asset_ID,
+          pm.PM_Date,
+          pm.Remarks,
+          pm.Status
+        FROM PMAINTENANCE pm
+        WHERE pm.Asset_ID = ?
+        ORDER BY pm.PM_Date DESC
+      `, [assetId]);
+      return rows;
+    } catch (error) {
+      console.error('Error in PMaintenance.findByAssetId:', error);
+      throw error;
+    }
+  }
+
+  // Create new PM record
+  static async create(assetId, pmDate, remarks, status = 'In-Process') {
+    try {
+      const [result] = await pool.execute(`
+        INSERT INTO PMAINTENANCE (Asset_ID, PM_Date, Remarks, Status)
+        VALUES (?, ?, ?, ?)
+      `, [assetId, pmDate, remarks, status]);
+      
+      return result.insertId;
+    } catch (error) {
+      console.error('Error in PMaintenance.create:', error);
+      throw error;
+    }
+  }
+
+  // Create PM results for a PM record
+  static async createResults(pmId, checklistResults) {
+    const connection = await pool.getConnection();
+    try {
+      await connection.beginTransaction();
+
+      // checklistResults is an array of { Checklist_ID, Is_OK_bool, Remarks }
+      for (const result of checklistResults) {
+        await connection.execute(`
+          INSERT INTO PM_RESULT (PM_ID, Checklist_ID, Is_OK_bool, Remarks)
+          VALUES (?, ?, ?, ?)
+        `, [pmId, result.Checklist_ID, result.Is_OK_bool, result.Remarks || null]);
+      }
+
+      await connection.commit();
+      return true;
+    } catch (error) {
+      await connection.rollback();
+      console.error('Error in PMaintenance.createResults:', error);
+      throw error;
+    } finally {
+      connection.release();
+    }
+  }
+
+  // Create PM record with results in one transaction
+  static async createWithResults(assetId, pmDate, remarks, checklistResults, status = 'In-Process') {
+    const connection = await pool.getConnection();
+    try {
+      await connection.beginTransaction();
+
+      // Create PM record
+      const [pmResult] = await connection.execute(`
+        INSERT INTO PMAINTENANCE (Asset_ID, PM_Date, Remarks, Status)
+        VALUES (?, ?, ?, ?)
+      `, [assetId, pmDate, remarks, status]);
+
+      const pmId = pmResult.insertId;
+
+      // Create PM results
+      for (const result of checklistResults) {
+        await connection.execute(`
+          INSERT INTO PM_RESULT (PM_ID, Checklist_ID, Is_OK_bool, Remarks)
+          VALUES (?, ?, ?, ?)
+        `, [pmId, result.Checklist_ID, result.Is_OK_bool, result.Remarks || null]);
+      }
+
+      await connection.commit();
+      return pmId;
+    } catch (error) {
+      await connection.rollback();
+      console.error('Error in PMaintenance.createWithResults:', error);
+      throw error;
+    } finally {
+      connection.release();
+    }
+  }
+
+  // ============ CHECKLIST MANAGEMENT ============
+  
+  // Get all categories
+  static async getAllCategories() {
+    try {
+      const [rows] = await pool.execute(`
+        SELECT Category_ID, Category
+        FROM CATEGORY
+        ORDER BY Category
+      `);
+      return rows;
+    } catch (error) {
+      console.error('Error in PMaintenance.getAllCategories:', error);
+      throw error;
+    }
+  }
+
+  // Create new checklist item
+  static async createChecklistItem(categoryId, checkItem) {
+    try {
+      const [result] = await pool.execute(`
+        INSERT INTO PM_CHECKLIST (Category_ID, Check_Item)
+        VALUES (?, ?)
+      `, [categoryId, checkItem]);
+      
+      return result.insertId;
+    } catch (error) {
+      console.error('Error in PMaintenance.createChecklistItem:', error);
+      throw error;
+    }
+  }
+
+  // Update checklist item
+  static async updateChecklistItem(checklistId, checkItem) {
+    try {
+      const [result] = await pool.execute(`
+        UPDATE PM_CHECKLIST
+        SET Check_Item = ?
+        WHERE Checklist_ID = ?
+      `, [checkItem, checklistId]);
+      
+      return result.affectedRows > 0;
+    } catch (error) {
+      console.error('Error in PMaintenance.updateChecklistItem:', error);
+      throw error;
+    }
+  }
+
+  // Delete checklist item
+  static async deleteChecklistItem(checklistId) {
+    try {
+      // First check if this checklist item is used in any PM results
+      const [pmResults] = await pool.execute(`
+        SELECT COUNT(*) as count
+        FROM PM_RESULT
+        WHERE Checklist_ID = ?
+      `, [checklistId]);
+
+      if (pmResults[0].count > 0) {
+        throw new Error(`Cannot delete checklist item: it is used in ${pmResults[0].count} PM record(s)`);
+      }
+
+      const [result] = await pool.execute(`
+        DELETE FROM PM_CHECKLIST
+        WHERE Checklist_ID = ?
+      `, [checklistId]);
+      
+      return result.affectedRows > 0;
+    } catch (error) {
+      console.error('Error in PMaintenance.deleteChecklistItem:', error);
+      throw error;
+    }
+  }
+
+  // Create new category
+  static async createCategory(categoryName) {
+    try {
+      const [result] = await pool.execute(`
+        INSERT INTO CATEGORY (Category)
+        VALUES (?)
+      `, [categoryName]);
+      
+      return result.insertId;
+    } catch (error) {
+      console.error('Error in PMaintenance.createCategory:', error);
       throw error;
     }
   }
