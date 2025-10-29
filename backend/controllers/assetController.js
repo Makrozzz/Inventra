@@ -7,7 +7,27 @@ const logger = require('../utils/logger');
  */
 const getAllAssets = async (req, res, next) => {
   try {
-    const assets = await Asset.findAll();
+    // First try to get assets
+    let assets = await Asset.findAll();
+    
+    // Check if we need to fix orphaned assets based on the debug output
+    const shouldCheckOrphans = true; // For now, always check
+    
+    if (shouldCheckOrphans) {
+      console.log('Checking for orphaned assets and fixing if needed...');
+      
+      try {
+        // Check for orphaned assets (no longer auto-fixes with defaults)
+        const checkResult = await Asset.fixOrphanedAssets();
+        if (checkResult.orphaned > 0) {
+          console.log(`⚠️  FOUND ${checkResult.orphaned} ORPHANED ASSETS - Manual assignment required`);
+          console.log('⚠️  Orphaned assets will not be auto-assigned to default customers');
+        }
+        // No need to re-fetch since we don't auto-fix anymore
+      } catch (checkError) {
+        console.warn('Failed to check orphaned assets:', checkError.message);
+      }
+    }
 
     // Return assets directly as JSON array for frontend compatibility
     res.status(200).json(assets);
@@ -244,23 +264,19 @@ const createAssetWithDetails = async (req, res, next) => {
           completeData.customer_name,
           completeData.branch
         );
-        console.log('Linked to project with inventory ID:', inventoryId);
+        console.log(`✅ LINKED TO PROJECT: Asset_ID ${newAsset.Asset_ID} → Inventory_ID ${inventoryId}`);
       } catch (linkError) {
         console.log('Failed to link to project:', linkError.message);
         // Continue anyway
       }
     }
 
-    console.log('Creating PM record...');
-    // Step 7: Generate PM record
+    // Step 7: PM record creation - DISABLED (PM records should be created manually only)
+    // console.log('Creating PM record...');
     let pmId = null;
-    try {
-      pmId = await Asset.createPreventiveMaintenance(newAsset.Asset_ID);
-      console.log('PM record created with ID:', pmId);
-    } catch (pmError) {
-      console.log('Failed to create PM record:', pmError.message);
-      // Continue anyway
-    }
+    // PM records are no longer automatically created for new assets
+    // They should be created manually through the Preventive Maintenance module
+    console.log('Skipping automatic PM record creation - PM records should be created manually');
 
     console.log('Fetching complete asset data...');
     // Fetch the complete asset data to return
@@ -274,11 +290,11 @@ const createAssetWithDetails = async (req, res, next) => {
       data: {
         ...completeAsset,
         asset_id: newAsset.Asset_ID,
-        pmid: pmId,
+        pmid: null, // PM records are created manually only
         inventory_id: inventoryId,
         peripheral_ids: peripheralIds
       },
-      message: 'Asset created successfully with all details'
+      message: 'Asset created successfully - PM records should be created manually when needed'
     });
   } catch (error) {
     logger.error('Error in createAssetWithDetails:', error);
@@ -528,56 +544,196 @@ const getAssetStatistics = async (req, res, next) => {
 };
 
 /**
- * Bulk import assets
+ * Bulk import assets with comprehensive validation and processing
  */
 const bulkImportAssets = async (req, res, next) => {
   try {
     const { assets } = req.body;
 
     if (!Array.isArray(assets) || assets.length === 0) {
-      return res.status(400).json(
-        formatResponse(false, null, 'Assets array is required')
-      );
+      return res.status(400).json({
+        success: false,
+        error: 'Assets array is required',
+        imported: 0,
+        failed: 0
+      });
     }
+
+    console.log(`Starting bulk import of ${assets.length} assets...`);
 
     const results = {
-      created: 0,
+      imported: 0,
       failed: 0,
-      errors: []
+      errors: [],
+      warnings: []
     };
 
-    for (const assetData of assets) {
-      try {
-        // Check if asset already exists
-        const existing = await Asset.findBySerialNumber(assetData.serialNumber);
-        if (existing) {
-          results.failed++;
-          results.errors.push({
-            serialNumber: assetData.serialNumber,
-            error: 'Asset already exists'
-          });
-          continue;
-        }
-
-        await Asset.create(assetData);
-        results.created++;
-      } catch (error) {
-        results.failed++;
-        results.errors.push({
-          serialNumber: assetData.serialNumber,
-          error: error.message
-        });
-      }
+    // Process assets in batches for better performance
+    const BATCH_SIZE = 10;
+    const batches = [];
+    for (let i = 0; i < assets.length; i += BATCH_SIZE) {
+      batches.push(assets.slice(i, i + BATCH_SIZE));
     }
 
-    logger.info(`Bulk import completed: ${results.created} created, ${results.failed} failed`);
+    let processedCount = 0;
 
-    res.status(200).json(
-      formatResponse(true, results, 'Bulk import completed')
-    );
+    for (const batch of batches) {
+      const batchPromises = batch.map(async (assetData, index) => {
+        const rowNumber = processedCount + index + 1;
+        
+        try {
+          console.log(`Processing asset ${rowNumber}: ${assetData.serial_number}`);
+          
+          // Validate required fields
+          const requiredFields = ['project_reference_num', 'serial_number', 'tag_id', 'item_name'];
+          for (const field of requiredFields) {
+            if (!assetData[field] || String(assetData[field]).trim() === '') {
+              throw new Error(`Missing required field: ${field}`);
+            }
+          }
+
+          // Check for duplicate serial number in database
+          const existingBySerial = await Asset.findBySerialNumber(assetData.serial_number);
+          if (existingBySerial) {
+            throw new Error(`Asset with serial number '${assetData.serial_number}' already exists`);
+          }
+
+          // Check for duplicate tag ID (you'd need to implement this check in Asset model)
+          // For now, we'll skip this check but it should be added
+
+          // Set default values
+          const processedAsset = {
+            project_reference_num: String(assetData.project_reference_num).trim(),
+            customer_name: assetData.customer_name || '',
+            customer_reference_number: assetData.customer_reference_number || '',
+            branch: assetData.branch || '',
+            serial_number: String(assetData.serial_number).trim(),
+            tag_id: String(assetData.tag_id).trim(),
+            item_name: String(assetData.item_name).trim(),
+            category: assetData.category || 'Uncategorized',
+            model: assetData.model || 'Unknown',
+            status: assetData.status || 'Active',
+            recipient_name: assetData.recipient_name || '',
+            department_name: assetData.department_name || ''
+          };
+
+          // Use the existing createAssetWithDetails method for comprehensive asset creation
+          console.log(`Creating asset with details for row ${rowNumber}...`);
+          
+          // Call the existing detailed asset creation method
+          const mockReq = {
+            body: processedAsset
+          };
+          
+          let assetCreated = false;
+          const mockRes = {
+            status: (code) => ({
+              json: (data) => {
+                if (code === 201 && data.success) {
+                  assetCreated = true;
+                  console.log(`✅ Asset ${rowNumber} created successfully`);
+                } else {
+                  throw new Error(data.error || data.message || 'Unknown error during asset creation');
+                }
+              }
+            })
+          };
+
+          // Use the existing createAssetWithDetails function
+          await createAssetWithDetails(mockReq, mockRes, (error) => {
+            if (error) throw error;
+          });
+
+          if (assetCreated) {
+            return { success: true, row: rowNumber };
+          } else {
+            throw new Error('Failed to create asset - unknown error');
+          }
+
+        } catch (error) {
+          console.error(`❌ Failed to process asset ${rowNumber}:`, error.message);
+          return {
+            success: false,
+            row: rowNumber,
+            serial_number: assetData.serial_number,
+            error: error.message
+          };
+        }
+      });
+
+      // Wait for batch to complete
+      const batchResults = await Promise.all(batchPromises);
+      
+      // Aggregate results
+      batchResults.forEach(result => {
+        if (result.success) {
+          results.imported++;
+        } else {
+          results.failed++;
+          results.errors.push({
+            row: result.row,
+            serial_number: result.serial_number,
+            error: result.error
+          });
+        }
+      });
+
+      processedCount += batch.length;
+      console.log(`Processed batch: ${processedCount}/${assets.length}`);
+    }
+
+    const finalMessage = `Bulk import completed: ${results.imported} imported, ${results.failed} failed`;
+    console.log(finalMessage);
+    logger.info(finalMessage);
+
+    // Return response
+    res.status(200).json({
+      success: results.imported > 0,
+      message: finalMessage,
+      imported: results.imported,
+      failed: results.failed,
+      errors: results.errors.slice(0, 50), // Limit errors to first 50
+      total: assets.length
+    });
+
   } catch (error) {
+    console.error('Error in bulkImportAssets:', error);
     logger.error('Error in bulkImportAssets:', error);
-    next(error);
+    
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error during bulk import',
+      message: error.message,
+      imported: 0,
+      failed: 0
+    });
+  }
+};
+
+/**
+ * Fix orphaned assets (assets not linked to inventory)
+ */
+const fixOrphanedAssets = async (req, res, next) => {
+  try {
+    console.log('Manual trigger: Checking orphaned assets...');
+    
+    const result = await Asset.fixOrphanedAssets();
+    
+    res.status(200).json({
+      success: true,
+      message: `Found ${result.orphaned} orphaned assets - Manual assignment required (no auto-fix to prevent default customer assignment)`,
+      orphaned_count: result.orphaned,
+      fixed_count: result.fixed,
+      note: 'Orphaned assets are no longer auto-assigned to default customers to preserve data integrity'
+    });
+  } catch (error) {
+    console.error('Error in fixOrphanedAssets:', error);
+    logger.error('Error in fixOrphanedAssets:', error);
+    
+    res.status(500).json({
+      success: false,
+      error: 'Failed to check orphaned assets'
+    });
   }
 };
 
@@ -592,5 +748,6 @@ module.exports = {
   updateAssetById,
   deleteAsset,
   getAssetStatistics,
-  bulkImportAssets
+  bulkImportAssets,
+  fixOrphanedAssets
 };

@@ -214,10 +214,27 @@ class ApiService {
   }
 
   async bulkImportAssets(assets) {
-    return this.makeRequest('assets/bulk-import', {
-      method: 'POST',
-      body: JSON.stringify({ assets })
-    });
+    try {
+      const url = `${this.baseURL}/assets/bulk-import`;
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ assets })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null);
+        throw new Error(errorData?.error || errorData?.message || `HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data; // Return the data directly without checking for success field
+    } catch (error) {
+      console.error('Bulk Import Error:', error);
+      throw error;
+    }
   }
 
   // Project methods
@@ -394,7 +411,7 @@ class ApiService {
       'Content-Type': 'application/json',
     };
 
-    const url = `${this.baseURL}/peripheral-types`;
+    const url = `${this.baseURL}/peripherals/types`;
     try {
       const response = await fetch(url, { headers });
       if (!response.ok) throw new Error('Failed to fetch peripheral types');
@@ -411,6 +428,357 @@ class ApiService {
           { Peripheral_Type_ID: 5, Peripheral_Type_Name: 'Power Cable' }
         ]
       };
+    }
+  }
+
+  // ========== HYBRID CATEGORY & PERIPHERAL METHODS ==========
+
+  /**
+   * Get all categories with hybrid support
+   */
+  async getCategories() {
+    const headers = {
+      'Content-Type': 'application/json',
+    };
+
+    const url = `${this.baseURL}/categories`;
+    try {
+      const response = await fetch(url, { headers });
+      if (!response.ok) throw new Error('Failed to fetch categories');
+      return await response.json();
+    } catch (error) {
+      console.warn('Categories endpoint not available, using fallback data');
+      return {
+        success: true,
+        data: [
+          { id: 1, name: 'Desktop', Category_ID: 1, Category: 'Desktop' },
+          { id: 2, name: 'Printer', Category_ID: 2, Category: 'Printer' },
+          { id: 3, name: 'Laptop', Category_ID: 3, Category: 'Laptop' },
+          { id: 4, name: 'Server', Category_ID: 4, Category: 'Server' }
+        ],
+        fallback: true
+      };
+    }
+  }
+
+  /**
+   * Search categories by name
+   */
+  async searchCategories(query) {
+    const headers = {
+      'Content-Type': 'application/json',
+    };
+
+    const url = `${this.baseURL}/categories/search?q=${encodeURIComponent(query)}`;
+    try {
+      const response = await fetch(url, { headers });
+      if (!response.ok) throw new Error('Failed to search categories');
+      return await response.json();
+    } catch (error) {
+      console.warn('Category search endpoint not available');
+      // Fallback to client-side filtering
+      const categories = await this.getCategories();
+      const filtered = categories.data.filter(cat => 
+        cat.name.toLowerCase().includes(query.toLowerCase())
+      );
+      return { success: true, data: filtered };
+    }
+  }
+
+  /**
+   * Get or create category (hybrid functionality)
+   */
+  async getOrCreateCategory(name) {
+    const headers = {
+      'Content-Type': 'application/json',
+    };
+
+    const url = `${this.baseURL}/categories/get-or-create`;
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ name })
+      });
+      
+      if (!response.ok) throw new Error('Failed to get or create category');
+      return await response.json();
+    } catch (error) {
+      console.error('Failed to get or create category:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get all categories with hybrid format support
+   */
+  async getCategoriesHybrid() {
+    const headers = {
+      'Content-Type': 'application/json',
+    };
+
+    const url = `${this.baseURL}/categories`;
+    try {
+      const response = await fetch(url, { headers });
+      if (!response.ok) throw new Error('Failed to fetch categories');
+      return await response.json();
+    } catch (error) {
+      console.warn('Categories endpoint not available, using fallback data');
+      return {
+        success: true,
+        data: [
+          { id: 1, name: 'Desktop', Category_ID: 1, Category: 'Desktop' },
+          { id: 2, name: 'Printer', Category_ID: 2, Category: 'Printer' },
+          { id: 3, name: 'Laptop', Category_ID: 3, Category: 'Laptop' },
+          { id: 4, name: 'Server', Category_ID: 4, Category: 'Server' }
+        ]
+      };
+    }
+  }
+
+  /**
+   * Search categories by name
+   */
+  async searchCategories(query) {
+    const headers = {
+      'Content-Type': 'application/json',
+    };
+
+    const url = `${this.baseURL}/categories/search?q=${encodeURIComponent(query)}`;
+    try {
+      const response = await fetch(url, { headers });
+      if (!response.ok) throw new Error('Failed to search categories');
+      return await response.json();
+    } catch (error) {
+      console.error('Failed to search categories:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Create new category explicitly
+   */
+  async createCategory(name) {
+    const headers = {
+      'Content-Type': 'application/json',
+    };
+
+    const url = `${this.baseURL}/categories`;
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ name })
+      });
+      
+      if (!response.ok) throw new Error('Failed to create category');
+      return await response.json();
+    } catch (error) {
+      console.error('Failed to create category:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get all peripheral types with hybrid support
+   */
+  async getPeripheralTypesHybrid() {
+    const headers = {
+      'Content-Type': 'application/json',
+    };
+
+    const url = `${this.baseURL}/peripherals/types`;
+    try {
+      const response = await fetch(url, { headers });
+      if (!response.ok) throw new Error('Failed to fetch peripheral types');
+      return await response.json();
+    } catch (error) {
+      console.warn('Peripheral types endpoint not available, using fallback data');
+      return {
+        success: true,
+        data: [
+          { id: 1, name: 'Keyboard', Peripheral_Type_ID: 1, Peripheral_Type_Name: 'Keyboard' },
+          { id: 2, name: 'Mouse', Peripheral_Type_ID: 2, Peripheral_Type_Name: 'Mouse' },
+          { id: 3, name: 'Monitor', Peripheral_Type_ID: 3, Peripheral_Type_Name: 'Monitor' },
+          { id: 4, name: 'Ethernet Cable', Peripheral_Type_ID: 4, Peripheral_Type_Name: 'Ethernet Cable' },
+          { id: 5, name: 'Power Cable', Peripheral_Type_ID: 5, Peripheral_Type_Name: 'Power Cable' }
+        ],
+        fallback: true
+      };
+    }
+  }
+
+  /**
+   * Search peripheral types by name
+   */
+  async searchPeripheralTypes(query) {
+    const headers = {
+      'Content-Type': 'application/json',
+    };
+
+    const url = `${this.baseURL}/peripherals/types/search?q=${encodeURIComponent(query)}`;
+    try {
+      const response = await fetch(url, { headers });
+      if (!response.ok) throw new Error('Failed to search peripheral types');
+      return await response.json();
+    } catch (error) {
+      console.warn('Peripheral type search endpoint not available');
+      // Fallback to client-side filtering
+      const types = await this.getPeripheralTypesHybrid();
+      const filtered = types.data.filter(type => 
+        type.name.toLowerCase().includes(query.toLowerCase())
+      );
+      return { success: true, data: filtered };
+    }
+  }
+
+  /**
+   * Get or create peripheral type (hybrid functionality)
+   */
+  async getOrCreatePeripheralType(name) {
+    const headers = {
+      'Content-Type': 'application/json',
+    };
+
+    const url = `${this.baseURL}/peripherals/types/get-or-create`;
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ name })
+      });
+      
+      if (!response.ok) throw new Error('Failed to get or create peripheral type');
+      return await response.json();
+    } catch (error) {
+      console.error('Failed to get or create peripheral type:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Create peripheral for asset
+   */
+  async createPeripheral(peripheralData) {
+    const headers = {
+      'Content-Type': 'application/json',
+    };
+
+    const url = `${this.baseURL}/peripherals`;
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(peripheralData)
+      });
+      
+      if (!response.ok) throw new Error('Failed to create peripheral');
+      return await response.json();
+    } catch (error) {
+      console.error('Failed to create peripheral:', error);
+      throw error;
+    }
+  }
+
+  // ========== HYBRID MODEL METHODS ==========
+
+  /**
+   * Get all models with hybrid support
+   */
+  async getModelsHybrid() {
+    const headers = {
+      'Content-Type': 'application/json',
+    };
+
+    const url = `${this.baseURL}/models`;
+    try {
+      const response = await fetch(url, { headers });
+      if (!response.ok) throw new Error('Failed to fetch models');
+      return await response.json();
+    } catch (error) {
+      console.warn('Models endpoint not available, using fallback data');
+      return {
+        success: true,
+        data: [
+          { id: 1, name: 'Dell OptiPlex All-in-One Plus 7420', Model_ID: 1, Model: 'Dell OptiPlex All-in-One Plus 7420' },
+          { id: 2, name: 'HP Color LaserJet Enterprise MFP M480f', Model_ID: 2, Model: 'HP Color LaserJet Enterprise MFP M480f' },
+          { id: 3, name: 'Lenovo ThinkPad X1 Carbon', Model_ID: 3, Model: 'Lenovo ThinkPad X1 Carbon' },
+          { id: 4, name: 'Dell PowerEdge R740', Model_ID: 4, Model: 'Dell PowerEdge R740' }
+        ],
+        fallback: true
+      };
+    }
+  }
+
+  /**
+   * Search models by name
+   */
+  async searchModels(query) {
+    const headers = {
+      'Content-Type': 'application/json',
+    };
+
+    const url = `${this.baseURL}/models/search?q=${encodeURIComponent(query)}`;
+    try {
+      const response = await fetch(url, { headers });
+      if (!response.ok) throw new Error('Failed to search models');
+      return await response.json();
+    } catch (error) {
+      console.warn('Model search endpoint not available');
+      // Fallback to client-side filtering
+      const models = await this.getModelsHybrid();
+      const filtered = models.data.filter(model => 
+        model.name.toLowerCase().includes(query.toLowerCase())
+      );
+      return { success: true, data: filtered };
+    }
+  }
+
+  /**
+   * Get or create model (hybrid functionality)
+   */
+  async getOrCreateModel(name) {
+    const headers = {
+      'Content-Type': 'application/json',
+    };
+
+    const url = `${this.baseURL}/models/get-or-create`;
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ name })
+      });
+      
+      if (!response.ok) throw new Error('Failed to get or create model');
+      return await response.json();
+    } catch (error) {
+      console.error('Failed to get or create model:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Create new model explicitly
+   */
+  async createModel(name) {
+    const headers = {
+      'Content-Type': 'application/json',
+    };
+
+    const url = `${this.baseURL}/models`;
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ name })
+      });
+      
+      if (!response.ok) throw new Error('Failed to create model');
+      return await response.json();
+    } catch (error) {
+      console.error('Failed to create model:', error);
+      throw error;
     }
   }
 

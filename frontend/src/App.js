@@ -13,7 +13,7 @@ import PreventiveMaintenance from './pages/PreventiveMaintenance';
 import AccountSettings from './pages/AccountSettings';
 import AddAsset from './pages/AddAsset';
 import EditAsset from './pages/EditAsset';
-import DatabaseTest from './components/DatabaseTest';
+import CSVImport from './pages/CSVImport';
 import apiService from './services/apiService';
 
 function App() {
@@ -78,11 +78,11 @@ function App() {
             <Route path="/projects/:id" element={<ProjectDetail />} />
             <Route path="/assets" element={<Assets onDelete={deleteAsset} />} />
             <Route path="/asset-detail/:assetId" element={<AssetDetail />} />
+            <Route path="/assets/import" element={<CSVImport />} />
             <Route path="/maintenance" element={<PreventiveMaintenance assets={assets} />} />
             <Route path="/settings" element={<AccountSettings />} />
             <Route path="/add-asset" element={<AddAsset onAdd={addAsset} />} />
             <Route path="/edit-asset/:id" element={<EditAsset assets={assets} onUpdate={updateAsset} />} />
-            <Route path="/db-test" element={<DatabaseTest />} />
             <Route path="*" element={<Navigate to="/" />} />
           </Routes>
         </main>
