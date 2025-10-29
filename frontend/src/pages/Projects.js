@@ -177,17 +177,20 @@ const Projects = () => {
       {/* Header Section with Gradient */}
       <div style={{
         background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-        padding: '30px 40px',
+        padding: '30px 20px',
         marginBottom: '30px',
         borderRadius: '0 0 20px 20px',
-        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)'
+        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)',
+        width: '100%',
+        boxSizing: 'border-box'
       }}>
         <div style={{ 
           display: 'flex', 
           justifyContent: 'space-between', 
           alignItems: 'center',
-          maxWidth: '1400px',
-          margin: '0 auto'
+          flexWrap: 'wrap',
+          gap: '15px',
+          width: '100%'
         }}>
           <div>
             <h1 style={{ 
@@ -234,16 +237,19 @@ const Projects = () => {
         </div>
       </div>
 
-      <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '0 40px' }}>
+      {/* Full Width Search and Content Section */}
+      <div style={{ padding: '0 20px', width: '100%', boxSizing: 'border-box' }}>
         {/* Search and Filter Section */}
         <div style={{
           backgroundColor: 'white',
           borderRadius: '16px',
           padding: '25px',
           marginBottom: '30px',
-          boxShadow: '0 2px 15px rgba(0, 0, 0, 0.08)'
+          boxShadow: '0 2px 15px rgba(0, 0, 0, 0.08)',
+          width: '100%',
+          boxSizing: 'border-box'
         }}>
-          <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap', width: '100%' }}>
             {/* Search Bar */}
             <div style={{ flex: '1', minWidth: '300px', position: 'relative' }}>
               <Search 
