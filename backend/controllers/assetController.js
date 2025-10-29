@@ -251,16 +251,10 @@ const createAssetWithDetails = async (req, res, next) => {
       }
     }
 
-    console.log('Creating PM record...');
-    // Step 7: Generate PM record
+    // NOTE: PM_ID is NOT created automatically anymore
+    // PM records are only created when actual preventive maintenance is performed
+    // This prevents "ghost" PM records with no checklist results
     let pmId = null;
-    try {
-      pmId = await Asset.createPreventiveMaintenance(newAsset.Asset_ID);
-      console.log('PM record created with ID:', pmId);
-    } catch (pmError) {
-      console.log('Failed to create PM record:', pmError.message);
-      // Continue anyway
-    }
 
     console.log('Fetching complete asset data...');
     // Fetch the complete asset data to return

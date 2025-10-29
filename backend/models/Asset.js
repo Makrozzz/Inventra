@@ -552,6 +552,9 @@ class Asset {
   }
 
   // Helper method to create preventive maintenance record
+  // DEPRECATED: No longer used - PM records are created only when actual PM is performed
+  // This prevents ghost PM_ID records without checklist results
+  /*
   static async createPreventiveMaintenance(assetId) {
     try {
       const [result] = await pool.execute(
@@ -564,6 +567,7 @@ class Asset {
       throw error;
     }
   }
+  */
 }
 
 module.exports = Asset;

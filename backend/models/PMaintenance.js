@@ -154,11 +154,7 @@ class PMaintenance {
     try {
       const [rows] = await pool.execute(`
         SELECT 
-          pm.PM_ID,
-          pm.Asset_ID,
-          pm.PM_Date,
-          pm.Remarks,
-          pm.Status as PM_Status,
+          a.Asset_ID,
           a.Asset_Serial_Number,
           a.Asset_Tag_ID,
           a.Item_Name,
@@ -174,17 +170,21 @@ class PMaintenance {
           cust.Customer_ID,
           cust.Customer_Name,
           cust.Branch,
-          cust.Customer_Ref_Number
-        FROM PMAINTENANCE pm
-        LEFT JOIN ASSET a ON pm.Asset_ID = a.Asset_ID
+          cust.Customer_Ref_Number,
+          pm.PM_ID,
+          pm.PM_Date,
+          pm.Remarks,
+          pm.Status as PM_Status
+        FROM ASSET a
         LEFT JOIN CATEGORY c ON a.Category_ID = c.Category_ID
         LEFT JOIN MODEL m ON a.Model_ID = m.Model_ID
         LEFT JOIN RECIPIENTS r ON a.Recipients_ID = r.Recipients_ID
-        LEFT JOIN INVENTORY i ON a.Asset_ID = i.Asset_ID
+        INNER JOIN INVENTORY i ON a.Asset_ID = i.Asset_ID
+        INNER JOIN CUSTOMER cust ON i.Customer_ID = cust.Customer_ID
         LEFT JOIN PROJECT p ON i.Project_ID = p.Project_ID
-        LEFT JOIN CUSTOMER cust ON i.Customer_ID = cust.Customer_ID
+        LEFT JOIN PMAINTENANCE pm ON a.Asset_ID = pm.Asset_ID
         WHERE cust.Customer_Ref_Number = ? AND cust.Branch = ?
-        ORDER BY c.Category, pm.PM_Date DESC
+        ORDER BY c.Category, a.Asset_ID, pm.PM_Date ASC
       `, [customerRefNumber, branch]);
       return rows;
     } catch (error) {
@@ -276,15 +276,11 @@ class PMaintenance {
   // Get PM data with checklist results grouped by category
   static async getPMWithChecklistByCustomerAndBranch(customerRefNumber, branch) {
     try {
-      // First get all PM records for this customer reference number and branch
-      // customerId is now Customer_Ref_Number (e.g., "M24050")
-      const [pmRows] = await pool.execute(`
+      // First get all ASSETS for this customer reference number and branch
+      // This includes assets WITH and WITHOUT PM records
+      const [assetRows] = await pool.execute(`
         SELECT 
-          pm.PM_ID,
-          pm.Asset_ID,
-          pm.PM_Date,
-          pm.Remarks as PM_Remarks,
-          pm.Status as PM_Status,
+          a.Asset_ID,
           a.Asset_Serial_Number,
           a.Asset_Tag_ID,
           a.Item_Name,
@@ -292,21 +288,34 @@ class PMaintenance {
           c.Category,
           m.Model,
           r.Recipient_Name,
-          r.Department
-        FROM PMAINTENANCE pm
-        LEFT JOIN ASSET a ON pm.Asset_ID = a.Asset_ID
+          r.Department,
+          pm.PM_ID,
+          pm.PM_Date,
+          pm.Remarks as PM_Remarks,
+          pm.Status as PM_Status
+        FROM ASSET a
         LEFT JOIN CATEGORY c ON a.Category_ID = c.Category_ID
         LEFT JOIN MODEL m ON a.Model_ID = m.Model_ID
         LEFT JOIN RECIPIENTS r ON a.Recipients_ID = r.Recipients_ID
-        LEFT JOIN INVENTORY i ON a.Asset_ID = i.Asset_ID
-        LEFT JOIN CUSTOMER cust ON i.Customer_ID = cust.Customer_ID
+        INNER JOIN INVENTORY i ON a.Asset_ID = i.Asset_ID
+        INNER JOIN CUSTOMER cust ON i.Customer_ID = cust.Customer_ID
+        LEFT JOIN PMAINTENANCE pm ON a.Asset_ID = pm.Asset_ID
         WHERE cust.Customer_Ref_Number = ? AND cust.Branch = ?
-        ORDER BY c.Category, a.Asset_Tag_ID
+        ORDER BY c.Category, a.Asset_Tag_ID, pm.PM_Date ASC
       `, [customerRefNumber, branch]);
 
-      // For each PM record, get its checklist results
+      // For each row, get its checklist results (only if PM_ID exists)
       const pmWithChecklists = await Promise.all(
-        pmRows.map(async (pm) => {
+        assetRows.map(async (row) => {
+          // If this row has no PM_ID, return it as-is with empty checklist
+          if (!row.PM_ID) {
+            return {
+              ...row,
+              checklist_results: []
+            };
+          }
+
+          // Otherwise, fetch checklist results for this PM
           const [checklistResults] = await pool.execute(`
             SELECT 
               pmr.PM_Result_ID,
@@ -319,10 +328,10 @@ class PMaintenance {
             LEFT JOIN PM_CHECKLIST pmc ON pmr.Checklist_ID = pmc.Checklist_ID
             WHERE pmr.PM_ID = ?
             ORDER BY pmc.Checklist_ID
-          `, [pm.PM_ID]);
+          `, [row.PM_ID]);
 
           return {
-            ...pm,
+            ...row,
             checklist_results: checklistResults
           };
         })

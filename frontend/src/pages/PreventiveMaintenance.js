@@ -116,34 +116,49 @@ const PreventiveMaintenance = () => {
     // Skip if no Asset_ID
     if (!assetId) return acc;
     
-    // If this asset doesn't exist yet, or if this record is newer, update it
+    // If this asset doesn't exist yet, initialize it
     if (!acc[category].assets[assetId]) {
-      acc[category].assets[assetId] = {
-        ...record,
-        pmCount: 1,
-        latestPMDate: record.PM_Date,
-        allPMRecords: [{ PM_ID: record.PM_ID, PM_Date: record.PM_Date }]
-      };
-    } else {
-      // Store current values
-      const currentPmCount = acc[category].assets[assetId].pmCount;
-      const currentAllPMRecords = acc[category].assets[assetId].allPMRecords;
-      
-      // Increment PM count and add new PM record
-      acc[category].assets[assetId].pmCount = currentPmCount + 1;
-      acc[category].assets[assetId].allPMRecords = [...currentAllPMRecords, { PM_ID: record.PM_ID, PM_Date: record.PM_Date }];
-      
-      // If this PM is newer, update to use its checklist results
-      const existingDate = new Date(acc[category].assets[assetId].latestPMDate);
-      const currentDate = new Date(record.PM_Date);
-      
-      if (currentDate > existingDate) {
+      // Check if this asset has PM data
+      if (record.PM_ID) {
+        // Asset with PM data
         acc[category].assets[assetId] = {
           ...record,
-          pmCount: currentPmCount + 1,
+          pmCount: 1,
           latestPMDate: record.PM_Date,
-          allPMRecords: [...currentAllPMRecords, { PM_ID: record.PM_ID, PM_Date: record.PM_Date }]
+          allPMRecords: [{ PM_ID: record.PM_ID, PM_Date: record.PM_Date }]
         };
+      } else {
+        // Asset without PM data (never had PM performed)
+        acc[category].assets[assetId] = {
+          ...record,
+          pmCount: 0,
+          latestPMDate: null,
+          allPMRecords: []
+        };
+      }
+    } else {
+      // Asset already exists - only process if this record has PM_ID
+      if (record.PM_ID) {
+        // Store current values
+        const currentPmCount = acc[category].assets[assetId].pmCount;
+        const currentAllPMRecords = acc[category].assets[assetId].allPMRecords;
+        
+        // Increment PM count and add new PM record
+        acc[category].assets[assetId].pmCount = currentPmCount + 1;
+        acc[category].assets[assetId].allPMRecords = [...currentAllPMRecords, { PM_ID: record.PM_ID, PM_Date: record.PM_Date }];
+        
+        // If this PM is newer, update to use its checklist results
+        const existingDate = acc[category].assets[assetId].latestPMDate ? new Date(acc[category].assets[assetId].latestPMDate) : new Date(0);
+        const currentDate = new Date(record.PM_Date);
+        
+        if (currentDate > existingDate) {
+          acc[category].assets[assetId] = {
+            ...record,
+            pmCount: currentPmCount + 1,
+            latestPMDate: record.PM_Date,
+            allPMRecords: [...currentAllPMRecords, { PM_ID: record.PM_ID, PM_Date: record.PM_Date }]
+          };
+        }
       }
     }
     
@@ -502,7 +517,9 @@ const PreventiveMaintenance = () => {
                           <td style={{ textAlign: 'center' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '5px', justifyContent: 'center' }}>
                               <Calendar size={14} color="#666" />
-                              {formatDate(asset.latestPMDate)}
+                              {asset.latestPMDate ? formatDate(asset.latestPMDate) : (
+                                <span style={{ color: '#999', fontStyle: 'italic' }}>No PM Yet</span>
+                              )}
                             </div>
                           </td>
                           <td style={{ textAlign: 'center' }}>
@@ -512,9 +529,9 @@ const PreventiveMaintenance = () => {
                               borderRadius: '12px',
                               fontSize: '0.9rem',
                               fontWeight: '700',
-                              background: '#e3f2fd',
-                              color: '#1565c0',
-                              border: '1px solid #90caf9',
+                              background: asset.pmCount > 0 ? '#e3f2fd' : '#f5f5f5',
+                              color: asset.pmCount > 0 ? '#1565c0' : '#999',
+                              border: asset.pmCount > 0 ? '1px solid #90caf9' : '1px solid #ddd',
                               minWidth: '35px',
                               display: 'inline-block'
                             }}>
@@ -524,9 +541,10 @@ const PreventiveMaintenance = () => {
                           <td style={{ textAlign: 'center' }}>
                             {/* Individual PM Buttons */}
                             <div style={{ display: 'flex', gap: '6px', justifyContent: 'center', flexWrap: 'wrap' }}>
-                              {asset.allPMRecords && asset.allPMRecords
-                                .sort((a, b) => new Date(a.PM_Date) - new Date(b.PM_Date))
-                                .map((pm, index) => (
+                              {asset.allPMRecords && asset.allPMRecords.length > 0 ? (
+                                asset.allPMRecords
+                                  .sort((a, b) => new Date(a.PM_Date) - new Date(b.PM_Date))
+                                  .map((pm, index) => (
                                   <button
                                     key={pm.PM_ID}
                                     onClick={() => navigate(`/maintenance/detail/${pm.PM_ID}`)}
@@ -561,7 +579,12 @@ const PreventiveMaintenance = () => {
                                     <FileText size={14} />
                                     PM{index + 1}
                                   </button>
-                                ))}
+                                ))
+                              ) : (
+                                <span style={{ color: '#999', fontStyle: 'italic', fontSize: '0.9rem' }}>
+                                  No records
+                                </span>
+                              )}
                             </div>
                           </td>
                           <td style={{ textAlign: 'center' }}>
