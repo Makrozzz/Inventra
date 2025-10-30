@@ -4,15 +4,21 @@ import { ArrowLeft, Download, CheckCircle, AlertCircle } from 'lucide-react';
 import CSVUploader from '../components/CSVUploader';
 import ImportPreview from '../components/ImportPreview';
 import ImportConfirmationDialog from '../components/ImportConfirmationDialog';
+import HeaderMappingConfirmation from '../components/HeaderMappingConfirmation';
+import HeaderMapper from '../utils/headerMapper';
 import apiService from '../services/apiService';
 import Papa from 'papaparse';
 import * as XLSX from 'xlsx';
 
 const CSVImport = () => {
   const navigate = useNavigate();
-  const [currentStep, setCurrentStep] = useState(1); // 1: Upload, 2: Preview, 3: Import
+  const [currentStep, setCurrentStep] = useState(1); // 1: Upload, 1.5: Header Mapping, 2: Preview, 3: Import
   const [selectedFile, setSelectedFile] = useState(null);
   const [parsedData, setParsedData] = useState(null);
+  const [originalData, setOriginalData] = useState(null); // Store original data before transformation
+  const [detectedHeaders, setDetectedHeaders] = useState(null);
+  const [headerMapping, setHeaderMapping] = useState(null);
+  const [showHeaderMapping, setShowHeaderMapping] = useState(false);
   const [validationResults, setValidationResults] = useState(null);
   const [validationSummary, setValidationSummary] = useState(null);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
@@ -87,12 +93,34 @@ const CSVImport = () => {
       throw new Error('No data found in the file');
     }
 
-    setParsedData(data);
+    // Store original data
+    setOriginalData(data);
     
-    // Validate the data
-    const validation = await validateData(data);
-    setValidationResults(validation);
-    setCurrentStep(2);
+    // Detect headers and create mapping
+    const headers = Object.keys(data[0]);
+    setDetectedHeaders(headers);
+    
+    const mappingResult = HeaderMapper.mapHeaders(headers);
+    setHeaderMapping(mappingResult);
+    
+    console.log('Header Mapping Result:', mappingResult);
+    
+    // Check if mapping is valid
+    const validation = HeaderMapper.validateMapping(mappingResult.mapping);
+    
+    if (!validation.isValid || mappingResult.unmapped.length > 0 || mappingResult.duplicates.length > 0) {
+      // Show header mapping confirmation
+      setShowHeaderMapping(true);
+    } else {
+      // Auto-map and continue
+      const transformedData = HeaderMapper.transformData(data, mappingResult.mapping);
+      setParsedData(transformedData);
+      
+      // Validate the data
+      const validationResults = await validateData(transformedData);
+      setValidationResults(validationResults);
+      setCurrentStep(2);
+    }
   };
 
   const validateData = async (data) => {
@@ -169,6 +197,26 @@ const CSVImport = () => {
 
   const handleValidationComplete = (summary) => {
     setValidationSummary(summary);
+  };
+
+  const handleHeaderMappingConfirm = async (confirmedMapping) => {
+    setShowHeaderMapping(false);
+    
+    // Transform data using confirmed mapping
+    const transformedData = HeaderMapper.transformData(originalData, confirmedMapping);
+    setParsedData(transformedData);
+    
+    console.log('Transformed Data:', transformedData);
+    
+    // Validate the transformed data
+    const validationResults = await validateData(transformedData);
+    setValidationResults(validationResults);
+    setCurrentStep(2);
+  };
+
+  const handleHeaderMappingCancel = () => {
+    setShowHeaderMapping(false);
+    resetImport();
   };
 
   const handleConfirmImport = async (importOption) => {
@@ -652,6 +700,15 @@ const CSVImport = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {showHeaderMapping && headerMapping && (
+        <HeaderMappingConfirmation
+          detectedHeaders={detectedHeaders}
+          mappingResult={headerMapping}
+          onConfirm={handleHeaderMappingConfirm}
+          onCancel={handleHeaderMappingCancel}
+        />
       )}
 
       <ImportConfirmationDialog
