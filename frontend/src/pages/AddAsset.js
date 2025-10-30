@@ -112,7 +112,8 @@ const AddAsset = () => {
   const fetchAvailableProjects = async () => {
     try {
       setLoading(true);
-      const response = await apiService.getAllProjects();
+      // Fetch all projects without pagination limit (set limit to a high number)
+      const response = await apiService.getAllProjects(1, 1000);
       console.log('Available projects:', response);
       
       // Handle both paginated and direct array responses

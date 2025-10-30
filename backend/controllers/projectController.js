@@ -49,13 +49,22 @@ exports.getAllProjects = async (req, res) => {
       ];
       
       console.log('No projects found in database, returning mock data');
-      return res.json(mockProjects);
+      return res.json({
+        success: true,
+        data: mockProjects,
+        message: 'Mock projects returned (no projects in database)'
+      });
     }
 
-    res.json(projects);
+    res.json({
+      success: true,
+      data: projects,
+      message: 'Projects fetched successfully'
+    });
   } catch (error) {
     console.error('Error fetching projects:', error);
     res.status(500).json({ 
+      success: false,
       error: 'Failed to fetch projects',
       message: error.message 
     });

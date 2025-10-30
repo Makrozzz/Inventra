@@ -21,9 +21,13 @@ const Projects = () => {
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      const data = await response.json();
-      console.log('✅ Projects API call successful, projects found:', data.length);
-      setProjects(data);
+      const responseData = await response.json();
+      console.log('✅ Projects API response:', responseData);
+      
+      // Extract projects array from response (handle both old and new format)
+      const projects = responseData.data || responseData || [];
+      console.log('✅ Projects found:', projects.length);
+      setProjects(projects);
     } catch (error) {
       console.error('❌ Error fetching projects:', error);
       console.error('❌ Error details:', error.message);
