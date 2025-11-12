@@ -10,6 +10,7 @@ const {
   updateAsset,
   updateAssetById,
   deleteAsset,
+  deleteAssetById,
   getAssetStatistics,
   bulkImportAssets,
   fixOrphanedAssets
@@ -123,6 +124,13 @@ router.delete('/:serialNumber',
   authenticateToken, 
   authorize('admin', 'manager'), 
   deleteAsset
+);
+
+// Delete asset by ID (no auth for development)
+router.delete('/id/:id', 
+  // authenticateToken,  // Disabled for development/testing
+  // authorize('admin', 'manager'), 
+  deleteAssetById
 );
 
 router.post('/bulk-import', 

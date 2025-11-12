@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Search, Filter, Edit, Trash2, Upload, Plus, Download, Eye, FileText, RefreshCw } from 'lucide-react';
+import { Search, Filter, Edit, Trash2, Upload, Plus, Download, Eye, FileText, RefreshCw, AlertTriangle, X } from 'lucide-react';
 import Pagination from '../components/Pagination';
+import apiService from '../services/apiService';
 
 const Assets = ({ onDelete }) => {
   const navigate = useNavigate();
@@ -31,6 +32,13 @@ const Assets = ({ onDelete }) => {
   
   // Success message state
   const [successMessage, setSuccessMessage] = useState('');
+
+  // Delete confirmation dialog state
+  const [deleteDialog, setDeleteDialog] = useState({
+    show: false,
+    asset: null,
+    deleting: false
+  });
 
   // Fetch all assets from database
   const fetchAssets = async () => {
@@ -102,6 +110,59 @@ const Assets = ({ onDelete }) => {
   // Refresh function to be called from external components
   const refreshAssets = () => {
     fetchAssets();
+  };
+
+  // Handle delete button click - show confirmation dialog
+  const handleDeleteClick = (asset) => {
+    setDeleteDialog({
+      show: true,
+      asset: asset,
+      deleting: false
+    });
+  };
+
+  // Handle confirmed delete
+  const handleConfirmDelete = async () => {
+    if (!deleteDialog.asset) return;
+
+    setDeleteDialog(prev => ({ ...prev, deleting: true }));
+
+    try {
+      console.log(`Attempting to delete asset ID: ${deleteDialog.asset.Asset_ID}`);
+      
+      const response = await apiService.deleteAssetById(deleteDialog.asset.Asset_ID);
+      
+      if (response.success) {
+        console.log('Delete successful:', response);
+        
+        // Show success message
+        setSuccessMessage(
+          `Asset deleted successfully! ` +
+          `(Peripherals: ${response.data.peripherals_deleted}, ` +
+          `PM Records: ${response.data.pm_records_deleted})`
+        );
+        
+        // Close dialog
+        setDeleteDialog({ show: false, asset: null, deleting: false });
+        
+        // Refresh assets list
+        await fetchAssets();
+        
+        // Clear success message after 5 seconds
+        setTimeout(() => setSuccessMessage(''), 5000);
+      } else {
+        throw new Error(response.error || 'Failed to delete asset');
+      }
+    } catch (error) {
+      console.error('Error deleting asset:', error);
+      alert(`Failed to delete asset: ${error.message}`);
+      setDeleteDialog(prev => ({ ...prev, deleting: false }));
+    }
+  };
+
+  // Handle cancel delete
+  const handleCancelDelete = () => {
+    setDeleteDialog({ show: false, asset: null, deleting: false });
   };
 
   // Filter and sort assets based on search, column-specific filters, and sort settings
@@ -669,7 +730,7 @@ const Assets = ({ onDelete }) => {
                           <button 
                             onClick={(e) => {
                               e.stopPropagation();
-                              onDelete && onDelete(asset.Asset_ID);
+                              handleDeleteClick(asset);
                             }} 
                             className="btn btn-danger"
                             title="Delete Asset"
@@ -913,6 +974,194 @@ const Assets = ({ onDelete }) => {
         )}
       </div>
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      {deleteDialog.show && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 9999,
+          padding: '20px'
+        }}>
+          <div style={{
+            backgroundColor: 'white',
+            borderRadius: '12px',
+            padding: '30px',
+            maxWidth: '500px',
+            width: '100%',
+            boxShadow: '0 10px 40px rgba(0, 0, 0, 0.2)',
+            position: 'relative'
+          }}>
+            {/* Close button */}
+            <button
+              onClick={handleCancelDelete}
+              disabled={deleteDialog.deleting}
+              style={{
+                position: 'absolute',
+                top: '15px',
+                right: '15px',
+                background: 'none',
+                border: 'none',
+                cursor: deleteDialog.deleting ? 'not-allowed' : 'pointer',
+                padding: '5px',
+                opacity: deleteDialog.deleting ? 0.5 : 1
+              }}
+            >
+              <X size={24} color="#666" />
+            </button>
+
+            {/* Warning Icon */}
+            <div style={{
+              display: 'flex',
+              justifyContent: 'center',
+              marginBottom: '20px'
+            }}>
+              <div style={{
+                backgroundColor: '#fee',
+                borderRadius: '50%',
+                padding: '15px',
+                display: 'inline-flex'
+              }}>
+                <AlertTriangle size={40} color="#dc3545" />
+              </div>
+            </div>
+
+            {/* Title */}
+            <h2 style={{
+              textAlign: 'center',
+              color: '#dc3545',
+              marginBottom: '20px',
+              fontSize: '1.5rem'
+            }}>
+              Delete Asset?
+            </h2>
+
+            {/* Asset Information */}
+            {deleteDialog.asset && (
+              <div style={{
+                backgroundColor: '#f8f9fa',
+                padding: '15px',
+                borderRadius: '8px',
+                marginBottom: '20px'
+              }}>
+                <p style={{ margin: '5px 0', fontSize: '0.95rem' }}>
+                  <strong>Serial Number:</strong> {deleteDialog.asset.Asset_Serial_Number}
+                </p>
+                <p style={{ margin: '5px 0', fontSize: '0.95rem' }}>
+                  <strong>Tag ID:</strong> {deleteDialog.asset.Asset_Tag_ID}
+                </p>
+                <p style={{ margin: '5px 0', fontSize: '0.95rem' }}>
+                  <strong>Item Name:</strong> {deleteDialog.asset.Item_Name}
+                </p>
+              </div>
+            )}
+
+            {/* Warning Message */}
+            <div style={{
+              backgroundColor: '#fff3cd',
+              border: '1px solid #ffc107',
+              borderRadius: '8px',
+              padding: '15px',
+              marginBottom: '25px'
+            }}>
+              <p style={{
+                margin: 0,
+                color: '#856404',
+                fontSize: '0.9rem',
+                lineHeight: '1.5'
+              }}>
+                <strong>⚠️ Warning:</strong> This action cannot be undone. The following related records will also be permanently deleted:
+              </p>
+              <ul style={{
+                marginTop: '10px',
+                marginBottom: 0,
+                paddingLeft: '20px',
+                color: '#856404',
+                fontSize: '0.9rem'
+              }}>
+                <li>All <strong>Peripherals</strong> associated with this asset</li>
+                <li>All <strong>Preventive Maintenance (PM)</strong> records for this asset</li>
+                <li>Inventory links will be cleared (not deleted)</li>
+              </ul>
+            </div>
+
+            {/* Action Buttons */}
+            <div style={{
+              display: 'flex',
+              gap: '15px',
+              justifyContent: 'flex-end'
+            }}>
+              <button
+                onClick={handleCancelDelete}
+                disabled={deleteDialog.deleting}
+                style={{
+                  padding: '12px 24px',
+                  border: '1px solid #ddd',
+                  borderRadius: '6px',
+                  backgroundColor: 'white',
+                  color: '#666',
+                  cursor: deleteDialog.deleting ? 'not-allowed' : 'pointer',
+                  fontSize: '1rem',
+                  fontWeight: '500',
+                  opacity: deleteDialog.deleting ? 0.5 : 1
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmDelete}
+                disabled={deleteDialog.deleting}
+                style={{
+                  padding: '12px 24px',
+                  border: 'none',
+                  borderRadius: '6px',
+                  backgroundColor: deleteDialog.deleting ? '#ccc' : '#dc3545',
+                  color: 'white',
+                  cursor: deleteDialog.deleting ? 'not-allowed' : 'pointer',
+                  fontSize: '1rem',
+                  fontWeight: '500',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}
+              >
+                {deleteDialog.deleting ? (
+                  <>
+                    <span>Deleting...</span>
+                    <div style={{
+                      width: '16px',
+                      height: '16px',
+                      border: '2px solid white',
+                      borderTopColor: 'transparent',
+                      borderRadius: '50%',
+                      animation: 'spin 0.8s linear infinite'
+                    }} />
+                  </>
+                ) : (
+                  <>
+                    <Trash2 size={18} />
+                    <span>Delete Permanently</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add spinning animation for loading indicator */}
+      <style>{`
+        @keyframes spin {
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
     </div>
   );
 };

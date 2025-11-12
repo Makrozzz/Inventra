@@ -498,6 +498,61 @@ const deleteAsset = async (req, res, next) => {
 };
 
 /**
+ * Delete asset by ID (with cascade deletion of peripherals and PM records)
+ */
+const deleteAssetById = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    console.log(`Delete request received for Asset_ID: ${id}`);
+
+    // Check if asset exists and get its details
+    const existingAsset = await Asset.findById(id);
+    if (!existingAsset) {
+      console.log(`Asset not found with ID: ${id}`);
+      return res.status(404).json({
+        success: false,
+        error: 'Asset not found'
+      });
+    }
+
+    console.log(`Found asset: ${existingAsset.Asset_Serial_Number}`);
+
+    // Delete asset (this will cascade delete peripherals and PM records due to foreign key constraints)
+    const result = await Asset.deleteById(id);
+    
+    if (!result.success) {
+      console.error(`Failed to delete asset: ${result.error}`);
+      return res.status(400).json({
+        success: false,
+        error: result.error || 'Failed to delete asset'
+      });
+    }
+
+    logger.info(`Asset deleted: ID ${id}, Serial: ${existingAsset.Asset_Serial_Number}, Peripherals: ${result.peripheralsDeleted}, PM Records: ${result.pmRecordsDeleted}`);
+
+    res.status(200).json({
+      success: true,
+      message: 'Asset and related records deleted successfully',
+      data: {
+        asset_id: id,
+        serial_number: existingAsset.Asset_Serial_Number,
+        peripherals_deleted: result.peripheralsDeleted,
+        pm_records_deleted: result.pmRecordsDeleted,
+        inventory_updated: result.inventoryUpdated
+      }
+    });
+  } catch (error) {
+    logger.error('Error in deleteAssetById:', error);
+    console.error('Error deleting asset:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to delete asset',
+      message: error.message
+    });
+  }
+};
+
+/**
  * Get asset statistics for dashboard
  */
 const getAssetStatistics = async (req, res, next) => {
@@ -754,6 +809,7 @@ module.exports = {
   updateAsset,
   updateAssetById,
   deleteAsset,
+  deleteAssetById,
   getAssetStatistics,
   bulkImportAssets,
   fixOrphanedAssets
