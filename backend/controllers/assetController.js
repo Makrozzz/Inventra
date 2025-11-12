@@ -233,13 +233,15 @@ const createAssetWithDetails = async (req, res, next) => {
     // Step 5: Create peripherals if provided
     let peripheralIds = [];
     if (completeData.peripherals && Array.isArray(completeData.peripherals)) {
+      console.log(`Found ${completeData.peripherals.length} peripherals to create`);
       for (const peripheral of completeData.peripherals) {
         if (peripheral.peripheral_name) {
           try {
+            console.log(`Creating peripheral: ${peripheral.peripheral_name} with serial: ${peripheral.serial_code || 'N/A'}`);
             const peripheralId = await Asset.createPeripheral(
               newAsset.Asset_ID,
               peripheral.peripheral_name,
-              peripheral.serial_code_name,
+              peripheral.serial_code || peripheral.serial_code_name, // Support both field names
               peripheral.condition || 'Good',
               peripheral.remarks
             );
@@ -251,6 +253,9 @@ const createAssetWithDetails = async (req, res, next) => {
           }
         }
       }
+      console.log(`✅ Created ${peripheralIds.length} peripherals`);
+    } else {
+      console.log('No peripherals to create');
     }
 
     console.log('Linking to project...');
@@ -552,10 +557,13 @@ const getAssetStatistics = async (req, res, next) => {
 
 /**
  * Bulk import assets with comprehensive validation and processing
+ * Supports two modes:
+ * 1. Create new assets (default)
+ * 2. Add peripherals to existing assets (when assets already exist)
  */
 const bulkImportAssets = async (req, res, next) => {
   try {
-    const { assets } = req.body;
+    const { assets, importMode } = req.body; // importMode can be 'auto', 'new_assets', or 'add_peripherals'
 
     if (!Array.isArray(assets) || assets.length === 0) {
       return res.status(400).json({
@@ -566,14 +574,98 @@ const bulkImportAssets = async (req, res, next) => {
       });
     }
 
+    console.log(`\n${'='.repeat(60)}`);
     console.log(`Starting bulk import of ${assets.length} assets...`);
+    console.log(`Import Mode: ${importMode || 'auto'}`);
+    console.log(`${'='.repeat(60)}\n`);
+
+    const ImportModeDetector = require('../utils/importModeDetector');
+    const PeripheralImporter = require('../utils/peripheralImporter');
+
+    // Detect import mode if not explicitly specified
+    let detectedMode = importMode || 'auto';
+    let modeAnalysis = null;
+    
+    if (detectedMode === 'auto') {
+      console.log('🔍 Running import mode detection...');
+      modeAnalysis = await ImportModeDetector.detectImportMode(assets);
+      detectedMode = modeAnalysis.mode;
+      
+      const recommendations = ImportModeDetector.getImportRecommendations(modeAnalysis);
+      console.log('\n📋 Import Recommendations:');
+      recommendations.suggestions.forEach(s => console.log(`   ℹ️  ${s}`));
+      recommendations.warnings.forEach(w => console.log(`   ⚠️  ${w}`));
+      recommendations.requiredActions.forEach(a => console.log(`   ⚡ ${a}`));
+      console.log('');
+    }
 
     const results = {
       imported: 0,
       failed: 0,
+      peripheralsAdded: 0,
+      assetsCreated: 0,
       errors: [],
-      warnings: []
+      warnings: [],
+      mode: detectedMode,
+      modeAnalysis: modeAnalysis
     };
+
+    // Handle different import modes
+    if (detectedMode === 'add_peripherals' || detectedMode === 'mixed') {
+      // Separate rows by action
+      const separated = modeAnalysis 
+        ? ImportModeDetector.separateRowsByAction(assets, modeAnalysis)
+        : { createAssets: [], addPeripherals: assets, skip: [] };
+      
+      console.log(`\n📦 Import Strategy:`);
+      console.log(`   Create New Assets: ${separated.createAssets.length}`);
+      console.log(`   Add Peripherals to Existing: ${separated.addPeripherals.length}`);
+      console.log(`   Skip: ${separated.skip.length}\n`);
+      
+      // Handle peripheral-only imports
+      if (separated.addPeripherals.length > 0) {
+        console.log(`\n🔧 Adding peripherals to existing assets...`);
+        const peripheralResults = await PeripheralImporter.addPeripheralsToExistingAssets(
+          separated.addPeripherals
+        );
+        
+        results.peripheralsAdded = peripheralResults.success;
+        results.failed += peripheralResults.failed;
+        results.errors.push(...peripheralResults.errors);
+        results.imported += peripheralResults.success;
+      }
+      
+      // Handle new asset creation if in mixed mode
+      if (separated.createAssets.length > 0) {
+        console.log(`\n📝 Creating new assets...`);
+        const createResults = await this.processNewAssets(separated.createAssets);
+        results.assetsCreated = createResults.imported;
+        results.failed += createResults.failed;
+        results.errors.push(...createResults.errors);
+        results.imported += createResults.imported;
+      }
+      
+      // Log final results
+      const finalMessage = `Bulk import completed: ${results.imported} total (${results.assetsCreated} new assets, ${results.peripheralsAdded} peripheral additions), ${results.failed} failed`;
+      console.log(`\n${finalMessage}`);
+      logger.info(finalMessage);
+      
+      return res.status(200).json({
+        success: results.imported > 0,
+        message: finalMessage,
+        imported: results.imported,
+        assetsCreated: results.assetsCreated,
+        peripheralsAdded: results.peripheralsAdded,
+        failed: results.failed,
+        errors: results.errors.slice(0, 50),
+        total: assets.length,
+        mode: results.mode,
+        modeAnalysis: results.modeAnalysis
+      });
+    }
+    
+    // Default mode: Create new assets only (original behavior)
+    console.log(`\n📝 Creating new assets (default mode)...`);
 
     // Process assets in batches for better performance
     const BATCH_SIZE = 10;
@@ -599,9 +691,9 @@ const bulkImportAssets = async (req, res, next) => {
             }
           }
 
-          // Check for duplicate serial number in database
+          // Check for duplicate serial number in database (only in new_assets mode)
           const existingBySerial = await Asset.findBySerialNumber(assetData.serial_number);
-          if (existingBySerial) {
+          if (existingBySerial && detectedMode === 'new_assets') {
             throw new Error(`Asset with serial number '${assetData.serial_number}' already exists`);
           }
 
@@ -621,7 +713,8 @@ const bulkImportAssets = async (req, res, next) => {
             model: assetData.model || 'Unknown',
             status: assetData.status || 'Active',
             recipient_name: assetData.recipient_name || '',
-            department_name: assetData.department_name || ''
+            department_name: assetData.department_name || '',
+            peripherals: assetData.peripherals || []
           };
 
           // Use the existing createAssetWithDetails method for comprehensive asset creation
@@ -689,8 +782,9 @@ const bulkImportAssets = async (req, res, next) => {
       console.log(`Processed batch: ${processedCount}/${assets.length}`);
     }
 
-    const finalMessage = `Bulk import completed: ${results.imported} imported, ${results.failed} failed`;
-    console.log(finalMessage);
+    results.assetsCreated = results.imported;
+    const finalMessage = `Bulk import completed: ${results.imported} new assets created, ${results.failed} failed`;
+    console.log(`\n${finalMessage}`);
     logger.info(finalMessage);
 
     // Return response
@@ -698,9 +792,12 @@ const bulkImportAssets = async (req, res, next) => {
       success: results.imported > 0,
       message: finalMessage,
       imported: results.imported,
+      assetsCreated: results.imported,
+      peripheralsAdded: 0,
       failed: results.failed,
       errors: results.errors.slice(0, 50), // Limit errors to first 50
-      total: assets.length
+      total: assets.length,
+      mode: detectedMode
     });
 
   } catch (error) {
