@@ -239,7 +239,7 @@ const createAssetWithDetails = async (req, res, next) => {
             const peripheralId = await Asset.createPeripheral(
               newAsset.Asset_ID,
               peripheral.peripheral_name,
-              peripheral.serial_code_name,
+              peripheral.serial_code, // Aligned with DB schema (PERIPHERAL.Serial_Code)
               peripheral.condition || 'Good',
               peripheral.remarks
             );

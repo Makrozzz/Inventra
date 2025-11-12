@@ -53,7 +53,7 @@ const AddAsset = () => {
   // Peripheral data
   const [peripherals, setPeripherals] = useState([{
     peripheral_name: '',
-    serial_code_name: '',
+    serial_code: '', // Aligned with DB schema (PERIPHERAL.Serial_Code)
     condition: 'Good',
     remarks: ''
   }]);
@@ -338,7 +338,7 @@ const AddAsset = () => {
         department_name: asset.department_name,
         
         // Include only valid peripherals (those with both name and serial code)
-        peripherals: peripherals.filter(p => p.peripheral_name.trim() && p.serial_code_name.trim())
+        peripherals: peripherals.filter(p => p.peripheral_name.trim() && p.serial_code.trim())
       };
       
       console.log('Submitting asset data:', completeAssetData);
@@ -433,7 +433,7 @@ const AddAsset = () => {
 
   // Helper function to check if a peripheral form is complete
   const isPeripheralComplete = (peripheral) => {
-    return peripheral.peripheral_name.trim() !== '' && peripheral.serial_code_name.trim() !== '';
+    return peripheral.peripheral_name.trim() !== '' && peripheral.serial_code.trim() !== '';
   };
 
   // Helper function to check if we can add a new peripheral
@@ -447,7 +447,7 @@ const AddAsset = () => {
   const validatePeripherals = () => {
     const errors = [];
     peripherals.forEach((peripheral, index) => {
-      if (peripheral.peripheral_name.trim() && !peripheral.serial_code_name.trim()) {
+      if (peripheral.peripheral_name.trim() && !peripheral.serial_code.trim()) {
         errors.push(`Peripheral ${index + 1}: Serial code is required when peripheral name is provided`);
       }
     });
@@ -465,7 +465,7 @@ const AddAsset = () => {
     if (canAddNewPeripheral()) {
       setPeripherals([...peripherals, {
         peripheral_name: '',
-        serial_code_name: '',
+        serial_code: '',
         condition: 'Good',
         remarks: ''
       }]);
@@ -1006,7 +1006,7 @@ const AddAsset = () => {
                         value={peripheral.peripheral_name}
                         onChange={(e) => handlePeripheralChange(index, 'peripheral_name', e.target.value)}
                         placeholder="Enter peripheral type (e.g., Keyboard, Mouse, Monitor)"
-                        className={peripheral.peripheral_name.trim() && !peripheral.serial_code_name.trim() ? 'peripheral-warning' : ''}
+                        className={peripheral.peripheral_name.trim() && !peripheral.serial_code.trim() ? 'peripheral-warning' : ''}
                       />
                     </div>
 
@@ -1016,18 +1016,18 @@ const AddAsset = () => {
                         {peripheral.peripheral_name.trim() !== '' && (
                           <span style={{ color: '#f44336' }}> * (Required)</span>
                         )}
-                        {peripheral.serial_code_name.trim() !== '' && <span style={{ color: '#4caf50' }}> ✓</span>}
+                        {peripheral.serial_code.trim() !== '' && <span style={{ color: '#4caf50' }}> ✓</span>}
                       </label>
                       <input
                         type="text"
-                        value={peripheral.serial_code_name}
-                        onChange={(e) => handlePeripheralChange(index, 'serial_code_name', e.target.value)}
+                        value={peripheral.serial_code}
+                        onChange={(e) => handlePeripheralChange(index, 'serial_code', e.target.value)}
                         placeholder="e.g., CN-GE90-9865"
                         style={{
-                          borderColor: peripheral.peripheral_name.trim() && !peripheral.serial_code_name.trim() ? '#ff9800' : ''
+                          borderColor: peripheral.peripheral_name.trim() && !peripheral.serial_code.trim() ? '#ff9800' : ''
                         }}
                       />
-                      {peripheral.peripheral_name.trim() && !peripheral.serial_code_name.trim() && (
+                      {peripheral.peripheral_name.trim() && !peripheral.serial_code.trim() && (
                         <small style={{ color: '#ff9800', fontSize: '11px', display: 'block', marginTop: '2px' }}>
                           Serial code is required when peripheral name is selected
                         </small>
@@ -1114,7 +1114,7 @@ const AddAsset = () => {
           itemName: asset.item_name,
           category: asset.category,
           model: asset.model,
-          peripheralCount: peripherals.filter(p => p.peripheral_name.trim() && p.serial_code_name.trim()).length
+          peripheralCount: peripherals.filter(p => p.peripheral_name.trim() && p.serial_code.trim()).length
         }}
         loading={loading}
       />

@@ -105,18 +105,21 @@ class HeaderMapper {
       'unit', 'division', 'team', 'departmentname'
     ],
     
-    // peripheral_name variations
+    // peripheral_name variations (maps to Peripheral_Type_Name in DB)
     'peripheral_name': [
       'peripheral_name', 'peripheral name', 'peripheral', 'accessory',
       'component', 'attached device', 'peripheralname',
-      'accessories', 'components'
+      'accessories', 'components', 'peripheral type', 'peripheraltype',
+      'device type', 'accessory type', 'peripheal' // Common typo
     ],
     
-    // serial_code_name variations
-    'serial_code_name': [
-      'serial_code_name', 'serial code name', 'peripheral serial',
-      'accessory serial', 'component serial', 'serial code',
-      'serial_code', 'serialcode', 'peripheralserial', 'serialcodename'
+    // serial_code variations (maps to Serial_Code in PERIPHERAL table)
+    'serial_code': [
+      'serial_code', 'serial code', 'peripheral serial',
+      'accessory serial', 'component serial', 'peripheral_serial',
+      'serialcode', 'peripheralserial', 'serial_code_name',
+      'serial code name', 'serialcodename', 'peripheral serial number',
+      'peripheral_serial_number', 'accessory serial number'
     ],
     
     // remarks variations
