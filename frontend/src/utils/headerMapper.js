@@ -109,14 +109,16 @@ class HeaderMapper {
     'peripheral_name': [
       'peripheral_name', 'peripheral name', 'peripheral', 'accessory',
       'component', 'attached device', 'peripheralname',
-      'accessories', 'components'
+      'accessories', 'components', 'peripheal' // Common typo
     ],
     
-    // serial_code_name variations
-    'serial_code_name': [
-      'serial_code_name', 'serial code name', 'peripheral serial',
-      'accessory serial', 'component serial', 'serial code',
-      'serial_code', 'serialcode', 'peripheralserial', 'serialcodename'
+    // serial_code variations (maps to Serial_Code in PERIPHERAL table)
+    'serial_code': [
+      'serial_code', 'serial code', 'peripheral serial',
+      'accessory serial', 'component serial', 'peripheral_serial',
+      'serialcode', 'peripheralserial', 'serial_code_name',
+      'serial code name', 'serialcodename', 'peripheral serial number',
+      'peripheral_serial_number', 'accessory serial number'
     ],
     
     // remarks variations
@@ -174,7 +176,7 @@ class HeaderMapper {
       'recipient_name': ['recipient', 'assign', 'user', 'owner'],
       'department_name': ['department', 'dept', 'unit'],
       'peripheral_name': ['peripheral', 'accessory', 'component'],
-      'serial_code_name': ['serial', 'code'],
+      'serial_code': ['serial', 'code'],
       'remarks': ['remark', 'note', 'comment'],
       'customer_name': ['customer', 'client'],
       'customer_reference_number': ['customer', 'reference'],
