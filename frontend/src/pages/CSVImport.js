@@ -4,15 +4,26 @@ import { ArrowLeft, Download, CheckCircle, AlertCircle } from 'lucide-react';
 import CSVUploader from '../components/CSVUploader';
 import ImportPreview from '../components/ImportPreview';
 import ImportConfirmationDialog from '../components/ImportConfirmationDialog';
+import HeaderMappingConfirmation from '../components/HeaderMappingConfirmation';
+import AssetGroupingPreview from '../components/AssetGroupingPreview';
+import HeaderMapper from '../utils/headerMapper';
+import AssetGrouper from '../utils/assetGrouper';
 import apiService from '../services/apiService';
 import Papa from 'papaparse';
 import * as XLSX from 'xlsx';
 
 const CSVImport = () => {
   const navigate = useNavigate();
-  const [currentStep, setCurrentStep] = useState(1); // 1: Upload, 2: Preview, 3: Import
+  const [currentStep, setCurrentStep] = useState(1); // 1: Upload, 1.5: Header Mapping, 1.7: Grouping, 2: Preview, 3: Import
   const [selectedFile, setSelectedFile] = useState(null);
   const [parsedData, setParsedData] = useState(null);
+  const [originalData, setOriginalData] = useState(null); // Store original data before transformation
+  const [detectedHeaders, setDetectedHeaders] = useState(null);
+  const [headerMapping, setHeaderMapping] = useState(null);
+  const [showHeaderMapping, setShowHeaderMapping] = useState(false);
+  const [groupingPreview, setGroupingPreview] = useState(null);
+  const [showGroupingPreview, setShowGroupingPreview] = useState(false);
+  const [groupedData, setGroupedData] = useState(null);
   const [validationResults, setValidationResults] = useState(null);
   const [validationSummary, setValidationSummary] = useState(null);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
@@ -87,22 +98,55 @@ const CSVImport = () => {
       throw new Error('No data found in the file');
     }
 
-    setParsedData(data);
+    // Store original data
+    setOriginalData(data);
     
-    // Validate the data
-    const validation = await validateData(data);
-    setValidationResults(validation);
-    setCurrentStep(2);
+    // Detect headers and create mapping
+    const headers = Object.keys(data[0]);
+    setDetectedHeaders(headers);
+    
+    const mappingResult = HeaderMapper.mapHeaders(headers);
+    setHeaderMapping(mappingResult);
+    
+    console.log('Header Mapping Result:', mappingResult);
+    
+    // Check if mapping is valid
+    const validation = HeaderMapper.validateMapping(mappingResult.mapping);
+    
+    if (!validation.isValid || mappingResult.unmapped.length > 0 || mappingResult.duplicates.length > 0) {
+      // Show header mapping confirmation
+      setShowHeaderMapping(true);
+    } else {
+      // Auto-map and continue
+      const transformedData = HeaderMapper.transformData(data, mappingResult.mapping);
+      
+      // Check if data needs grouping (duplicate assets with different peripherals)
+      const needsGrouping = AssetGrouper.needsGrouping(transformedData);
+      
+      if (needsGrouping) {
+        console.log('Asset grouping needed (auto-mapped) - showing preview');
+        const preview = AssetGrouper.previewGrouping(transformedData);
+        setGroupingPreview(preview);
+        setShowGroupingPreview(true);
+        setParsedData(transformedData); // Store for potential grouping
+      } else {
+        // No grouping needed, proceed directly to validation
+        setParsedData(transformedData);
+        const validationResults = await validateData(transformedData, false);
+        setValidationResults(validationResults);
+        setCurrentStep(2);
+      }
+    }
   };
 
-  const validateData = async (data) => {
+  const validateData = async (data, isGroupedData = false) => {
     const validationResults = [];
     
     // Define validation rules
     const requiredFields = ['project_reference_num', 'serial_number', 'tag_id', 'item_name'];
     const validStatuses = ['Active', 'Inactive', 'Maintenance'];
     
-    // Track unique values for uniqueness validation
+    // Track unique values for uniqueness validation (only if not grouped data)
     const seenSerialNumbers = new Set();
     const seenTagIds = new Set();
 
@@ -120,28 +164,30 @@ const CSVImport = () => {
         }
       });
 
-      // Check unique fields
-      if (row.serial_number) {
-        const serialNum = String(row.serial_number).trim();
-        if (seenSerialNumbers.has(serialNum)) {
-          errors.push({
-            field: 'serial_number',
-            message: 'Serial number must be unique within the file'
-          });
-        } else {
-          seenSerialNumbers.add(serialNum);
+      // Check unique fields (skip uniqueness check if data is already grouped)
+      if (!isGroupedData) {
+        if (row.serial_number) {
+          const serialNum = String(row.serial_number).trim();
+          if (seenSerialNumbers.has(serialNum)) {
+            errors.push({
+              field: 'serial_number',
+              message: 'Duplicate serial number detected - asset grouping may be needed'
+            });
+          } else {
+            seenSerialNumbers.add(serialNum);
+          }
         }
-      }
 
-      if (row.tag_id) {
-        const tagId = String(row.tag_id).trim();
-        if (seenTagIds.has(tagId)) {
-          errors.push({
-            field: 'tag_id',
-            message: 'Tag ID must be unique within the file'
-          });
-        } else {
-          seenTagIds.add(tagId);
+        if (row.tag_id) {
+          const tagId = String(row.tag_id).trim();
+          if (seenTagIds.has(tagId)) {
+            errors.push({
+              field: 'tag_id',
+              message: 'Duplicate tag ID detected - asset grouping may be needed'
+            });
+          } else {
+            seenTagIds.add(tagId);
+          }
         }
       }
 
@@ -161,6 +207,18 @@ const CSVImport = () => {
         });
       }
 
+      // If row has peripherals array (grouped data), validate peripheral data
+      if (row.peripherals && Array.isArray(row.peripherals)) {
+        row.peripherals.forEach((peripheral, pIndex) => {
+          if (peripheral.peripheral_name && !peripheral.serial_code) {
+            errors.push({
+              field: `peripherals[${pIndex}].serial_code`,
+              message: 'Peripheral serial code is required when peripheral name is provided'
+            });
+          }
+        });
+      }
+
       validationResults.push(errors);
     }
 
@@ -169,6 +227,61 @@ const CSVImport = () => {
 
   const handleValidationComplete = (summary) => {
     setValidationSummary(summary);
+  };
+
+  const handleHeaderMappingConfirm = async (confirmedMapping) => {
+    setShowHeaderMapping(false);
+    
+    // Transform data using confirmed mapping
+    const transformedData = HeaderMapper.transformData(originalData, confirmedMapping);
+    
+    console.log('Transformed Data:', transformedData);
+    
+    // Check if data needs grouping (duplicate assets with different peripherals)
+    const needsGrouping = AssetGrouper.needsGrouping(transformedData);
+    
+    if (needsGrouping) {
+      console.log('Asset grouping needed - showing preview');
+      const preview = AssetGrouper.previewGrouping(transformedData);
+      setGroupingPreview(preview);
+      setShowGroupingPreview(true);
+      setParsedData(transformedData); // Store for potential grouping
+    } else {
+      // No grouping needed, proceed directly to validation
+      setParsedData(transformedData);
+      const validationResults = await validateData(transformedData, false);
+      setValidationResults(validationResults);
+      setCurrentStep(2);
+    }
+  };
+
+  const handleHeaderMappingCancel = () => {
+    setShowHeaderMapping(false);
+    resetImport();
+  };
+
+  const handleGroupingConfirm = async () => {
+    setShowGroupingPreview(false);
+    
+    // Group the assets
+    const groupingResult = AssetGrouper.groupAssets(parsedData);
+    const finalData = AssetGrouper.transformForBackend(groupingResult.groupedAssets);
+    
+    console.log('Grouped Data:', finalData);
+    console.log('Grouping Info:', groupingResult.groupingInfo);
+    
+    setGroupedData(finalData);
+    setParsedData(finalData); // Update parsedData with grouped data
+    
+    // Validate the grouped data (passing true to skip duplicate checks)
+    const validationResults = await validateData(finalData, true);
+    setValidationResults(validationResults);
+    setCurrentStep(2);
+  };
+
+  const handleGroupingCancel = () => {
+    setShowGroupingPreview(false);
+    resetImport();
   };
 
   const handleConfirmImport = async (importOption) => {
@@ -252,7 +365,7 @@ const CSVImport = () => {
 
   return (
     <div className="csv-import-page">
-      <style jsx>{`
+      <style>{`
         .csv-import-page {
           padding: 20px;
           max-width: 1200px;
@@ -652,6 +765,23 @@ const CSVImport = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {showHeaderMapping && headerMapping && (
+        <HeaderMappingConfirmation
+          detectedHeaders={detectedHeaders}
+          mappingResult={headerMapping}
+          onConfirm={handleHeaderMappingConfirm}
+          onCancel={handleHeaderMappingCancel}
+        />
+      )}
+
+      {showGroupingPreview && groupingPreview && (
+        <AssetGroupingPreview
+          groupingResult={groupingPreview}
+          onConfirm={handleGroupingConfirm}
+          onCancel={handleGroupingCancel}
+        />
       )}
 
       <ImportConfirmationDialog

@@ -112,12 +112,21 @@ const AddAsset = () => {
   const fetchAvailableProjects = async () => {
     try {
       setLoading(true);
-      // Fetch all projects without pagination limit (set limit to a high number)
+      // Fetch all projects without pagination (use high limit to get all)
       const response = await apiService.getAllProjects(1, 1000);
-      console.log('Available projects:', response);
+      console.log('Available projects response:', response);
       
       // Handle both paginated and direct array responses
-      const projects = response.data || response || [];
+      let projects = [];
+      if (response.data) {
+        // If it's a paginated response with data property
+        projects = Array.isArray(response.data) ? response.data : [];
+      } else if (Array.isArray(response)) {
+        // If it's a direct array
+        projects = response;
+      }
+      
+      console.log(`✅ Loaded ${projects.length} projects`);
       setAvailableProjects(projects);
       setFilteredProjects(projects);
       setProjectSearchError(null); // Clear search-specific errors
@@ -142,8 +151,15 @@ const AddAsset = () => {
           Project_Ref_Number: 'QT240000000029575',
           Project_Title: 'PERKHIDMATAN SEWAAN PERALATAN ICT DI INSTITUT LATIHAN ISLAM MALAYSIA (ILIM)',
           Customer_Name: 'ILIM'
+        },
+        {
+          Project_ID: 8,
+          Project_Ref_Number: 'QT244567890987',
+          Project_Title: 'PERKHIDMATAN SEWAAN PERALATAN ICT DI MAHKAMAH SYARIAH WILAYAH PERSEKUTUAN KUALA LUMPUR',
+          Customer_Name: 'MSWP'
         }
       ];
+      console.log('⚠️ Using fallback mock projects');
       setAvailableProjects(mockProjects);
       setFilteredProjects(mockProjects);
     } finally {
@@ -355,8 +371,17 @@ const AddAsset = () => {
         });
         setSuccess(true);
         setShowCreateConfirmation(false);
+        
+        // Navigate with state to trigger refresh on Assets page
         setTimeout(() => {
-          navigate('/assets');
+          navigate('/assets', { 
+            state: { 
+              refresh: true, 
+              message: 'Asset created successfully',
+              newAssetId: response.data.asset_id 
+            },
+            replace: false  // Use push instead of replace to ensure proper navigation
+          });
         }, 2000);
       } else {
         setError(response.message || 'Failed to create asset');

@@ -292,6 +292,17 @@ const ImportPreview = ({ parsedData, validationResults, onValidationComplete }) 
           border: 1px solid #fecaca;
         }
 
+        .preview-table td[title]:not([title=""]) {
+          cursor: help;
+          position: relative;
+        }
+
+        .preview-table td[title]:not([title=""]) .cell-content {
+          color: #3b82f6;
+          font-weight: 500;
+          text-decoration: underline dotted;
+        }
+
         .validation-icon {
           width: 16px;
           height: 16px;
@@ -446,10 +457,34 @@ const ImportPreview = ({ parsedData, validationResults, onValidationComplete }) 
                     const dbField = columnMapping[key];
                     const fieldStatus = getFieldValidationStatus(index, dbField);
                     
+                    // Handle different value types
+                    let displayValue = '—';
+                    let tooltipTitle = '';
+                    
+                    if (value !== null && value !== undefined && value !== '') {
+                      if (Array.isArray(value)) {
+                        // Handle peripherals array
+                        if (value.length === 0) {
+                          displayValue = 'No peripherals';
+                        } else {
+                          displayValue = `${value.length} peripheral${value.length > 1 ? 's' : ''}`;
+                          // Create tooltip with peripheral details
+                          tooltipTitle = value.map((p, i) => 
+                            `${i + 1}. ${p.peripheral_name || 'Unknown'} (${p.serial_code || 'N/A'})`
+                          ).join('\n');
+                        }
+                      } else if (typeof value === 'object') {
+                        // Handle object values
+                        displayValue = JSON.stringify(value);
+                      } else {
+                        displayValue = String(value);
+                      }
+                    }
+                    
                     return (
-                      <td key={key}>
+                      <td key={key} title={tooltipTitle}>
                         <div className={`cell-content ${fieldStatus === 'invalid' ? 'invalid' : ''}`}>
-                          {value || '—'}
+                          {displayValue}
                         </div>
                       </td>
                     );

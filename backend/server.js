@@ -38,8 +38,18 @@ const corsOptions = {
     const allowedOrigins = [
       'http://localhost:3000',
       'http://127.0.0.1:3000',
+      'http://192.168.56.1:3000',
+      'http://172.16.0.2:3000', // Network IP from previous logs
       process.env.CORS_ORIGIN
     ].filter(Boolean);
+    
+    // Allow any origin from local network in development
+    if (process.env.NODE_ENV === 'development' && origin) {
+      const isLocalNetwork = /^http:\/\/(localhost|127\.0\.0\.1|192\.168\.\d+\.\d+|172\.\d+\.\d+\.\d+):3000$/.test(origin);
+      if (isLocalNetwork) {
+        return callback(null, true);
+      }
+    }
     
     if (allowedOrigins.includes(origin)) {
       callback(null, true);
@@ -97,10 +107,11 @@ const startServer = async () => {
   }
   
   // Start server regardless of database connection status
-  app.listen(PORT, () => {
+  app.listen(PORT, '0.0.0.0', () => {
     logger.info(`🚀 Inventra Backend Server running on port ${PORT}`);
     logger.info(`📍 Environment: ${process.env.NODE_ENV}`);
     logger.info(`🌐 CORS enabled for: ${process.env.CORS_ORIGIN}`);
+    logger.info(`🌍 Server accessible on all network interfaces (0.0.0.0)`);
   });
 };
 

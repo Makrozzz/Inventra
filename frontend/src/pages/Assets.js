@@ -93,19 +93,24 @@ const Assets = ({ onDelete }) => {
 
   // Refresh data when coming from CSV import or when explicitly requested
   useEffect(() => {
-    // Check if we're coming from CSV import (via state or URL param)
-    if (location.state?.refresh || location.search.includes('refresh=true')) {
-      console.log('Refreshing assets due to CSV import navigation');
-      setSuccessMessage('Asset data refreshed - showing newly imported assets');
+    // Check if we're coming from CSV import, Add Asset, or when explicitly requested
+    const stateMessage = location.state?.message;
+    const hasRefresh = location.state?.refresh || location.search.includes('refresh=true');
+    
+    if (hasRefresh) {
+      console.log('Refreshing assets:', stateMessage || 'Data refresh requested');
+      setSuccessMessage(stateMessage || 'Asset data refreshed successfully');
       fetchAssets();
+      
       // Clear the state to prevent infinite refreshing
-      if (location.state?.refresh) {
+      if (location.state) {
         navigate(location.pathname, { replace: true, state: {} });
       }
+      
       // Clear success message after 5 seconds
       setTimeout(() => setSuccessMessage(''), 5000);
     }
-  }, [location, navigate, fetchAssets]);
+  }, [location, navigate]);
 
   // Refresh function to be called from external components
   const refreshAssets = () => {
