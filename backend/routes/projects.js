@@ -23,6 +23,9 @@ router.post('/', projectController.createProject);
 // PUT /api/projects/:id - Update project
 router.put('/:id', projectController.updateProject);
 
+// PUT /api/projects/:id/branches - Update project branches
+router.put('/:id/branches', projectController.updateProjectBranches);
+
 // DELETE /api/projects/:id - Delete project
 router.delete('/:id', projectController.deleteProject);
 

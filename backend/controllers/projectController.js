@@ -321,3 +321,91 @@ exports.getProjectStatistics = async (req, res) => {
     });
   }
 };
+
+// Update branches for a project
+exports.updateProjectBranches = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { branches } = req.body;
+
+    if (!branches || !Array.isArray(branches)) {
+      return res.status(400).json({ error: 'Branches array is required' });
+    }
+
+    console.log(`Updating branches for project ${id}:`, branches);
+
+    // Get existing inventory records to find current customers
+    const existingInventory = await Inventory.findByProject(id);
+    
+    if (existingInventory.length === 0) {
+      return res.status(404).json({ error: 'No inventory records found for this project' });
+    }
+    
+    // Get customer info from existing inventory (all records should have same customer info)
+    const customerRefNumber = existingInventory[0].Customer_Ref_Number;
+    const customerName = existingInventory[0].Customer_Name;
+    
+    if (!customerRefNumber || !customerName) {
+      return res.status(400).json({ error: 'Customer information not found in inventory records' });
+    }
+    
+    console.log('Using customer info:', { customerRefNumber, customerName });
+    
+    const existingCustomerIds = [...new Set(existingInventory.map(inv => inv.Customer_ID))];
+    
+    // Get existing branches
+    const existingBranches = [...new Set(existingInventory.map(inv => inv.Branch))];
+    console.log('Existing branches:', existingBranches);
+    console.log('New branches:', branches);
+
+    // Find branches to add and remove
+    const branchesToAdd = branches.filter(b => !existingBranches.includes(b));
+    const branchesToKeep = branches.filter(b => existingBranches.includes(b));
+    const branchesToRemove = existingBranches.filter(b => !branches.includes(b));
+
+    console.log('Branches to add:', branchesToAdd);
+    console.log('Branches to keep:', branchesToKeep);
+    console.log('Branches to remove:', branchesToRemove);
+
+    // Delete customers and inventory for removed branches
+    for (const branch of branchesToRemove) {
+      const inventoryToDelete = existingInventory.filter(inv => inv.Branch === branch);
+      for (const inv of inventoryToDelete) {
+        await Inventory.delete(inv.Inventory_ID);
+        if (inv.Customer_ID) {
+          await Customer.delete(inv.Customer_ID);
+        }
+        console.log(`Deleted inventory ${inv.Inventory_ID} and customer ${inv.Customer_ID} for branch: ${branch}`);
+      }
+    }
+
+    // Add new branches
+    if (branchesToAdd.length > 0) {
+      // Create new customer records for new branches
+      const newCustomerIds = await Customer.createMultipleBranches(
+        customerRefNumber,
+        customerName,
+        branchesToAdd
+      );
+      console.log('Created new customer IDs:', newCustomerIds);
+
+      // Create inventory records for new branches
+      const newInventoryIds = await Inventory.createForProject(id, newCustomerIds);
+      console.log('Created new inventory IDs:', newInventoryIds);
+    }
+
+    res.json({
+      success: true,
+      message: 'Branches updated successfully',
+      added: branchesToAdd.length,
+      removed: branchesToRemove.length,
+      total: branches.length
+    });
+  } catch (error) {
+    console.error('Error updating project branches:', error);
+    res.status(500).json({ 
+      error: 'Failed to update branches',
+      message: error.message 
+    });
+  }
+};

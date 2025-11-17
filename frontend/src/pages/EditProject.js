@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Save, ArrowLeft, Calendar, FileText, User, Shield, Wrench, Building2, MapPin, X } from 'lucide-react';
+import { Save, ArrowLeft, Calendar, FileText, User, Shield, Wrench, Building2, MapPin, X, Plus, Trash2, Edit2 } from 'lucide-react';
 
 const EditProject = () => {
   const { id } = useParams();
@@ -25,8 +25,11 @@ const EditProject = () => {
     Customer_Name: ''
   });
   
-  // Branches (read-only, cannot be edited)
+  // Branches (now editable)
   const [branches, setBranches] = useState([]);
+  const [originalBranches, setOriginalBranches] = useState([]); // Track original branches
+  const [newBranchInput, setNewBranchInput] = useState('');
+  const [branchesModified, setBranchesModified] = useState(false);
 
   useEffect(() => {
     fetchProjectData();
@@ -66,6 +69,7 @@ const EditProject = () => {
         const inventoryData = await inventoryResponse.json();
         const uniqueBranches = [...new Set(inventoryData.map(item => item.Branch))];
         setBranches(uniqueBranches);
+        setOriginalBranches([...uniqueBranches]); // Store original branches for comparison
       }
 
     } catch (error) {
@@ -89,6 +93,7 @@ const EditProject = () => {
     try {
       console.log('Updating project data:', project);
       
+      // Update project details
       const response = await fetch(`http://localhost:5000/api/v1/projects/${id}`, {
         method: 'PUT',
         headers: {
@@ -108,6 +113,28 @@ const EditProject = () => {
       const updatedProject = await response.json();
       console.log('Project updated successfully:', updatedProject);
       
+      // Update branches if they were modified
+      if (branchesModified) {
+        console.log('Updating branches:', branches);
+        const branchResponse = await fetch(`http://localhost:5000/api/v1/projects/${id}/branches`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            branches: branches
+          })
+        });
+
+        if (!branchResponse.ok) {
+          const errorData = await branchResponse.json().catch(() => ({ error: 'Failed to update branches' }));
+          throw new Error(errorData.error || 'Failed to update branches');
+        }
+
+        const branchResult = await branchResponse.json();
+        console.log('Branches updated:', branchResult);
+      }
+      
       // Navigate back to project detail page
       navigate(`/projects/${id}`);
     } catch (error) {
@@ -124,6 +151,68 @@ const EditProject = () => {
 
   const handleChange = (e) => {
     setProject({ ...project, [e.target.name]: e.target.value });
+  };
+
+  // Branch management functions
+  const handleAddBranch = () => {
+    const trimmedBranch = newBranchInput.trim();
+    if (!trimmedBranch) return;
+    
+    // Check for duplicates
+    if (branches.includes(trimmedBranch)) {
+      alert('This branch already exists');
+      return;
+    }
+
+    setBranches([...branches, trimmedBranch]);
+    setNewBranchInput('');
+    setBranchesModified(true);
+  };
+
+  const handleEditBranch = (index, oldBranchName) => {
+    const newBranchName = prompt('Edit branch name:', oldBranchName);
+    if (!newBranchName) return; // User cancelled
+    
+    const trimmedNewBranch = newBranchName.trim();
+    if (!trimmedNewBranch) {
+      alert('Branch name cannot be empty');
+      return;
+    }
+    
+    // Check if new name already exists (excluding current branch)
+    if (branches.some((b, i) => i !== index && b === trimmedNewBranch)) {
+      alert('This branch name already exists');
+      return;
+    }
+    
+    // Update the branch at this index
+    const updatedBranches = [...branches];
+    updatedBranches[index] = trimmedNewBranch;
+    setBranches(updatedBranches);
+    setBranchesModified(true);
+  };
+
+  const handleDeleteBranch = (branchToDelete) => {
+    if (branches.length === 1) {
+      alert('Cannot delete the last branch. Project must have at least one branch.');
+      return;
+    }
+
+    if (window.confirm(`Are you sure you want to delete branch "${branchToDelete}"? This will remove all associated inventory records.`)) {
+      setBranches(branches.filter(branch => branch !== branchToDelete));
+      setBranchesModified(true);
+    }
+  };
+
+  const handleBranchInputChange = (e) => {
+    setNewBranchInput(e.target.value);
+  };
+
+  const handleBranchInputKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleAddBranch();
+    }
   };
 
   if (loading) {
@@ -388,28 +477,83 @@ const EditProject = () => {
               </div>
             </div>
 
-            {/* Branches (Read-Only) */}
-            {branches.length > 0 && (
-              <div style={{ marginTop: '20px' }}>
-                <label style={{
-                  display: 'block',
-                  marginBottom: '12px',
-                  fontWeight: '600',
-                  color: '#374151',
-                  fontSize: '14px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px'
-                }}>
-                  <MapPin size={16} style={{ color: '#667eea' }} />
-                  Branches
-                </label>
+            {/* Branches (Editable) */}
+            <div style={{ marginTop: '20px' }}>
+              <label style={{
+                display: 'block',
+                marginBottom: '12px',
+                fontWeight: '600',
+                color: '#374151',
+                fontSize: '14px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}>
+                <MapPin size={16} style={{ color: '#667eea' }} />
+                Branches
+              </label>
+              
+              {/* Add new branch input */}
+              <div style={{ 
+                display: 'flex', 
+                gap: '10px', 
+                marginBottom: '15px',
+                alignItems: 'center'
+              }}>
+                <input
+                  type="text"
+                  value={newBranchInput}
+                  onChange={handleBranchInputChange}
+                  onKeyPress={handleBranchInputKeyPress}
+                  placeholder="Enter new branch name"
+                  style={{
+                    flex: 1,
+                    padding: '10px 16px',
+                    border: '2px solid #e5e7eb',
+                    borderRadius: '8px',
+                    fontSize: '14px',
+                    outline: 'none',
+                    transition: 'border-color 0.2s'
+                  }}
+                  onFocus={(e) => e.target.style.borderColor = '#667eea'}
+                  onBlur={(e) => e.target.style.borderColor = '#e5e7eb'}
+                />
+                <button
+                  type="button"
+                  onClick={handleAddBranch}
+                  style={{
+                    padding: '10px 20px',
+                    backgroundColor: '#10b981',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    transition: 'background-color 0.2s'
+                  }}
+                  onMouseEnter={(e) => e.target.style.backgroundColor = '#059669'}
+                  onMouseLeave={(e) => e.target.style.backgroundColor = '#10b981'}
+                >
+                  <Plus size={16} />
+                  Add Branch
+                </button>
+              </div>
+
+              {/* Display existing branches */}
+              {branches.length > 0 ? (
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
                   {branches.map((branch, index) => (
-                    <span
+                    <div
                       key={index}
                       style={{
-                        padding: '8px 16px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        padding: '8px 12px',
                         backgroundColor: '#e0e7ff',
                         color: '#4338ca',
                         borderRadius: '20px',
@@ -417,12 +561,59 @@ const EditProject = () => {
                         fontWeight: '500'
                       }}
                     >
-                      {branch}
-                    </span>
+                      <span>{branch}</span>
+                      <button
+                        type="button"
+                        onClick={() => handleEditBranch(index, branch)}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          cursor: 'pointer',
+                          padding: '2px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          color: '#3b82f6',
+                          transition: 'color 0.2s'
+                        }}
+                        onMouseEnter={(e) => e.target.closest('button').style.color = '#2563eb'}
+                        onMouseLeave={(e) => e.target.closest('button').style.color = '#3b82f6'}
+                        title="Edit branch"
+                      >
+                        <Edit2 size={14} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteBranch(branch)}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          cursor: 'pointer',
+                          padding: '2px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          color: '#ef4444',
+                          transition: 'color 0.2s'
+                        }}
+                        onMouseEnter={(e) => e.target.closest('button').style.color = '#dc2626'}
+                        onMouseLeave={(e) => e.target.closest('button').style.color = '#ef4444'}
+                        title="Delete branch"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
                   ))}
                 </div>
-              </div>
-            )}
+              ) : (
+                <p style={{ 
+                  color: '#9ca3af', 
+                  fontSize: '14px', 
+                  fontStyle: 'italic',
+                  margin: '0'
+                }}>
+                  No branches yet. Add a branch above.
+                </p>
+              )}
+            </div>
           </div>
 
           {/* Project Information (Editable) */}
