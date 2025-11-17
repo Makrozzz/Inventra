@@ -365,7 +365,10 @@ const Projects = () => {
                     boxShadow: '0 2px 15px rgba(0, 0, 0, 0.08)',
                     transition: 'all 0.3s ease',
                     cursor: 'pointer',
-                    border: '1px solid #f3f4f6'
+                    border: '1px solid #f3f4f6',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    height: '100%'
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.transform = 'translateY(-5px)';
@@ -414,8 +417,14 @@ const Projects = () => {
                       fontSize: '13px',
                       opacity: 0.85,
                       fontWeight: '400',
-                      lineHeight: '1.4',
-                      paddingRight: '100px'
+                      lineHeight: '1.5',
+                      paddingRight: '100px',
+                      display: '-webkit-box',
+                      WebkitLineClamp: 3,
+                      WebkitBoxOrient: 'vertical',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      maxHeight: '4.5em'
                     }}>
                       {project.Project_Title || 'No Project Title'}
                     </p>
@@ -517,14 +526,26 @@ const Projects = () => {
                         gap: '12px',
                         padding: '12px',
                         backgroundColor: '#f9fafb',
-                        borderRadius: '10px'
+                        borderRadius: '10px',
+                        minHeight: '70px'
                       }}>
                         <Wrench size={18} style={{ color: '#8b5cf6', marginTop: '2px', flexShrink: 0 }} />
-                        <div style={{ flex: 1 }}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '4px', fontWeight: '600' }}>
                             Preventive Maintenance
                           </div>
-                          <div style={{ fontSize: '14px', color: '#1f2937', fontWeight: '500' }}>
+                          <div style={{ 
+                            fontSize: '14px', 
+                            color: '#1f2937', 
+                            fontWeight: '500',
+                            display: '-webkit-box',
+                            WebkitLineClamp: 3,
+                            WebkitBoxOrient: 'vertical',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            lineHeight: '1.4',
+                            maxHeight: '4.2em'
+                          }}>
                             {project.Preventive_Maintenance || 'Not Scheduled'}
                           </div>
                         </div>
