@@ -9,11 +9,11 @@ const AddProject = () => {
   const [project, setProject] = useState({
     Project_Ref_Number: '',
     Project_Title: '',
-    Solution_Principal: '',
     Warranty: '',
     Preventive_Maintenance: '',
     Start_Date: '',
-    End_Date: ''
+    End_Date: '',
+    Antivirus: ''
   });
   
   // Customer information
@@ -297,15 +297,15 @@ const AddProject = () => {
 
             <div className="form-group">
               <label>
-                <User size={16} style={{ marginRight: '5px', verticalAlign: 'middle' }} />
-                Solution Principal
+                <Shield size={16} style={{ marginRight: '5px', verticalAlign: 'middle' }} />
+                Antivirus
               </label>
               <input
                 type="text"
-                name="Solution_Principal"
-                value={project.Solution_Principal}
+                name="Antivirus"
+                value={project.Antivirus}
                 onChange={handleChange}
-                placeholder="Enter solution principal name"
+                placeholder="e.g., Kaspersky, McAfee, Norton"
               />
             </div>
 

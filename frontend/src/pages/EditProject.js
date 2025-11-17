@@ -12,11 +12,11 @@ const EditProject = () => {
   const [project, setProject] = useState({
     Project_Ref_Number: '',
     Project_Title: '',
-    Solution_Principal: '',
     Warranty: '',
     Preventive_Maintenance: '',
     Start_Date: '',
-    End_Date: ''
+    End_Date: '',
+    Antivirus: ''
   });
   
   // Customer information (read-only, cannot be edited)
@@ -45,11 +45,11 @@ const EditProject = () => {
       setProject({
         Project_Ref_Number: projectData.Project_Ref_Number || '',
         Project_Title: projectData.Project_Title || '',
-        Solution_Principal: projectData.Solution_Principal || '',
         Warranty: projectData.Warranty || '',
         Preventive_Maintenance: projectData.Preventive_Maintenance || '',
         Start_Date: projectData.Start_Date ? projectData.Start_Date.split('T')[0] : '',
-        End_Date: projectData.End_Date ? projectData.End_Date.split('T')[0] : ''
+        End_Date: projectData.End_Date ? projectData.End_Date.split('T')[0] : '',
+        Antivirus: projectData.Antivirus || ''
       });
 
       // Set customer data (from the joined query)
@@ -486,14 +486,15 @@ const EditProject = () => {
                   color: '#374151',
                   fontSize: '14px'
                 }}>
-                  <User size={16} style={{ marginRight: '6px', verticalAlign: 'middle', color: '#10b981' }} />
-                  Solution Principal
+                  <Shield size={16} style={{ marginRight: '6px', verticalAlign: 'middle', color: '#10b981' }} />
+                  Antivirus
                 </label>
                 <input
                   type="text"
-                  name="Solution_Principal"
-                  value={project.Solution_Principal}
+                  name="Antivirus"
+                  value={project.Antivirus}
                   onChange={handleChange}
+                  placeholder="e.g., Kaspersky, McAfee, Norton"
                   style={{
                     width: '100%',
                     padding: '12px 16px',

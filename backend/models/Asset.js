@@ -55,13 +55,13 @@ class Asset {
           a.Item_Name,
           a.Status,
           c.Category,
-          m.Model,
+          m.Model_Name as Model,
           r.Recipient_Name,
           r.Department,
           p.Project_ID,
           p.Project_Ref_Number,
           p.Project_Title,
-          p.Solution_Principal,
+          p.Antivirus,
           p.Warranty,
           p.Preventive_Maintenance,
           p.Start_Date,
@@ -112,7 +112,7 @@ class Asset {
           a.Model_ID,
           a.Status,
           c.Category,
-          m.Model,
+          m.Model_Name as Model,
           r.Recipient_Name,
           r.Department
         FROM ASSET a
@@ -146,7 +146,7 @@ class Asset {
           a.Model_ID,
           a.Status,
           c.Category,
-          m.Model,
+          m.Model_Name as Model,
           r.Recipient_Name,
           r.Department
         FROM ASSET a
@@ -308,7 +308,7 @@ class Asset {
         console.log('Updating existing model:', { modelName, currentModelId });
         
         await pool.execute(
-          'UPDATE MODEL SET Model = ? WHERE Model_ID = ?',
+          'UPDATE MODEL SET Model_Name = ? WHERE Model_ID = ?',
           [modelName, currentModelId]
         );
         return currentModelId;
@@ -317,7 +317,7 @@ class Asset {
       // If no current model ID, create new model
       console.log('Creating new model:', { modelName });
       const [result] = await pool.execute(
-        'INSERT INTO MODEL (Model) VALUES (?)',
+        'INSERT INTO MODEL (Model_Name) VALUES (?)',
         [modelName]
       );
       return result.insertId;
@@ -458,13 +458,13 @@ class Asset {
           a.Item_Name,
           a.Status,
           c.Category,
-          m.Model,
+          m.Model_Name as Model,
           r.Recipient_Name,
           r.Department,
           p.Project_ID,
           p.Project_Ref_Number,
           p.Project_Title,
-          p.Solution_Principal,
+          p.Antivirus,
           p.Warranty,
           p.Preventive_Maintenance,
           p.Start_Date,
@@ -693,18 +693,18 @@ class Asset {
 
       // First try to find existing model (case-insensitive)
       const [existing] = await pool.execute(
-        'SELECT Model_ID, Model FROM MODEL WHERE LOWER(Model) = LOWER(?)',
+        'SELECT Model_ID, Model_Name FROM MODEL WHERE LOWER(Model_Name) = LOWER(?)',
         [cleanModelName]
       );
       
       if (existing.length > 0) {
-        console.log(`Found existing model: ID=${existing[0].Model_ID}, Name="${existing[0].Model}"`);
+        console.log(`Found existing model: ID=${existing[0].Model_ID}, Name="${existing[0].Model_Name}"`);
         return existing[0].Model_ID;
       }
       
       // Create new model
       const [result] = await pool.execute(
-        'INSERT INTO MODEL (Model) VALUES (?)',
+        'INSERT INTO MODEL (Model_Name) VALUES (?)',
         [cleanModelName]
       );
       
@@ -716,7 +716,7 @@ class Asset {
       if (error.code === 'ER_DUP_ENTRY') {
         try {
           const [existing] = await pool.execute(
-            'SELECT Model_ID FROM MODEL WHERE LOWER(Model) = LOWER(?)',
+            'SELECT Model_ID FROM MODEL WHERE LOWER(Model_Name) = LOWER(?)',
             [modelName.trim()]
           );
           if (existing.length > 0) {

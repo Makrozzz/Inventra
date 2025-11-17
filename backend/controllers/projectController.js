@@ -184,8 +184,8 @@ exports.createProject = async (req, res) => {
     console.log('Project created:', newProject);
 
     // Step 2: Create customer records (one for each branch)
+    // NOTE: Customer table no longer has Project_ID in new database
     const customerIds = await Customer.createMultipleBranches(
-      newProject.Project_ID,
       customer.Customer_Ref_Number,
       customer.Customer_Name,
       customer.branches

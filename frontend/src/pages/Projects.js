@@ -481,7 +481,26 @@ const Projects = () => {
                         backgroundColor: '#f9fafb',
                         borderRadius: '10px'
                       }}>
-                        <Shield size={18} style={{ color: '#f59e0b', marginTop: '2px', flexShrink: 0 }} />
+                        <Shield size={18} style={{ color: '#ef4444', marginTop: '2px', flexShrink: 0 }} />
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '4px', fontWeight: '600' }}>
+                            Antivirus
+                          </div>
+                          <div style={{ fontSize: '14px', color: '#1f2937', fontWeight: '500' }}>
+                            {project.Antivirus || 'Not Specified'}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'flex-start',
+                        gap: '12px',
+                        padding: '12px',
+                        backgroundColor: '#f9fafb',
+                        borderRadius: '10px'
+                      }}>
+                        <Award size={18} style={{ color: '#f59e0b', marginTop: '2px', flexShrink: 0 }} />
                         <div style={{ flex: 1 }}>
                           <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '4px', fontWeight: '600' }}>
                             Warranty
