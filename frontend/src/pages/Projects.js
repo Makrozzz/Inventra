@@ -420,11 +420,11 @@ const Projects = () => {
                       lineHeight: '1.5',
                       paddingRight: '100px',
                       display: '-webkit-box',
-                      WebkitLineClamp: 3,
+                      WebkitLineClamp: 2,
                       WebkitBoxOrient: 'vertical',
                       overflow: 'hidden',
                       textOverflow: 'ellipsis',
-                      maxHeight: '4.5em'
+                      maxHeight: '3em'
                     }}>
                       {project.Project_Title || 'No Project Title'}
                     </p>
