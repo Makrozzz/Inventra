@@ -15,7 +15,8 @@ const {
   createChecklistItem,
   updateChecklistItem,
   deleteChecklistItem,
-  createCategory
+  createCategory,
+  getPMReport
 } = require('../controllers/pmController');
 
 const router = express.Router();
@@ -31,6 +32,10 @@ router.get('/all-checklist/:categoryId', getAllChecklistByCategory);
 router.get('/results/:pmId', getResultsByPMId);
 router.get('/detail/:pmId', getDetailedPM);
 router.get('/asset/:assetId', getPMByAssetId);
+
+// PDF Report route
+router.get('/:pmId/report', getPMReport);
+
 router.post('/', createPM);
 
 // Checklist management routes

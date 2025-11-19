@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
   ArrowLeft, CheckCircle, X, Calendar, FileText, Package, 
-  Wrench, AlertTriangle, ClipboardCheck
+  Wrench, AlertTriangle, ClipboardCheck, Download
 } from 'lucide-react';
+import PMReportDownload from '../components/PMReportDownload';
 
 const PMDetail = () => {
   const { pmId } = useParams();
@@ -130,8 +131,8 @@ const PMDetail = () => {
 
       {/* PM Overview Card */}
       <div className="card" style={{ marginBottom: '20px', background: 'linear-gradient(135deg, #27ae60 0%, #229954 100%)', color: 'white' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <div style={{ flex: 1 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '15px' }}>
               <Wrench size={40} />
               <div>
@@ -157,15 +158,26 @@ const PMDetail = () => {
               </div>
             </div>
           </div>
-          <div style={{ 
-            padding: '12px 24px', 
-            borderRadius: '8px',
-            fontWeight: '600',
-            fontSize: '1rem',
-            background: pmData.Status === 'Completed' ? 'rgba(255, 255, 255, 0.3)' : 'rgba(255, 255, 255, 0.2)',
-            border: '2px solid rgba(255, 255, 255, 0.5)'
-          }}>
-            {pmData.Status || 'In-Process'}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '15px', alignItems: 'flex-end' }}>
+            <div style={{ 
+              padding: '12px 24px', 
+              borderRadius: '8px',
+              fontWeight: '600',
+              fontSize: '1rem',
+              background: pmData.Status === 'Completed' ? 'rgba(255, 255, 255, 0.3)' : 'rgba(255, 255, 255, 0.2)',
+              border: '2px solid rgba(255, 255, 255, 0.5)'
+            }}>
+              {pmData.Status || 'In-Process'}
+            </div>
+            
+            {/* Download Form Button */}
+            <PMReportDownload 
+              pmId={pmData.PM_ID} 
+              assetSerialNumber={pmData.Asset_Serial_Number}
+              customerName={pmData.Customer_Name}
+              variant="light"
+              hasExistingPDF={pmData.file_path ? true : false}
+            />
           </div>
         </div>
       </div>

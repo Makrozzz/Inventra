@@ -9,6 +9,9 @@ frontend/.env
 backend/logs/
 *.log
 
+# Ignore generated PM report PDFs (each user generates their own)
+backend/uploads/pm-reports/*.pdf
+
 # OS files
 .DS_Store
 Thumbs.db
