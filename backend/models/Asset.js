@@ -199,9 +199,10 @@ class Asset {
           a.Model_ID,
           a.Status,
           c.Category,
-          m.Model,
+          m.Model_Name AS Model,
           r.Recipient_Name,
-          r.Department
+          r.Department,
+          r.Position
         FROM ASSET a
         LEFT JOIN CATEGORY c ON a.Category_ID = c.Category_ID
         LEFT JOIN MODEL m ON a.Model_ID = m.Model_ID
@@ -233,9 +234,10 @@ class Asset {
           a.Model_ID,
           a.Status,
           c.Category,
-          m.Model,
+          m.Model_Name AS Model,
           r.Recipient_Name,
-          r.Department
+          r.Department,
+          r.Position
         FROM ASSET a
         LEFT JOIN CATEGORY c ON a.Category_ID = c.Category_ID
         LEFT JOIN MODEL m ON a.Model_ID = m.Model_ID
@@ -309,9 +311,9 @@ class Asset {
   }
 
   // Helper method to update recipient information properly
-  static async updateRecipientInfo(recipientName, department, currentRecipientId) {
+  static async updateRecipientInfo(recipientName, department, position, currentRecipientId) {
     try {
-      if (!recipientName && !department) return currentRecipientId;
+      if (!recipientName && !department && !position) return currentRecipientId;
 
       // If we have a current recipient ID, update that recipient's information
       if (currentRecipientId) {
@@ -328,11 +330,16 @@ class Asset {
           updateValues.push(department);
         }
 
+        if (position !== undefined) {
+          updateFields.push('Position = ?');
+          updateValues.push(position || null);
+        }
+
         if (updateFields.length > 0) {
           updateValues.push(currentRecipientId);
           
           const updateQuery = `UPDATE RECIPIENTS SET ${updateFields.join(', ')} WHERE Recipients_ID = ?`;
-          console.log('Updating existing recipient:', { recipientName, department, currentRecipientId });
+          console.log('Updating existing recipient:', { recipientName, department, position, currentRecipientId });
           
           await pool.execute(updateQuery, updateValues);
           return currentRecipientId;
@@ -341,10 +348,10 @@ class Asset {
 
       // If no current recipient ID, create new recipient
       if (recipientName) {
-        console.log('Creating new recipient:', { recipientName, department });
+        console.log('Creating new recipient:', { recipientName, department, position });
         const [result] = await pool.execute(
-          'INSERT INTO RECIPIENTS (Recipient_Name, Department) VALUES (?, ?)',
-          [recipientName, department || '']
+          'INSERT INTO RECIPIENTS (Recipient_Name, Department, Position) VALUES (?, ?, ?)',
+          [recipientName, department || '', position || null]
         );
         return result.insertId;
       }
@@ -619,11 +626,11 @@ class Asset {
   }
 
   // Helper method to create or get recipient
-  static async createRecipient(recipientName, department) {
+  static async createRecipient(recipientName, department, position = null) {
     try {
       const [result] = await pool.execute(
-        'INSERT INTO RECIPIENTS (Recipient_Name, Department) VALUES (?, ?)',
-        [recipientName, department]
+        'INSERT INTO RECIPIENTS (Recipient_Name, Department, Position) VALUES (?, ?, ?)',
+        [recipientName, department, position]
       );
       return result.insertId;
     } catch (error) {

@@ -1,743 +1,556 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Save, ArrowLeft, Info, AlertCircle, CheckCircle, X } from 'lucide-react';
-import apiService from '../services/apiService';
+import { Save, ArrowLeft, AlertCircle, CheckCircle, X } from 'lucide-react';
 
-const EditAsset = ({ onUpdate }) => {
+const EditAsset = () => {
   const navigate = useNavigate();
   const { id } = useParams();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [currentAsset, setCurrentAsset] = useState(null);
-  const [showConfirmModal, setShowConfirmModal] = useState(false);
-  const [pendingChanges, setPendingChanges] = useState({});
-  const [updating, setUpdating] = useState(false);
-  const [asset, setAsset] = useState({
+  const [success, setSuccess] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const [activeTab, setActiveTab] = useState('asset');
+  
+  const [originalData, setOriginalData] = useState(null);
+  const [formData, setFormData] = useState({
+    // Asset Info
     Asset_Serial_Number: '',
     Asset_Tag_ID: '',
     Item_Name: '',
     Status: 'Active',
-    Recipients_ID: '',
-    Category_ID: '',
-    Model_ID: '',
+    Windows: '',
+    Microsoft_Office: '',
+    Monthly_Prices: '',
+    
+    // Customer Info
+    Customer_Name: '',
+    Customer_Ref_Number: '',
+    Branch: '',
     Recipient_Name: '',
     Department: '',
-    Category: '',
-    Model: ''
+    Position: '',
+    
+    // Project Info
+    Project_Ref_Number: '',
+    Warranty: '',
+    Start_Date: '',
+    End_Date: ''
   });
 
-  // Fetch the current asset data
+  // Fetch asset data on component mount
   useEffect(() => {
-    const fetchAsset = async () => {
-      if (!id) return;
-      
-      try {
-        setLoading(true);
-        setError(null);
-        
-        console.log('Fetching asset data (bypassing authentication)...');
-        
-        const assetData = await apiService.getAssetByIdDirect(id);
-        
-        setCurrentAsset(assetData);
-        // Keep form fields blank for editing, but store current data for placeholders
-        setAsset({
-          Asset_Serial_Number: '',
-          Asset_Tag_ID: '',
-          Item_Name: '',
-          Status: '',
-          Recipients_ID: '',
-          Category_ID: '',
-          Model_ID: '',
-          Recipient_Name: '',
-          Department: '',
-          Category: '',
-          Model: ''
-        });
-      } catch (err) {
-        console.error('Error fetching asset:', err);
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchAsset();
+    fetchAssetData();
   }, [id]);
+
+  const fetchAssetData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      console.log('🔄 Fetching asset data for editing, ID:', id);
+      
+      const response = await fetch(`http://localhost:5000/api/v1/assets/detail/${id}`);
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch asset: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      console.log('✅ Asset data loaded:', data);
+      
+      // Store original data for comparison
+      setOriginalData(data);
+      
+      // Populate form with current data
+      setFormData({
+        Asset_Serial_Number: data.Asset_Serial_Number || '',
+        Asset_Tag_ID: data.Asset_Tag_ID || '',
+        Item_Name: data.Item_Name || '',
+        Status: data.Status || 'Active',
+        Windows: data.Windows || '',
+        Microsoft_Office: data.Microsoft_Office || '',
+        Monthly_Prices: data.Monthly_Prices || '',
+        Customer_Name: data.Customer_Name || '',
+        Customer_Ref_Number: data.Customer_Ref_Number || '',
+        Branch: data.Branch || '',
+        Recipient_Name: data.Recipient_Name || '',
+        Department: data.Department || '',
+        Position: data.Position || '',
+        Project_Ref_Number: data.Project_Ref_Number || '',
+        Warranty: data.Warranty || '',
+        Start_Date: data.Start_Date ? data.Start_Date.split('T')[0] : '',
+        End_Date: data.End_Date ? data.End_Date.split('T')[0] : ''
+      });
+      
+    } catch (err) {
+      console.error('❌ Error fetching asset:', err);
+      setError(err.message || 'Failed to load asset data');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    try {
-      console.log('Bypassing authentication - login is in mock mode');
-      
-      // Filter out empty fields - only send fields that have been modified
-      const updateData = {};
-      Object.keys(asset).forEach(key => {
-        if (asset[key] && asset[key].trim() !== '') {
-          updateData[key] = asset[key];
-        }
-      });
-
-      // If no fields were modified, show a message
-      if (Object.keys(updateData).length === 0) {
-        setError('No changes made to update.');
-        return;
-      }
-
-      // Store pending changes and show confirmation modal
-      setPendingChanges(updateData);
-      setShowConfirmModal(true);
-    } catch (err) {
-      console.error('Error preparing update:', err);
-      setError(`Failed to prepare update: ${err.message}`);
+    // Basic validation
+    if (!formData.Asset_Serial_Number || !formData.Asset_Tag_ID || !formData.Item_Name) {
+      setError('Serial Number, Tag ID, and Item Name are required fields');
+      return;
     }
-  };
-
-  const handleConfirmUpdate = async () => {
+    
     try {
-      setUpdating(true);
+      setSaving(true);
       setError(null);
-
-      console.log('Attempting to update asset with data:', pendingChanges);
-      const updatedAsset = await apiService.updateAssetByIdDirect(id, pendingChanges);
-      console.log('Asset updated successfully:', updatedAsset);
-
-      // Call the parent component's onUpdate if provided
-      if (onUpdate) {
-        onUpdate(id, updatedAsset);
+      setSuccess(null);
+      
+      console.log('🔄 Updating asset:', formData);
+      
+      const response = await fetch(`http://localhost:5000/api/v1/assets/id/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData)
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to update asset');
       }
-
-      setShowConfirmModal(false);
-      navigate(-1);
+      
+      const result = await response.json();
+      console.log('✅ Asset updated successfully:', result);
+      
+      setSuccess('Asset updated successfully!');
+      
+      // Redirect to asset detail page after 1.5 seconds
+      setTimeout(() => {
+        navigate(`/asset-detail/${id}`);
+      }, 1500);
+      
     } catch (err) {
-      console.error('Error updating asset:', err);
-      setError(`Failed to update asset: ${err.message}`);
-      setUpdating(false);
+      console.error('❌ Error updating asset:', err);
+      setError(err.message || 'Failed to update asset');
+    } finally {
+      setSaving(false);
     }
   };
 
-  const handleCancelUpdate = () => {
-    setShowConfirmModal(false);
-    setPendingChanges({});
-    console.log('Asset update cancelled by user');
-  };
-
-  const handleChange = (e) => {
-    setAsset({ ...asset, [e.target.name]: e.target.value });
-  };
-
-  // Confirmation Modal Component
-  const ConfirmationModal = () => {
-    if (!showConfirmModal) return null;
-
-    const changedFields = Object.keys(pendingChanges).map(key => ({
-      field: key.replace(/_/g, ' '),
-      currentValue: currentAsset?.[key] || 'N/A',
-      newValue: pendingChanges[key]
-    }));
-
-    return (
-      <div style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        backgroundColor: 'rgba(0, 0, 0, 0.6)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 9999,
-        backdropFilter: 'blur(4px)'
-      }}>
-        <div style={{
-          backgroundColor: 'white',
-          borderRadius: '12px',
-          padding: '32px',
-          maxWidth: '600px',
-          width: '90%',
-          maxHeight: '80vh',
-          overflowY: 'auto',
-          boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)',
-          border: '1px solid #e1e8ed'
-        }}>
-          {/* Header */}
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            marginBottom: '24px',
-            paddingBottom: '16px',
-            borderBottom: '2px solid #f1f5f9'
-          }}>
-            <div style={{
-              backgroundColor: '#fef3c7',
-              borderRadius: '50%',
-              padding: '12px',
-              marginRight: '16px'
-            }}>
-              <AlertCircle size={24} color="#d97706" />
-            </div>
-            <div>
-              <h3 style={{
-                margin: 0,
-                color: '#1f2937',
-                fontSize: '1.5rem',
-                fontWeight: '600'
-              }}>
-                Confirm Asset Update
-              </h3>
-              <p style={{
-                margin: '4px 0 0 0',
-                color: '#6b7280',
-                fontSize: '0.9rem'
-              }}>
-                Review the changes before updating the asset
-              </p>
-            </div>
-          </div>
-
-          {/* Changes List */}
-          <div style={{
-            marginBottom: '24px'
-          }}>
-            <h4 style={{
-              margin: '0 0 16px 0',
-              color: '#374151',
-              fontSize: '1.1rem',
-              fontWeight: '600'
-            }}>
-              Changes to be made:
-            </h4>
-            
-            <div style={{
-              backgroundColor: '#f8fafc',
-              border: '1px solid #e2e8f0',
-              borderRadius: '8px',
-              padding: '16px'
-            }}>
-              {changedFields.map((change, index) => (
-                <div key={index} style={{
-                  marginBottom: index < changedFields.length - 1 ? '12px' : '0',
-                  paddingBottom: index < changedFields.length - 1 ? '12px' : '0',
-                  borderBottom: index < changedFields.length - 1 ? '1px solid #e2e8f0' : 'none'
-                }}>
-                  <div style={{
-                    fontWeight: '600',
-                    color: '#374151',
-                    marginBottom: '4px',
-                    textTransform: 'capitalize'
-                  }}>
-                    {change.field}
-                  </div>
-                  <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '12px',
-                    fontSize: '0.9rem'
-                  }}>
-                    <span style={{
-                      color: '#6b7280',
-                      backgroundColor: '#f1f5f9',
-                      padding: '4px 8px',
-                      borderRadius: '4px',
-                      fontFamily: 'monospace',
-                      maxWidth: '200px',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap'
-                    }}>
-                      {change.currentValue}
-                    </span>
-                    <ArrowLeft size={16} color="#6b7280" style={{ transform: 'rotate(180deg)' }} />
-                    <span style={{
-                      color: '#059669',
-                      backgroundColor: '#ecfdf5',
-                      padding: '4px 8px',
-                      borderRadius: '4px',
-                      fontFamily: 'monospace',
-                      fontWeight: '600',
-                      maxWidth: '200px',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap'
-                    }}>
-                      {change.newValue}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Warning */}
-          <div style={{
-            backgroundColor: '#fef2f2',
-            border: '1px solid #fecaca',
-            borderRadius: '6px',
-            padding: '12px',
-            marginBottom: '24px'
-          }}>
-            <p style={{
-              margin: 0,
-              color: '#dc2626',
-              fontSize: '0.9rem',
-              fontWeight: '500'
-            }}>
-              ⚠️ This action cannot be undone. Make sure all changes are correct.
-            </p>
-          </div>
-
-          {/* Action Buttons */}
-          <div style={{
-            display: 'flex',
-            gap: '12px',
-            justifyContent: 'flex-end'
-          }}>
-            <button
-              type="button"
-              onClick={handleCancelUpdate}
-              disabled={updating}
-              style={{
-                padding: '12px 24px',
-                backgroundColor: '#f3f4f6',
-                color: '#374151',
-                border: '1px solid #d1d5db',
-                borderRadius: '8px',
-                fontSize: '0.9rem',
-                fontWeight: '600',
-                cursor: updating ? 'not-allowed' : 'pointer',
-                transition: 'all 0.2s ease',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                opacity: updating ? 0.6 : 1
-              }}
-            >
-              <X size={16} />
-              Cancel
-            </button>
-            
-            <button
-              type="button"
-              onClick={handleConfirmUpdate}
-              disabled={updating}
-              style={{
-                padding: '12px 24px',
-                backgroundColor: updating ? '#9ca3af' : '#3b82f6',
-                color: 'white',
-                border: 'none',
-                borderRadius: '8px',
-                fontSize: '0.9rem',
-                fontWeight: '600',
-                cursor: updating ? 'not-allowed' : 'pointer',
-                transition: 'all 0.2s ease',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px'
-              }}
-            >
-              {updating ? (
-                <>
-                  <div style={{
-                    width: '16px',
-                    height: '16px',
-                    border: '2px solid #ffffff',
-                    borderTop: '2px solid transparent',
-                    borderRadius: '50%',
-                    animation: 'spin 1s linear infinite'
-                  }} />
-                  Updating...
-                </>
-              ) : (
-                <>
-                  <CheckCircle size={16} />
-                  Confirm Update
-                </>
-              )}
-            </button>
-          </div>
-        </div>
-
-        <style>
-          {`
-            @keyframes spin {
-              0% { transform: rotate(0deg); }
-              100% { transform: rotate(360deg); }
-            }
-          `}
-        </style>
-      </div>
-    );
+  const handleCancel = () => {
+    navigate('/assets');
   };
 
   if (loading) {
     return (
-      <div>
-        <div style={{ display: 'flex', alignItems: 'center', marginBottom: '20px' }}>
-          <button onClick={() => navigate(-1)} className="btn btn-secondary" style={{ marginRight: '15px' }}>
-            <ArrowLeft size={16} />
-          </button>
-          <h1>Edit Asset</h1>
-        </div>
-        <div className="card">
-          <div style={{ textAlign: 'center', padding: '40px' }}>
-            <p>Loading asset data...</p>
-          </div>
+      <div className="page-container">
+        <div style={{ textAlign: 'center', padding: '60px 20px' }}>
+          <div style={{ fontSize: '1.2rem', color: '#666' }}>Loading asset data...</div>
         </div>
       </div>
     );
   }
 
-  if (error) {
+  if (error && !formData.Asset_Serial_Number) {
     return (
-      <div>
-        <div style={{ display: 'flex', alignItems: 'center', marginBottom: '20px' }}>
-          <button onClick={() => navigate(-1)} className="btn btn-secondary" style={{ marginRight: '15px' }}>
-            <ArrowLeft size={16} />
+      <div className="page-container">
+        <div className="card" style={{ textAlign: 'center', padding: '60px 20px' }}>
+          <AlertCircle size={48} color="#e74c3c" style={{ marginBottom: '20px' }} />
+          <h3 style={{ color: '#e74c3c', marginBottom: '10px' }}>Error Loading Asset</h3>
+          <p style={{ color: '#666', marginBottom: '20px' }}>{error}</p>
+          <button onClick={() => navigate('/assets')} className="btn btn-primary">
+            <ArrowLeft size={16} style={{ marginRight: '5px' }} />
+            Back to Assets
           </button>
-          <h1>Edit Asset</h1>
-        </div>
-        <div className="card">
-          <div style={{ textAlign: 'center', padding: '40px', color: '#e74c3c' }}>
-            <AlertCircle size={48} style={{ marginBottom: '20px' }} />
-            <p style={{ fontSize: '1.1rem', marginBottom: '20px' }}>Error: {error}</p>
-            <button onClick={() => navigate(-1)} className="btn btn-primary">
-              Back
-            </button>
-          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div>
-      <div style={{ display: 'flex', alignItems: 'center', marginBottom: '20px' }}>
-        <button onClick={() => navigate(-1)} className="btn btn-secondary" style={{ marginRight: '15px' }}>
-          <ArrowLeft size={16} />
-        </button>
-        <h1>Edit Asset: {currentAsset?.Item_Name}</h1>
-      </div>
-
-      {/* Current Asset Information Display */}
-      <div className="card" style={{ marginBottom: '20px', backgroundColor: '#f8f9fa', border: '2px solid #e9ecef' }}>
-        <div style={{ display: 'flex', alignItems: 'center', marginBottom: '15px' }}>
-          <Info size={20} style={{ marginRight: '8px', color: '#3498db' }} />
-          <span style={{ 
-            marginLeft: 'auto', 
-            padding: '4px 8px', 
-            backgroundColor: '#ffeaa7', 
-            color: '#d63031', 
-            borderRadius: '4px', 
-            fontSize: '0.8rem',
-            fontWeight: '600'
-          }}>
-            Asset ID is Read-Only
-          </span>
-        </div>
-        
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '15px', fontSize: '0.9rem' }}>
-          <div style={{ 
-            padding: '10px', 
-            backgroundColor: '#fff5f5', 
-            borderRadius: '6px', 
-            border: '2px solid #fed7d7',
-            position: 'relative'
-          }}>
-            <strong style={{ color: '#c53030', display: 'block', marginBottom: '4px' }}>Asset ID (Read-Only):</strong>
-            <span style={{ color: '#2d3748', fontWeight: '600', fontSize: '1.1rem' }}>{currentAsset?.Asset_ID}</span>
-            <div style={{ 
-              position: 'absolute', 
-              top: '5px', 
-              right: '5px', 
-              fontSize: '0.7rem', 
-              color: '#c53030',
-              fontWeight: '600'
-            }}>
-              🔒
-            </div>
-          </div>
-          
-          <div style={{ padding: '10px', backgroundColor: 'white', borderRadius: '6px', border: '1px solid #dee2e6' }}>
-            <strong style={{ color: '#7f8c8d', display: 'block', marginBottom: '4px' }}>Serial Number:</strong>
-            <span style={{ color: '#2c3e50', fontWeight: '600' }}>{currentAsset?.Asset_Serial_Number || 'N/A'}</span>
-          </div>
-          
-          <div style={{ padding: '10px', backgroundColor: 'white', borderRadius: '6px', border: '1px solid #dee2e6' }}>
-            <strong style={{ color: '#7f8c8d', display: 'block', marginBottom: '4px' }}>Tag ID:</strong>
-            <span style={{ color: '#2c3e50', fontWeight: '600' }}>{currentAsset?.Asset_Tag_ID || 'N/A'}</span>
-          </div>
-          
-          <div style={{ padding: '10px', backgroundColor: 'white', borderRadius: '6px', border: '1px solid #dee2e6' }}>
-            <strong style={{ color: '#7f8c8d', display: 'block', marginBottom: '4px' }}>Category:</strong>
-            <span style={{ color: '#2c3e50', fontWeight: '600' }}>{currentAsset?.Category || 'N/A'}</span>
-          </div>
-          
-          <div style={{ padding: '10px', backgroundColor: 'white', borderRadius: '6px', border: '1px solid #dee2e6' }}>
-            <strong style={{ color: '#7f8c8d', display: 'block', marginBottom: '4px' }}>Model:</strong>
-            <span style={{ color: '#2c3e50', fontWeight: '600' }}>{currentAsset?.Model || 'N/A'}</span>
-          </div>
-          
-          <div style={{ padding: '10px', backgroundColor: 'white', borderRadius: '6px', border: '1px solid #dee2e6' }}>
-            <strong style={{ color: '#7f8c8d', display: 'block', marginBottom: '4px' }}>Assigned Recipient:</strong>
-            <span style={{ color: '#2c3e50', fontWeight: '600' }}>{currentAsset?.Recipient_Name || 'N/A'}</span>
-          </div>
-          
-          <div style={{ padding: '10px', backgroundColor: 'white', borderRadius: '6px', border: '1px solid #dee2e6' }}>
-            <strong style={{ color: '#7f8c8d', display: 'block', marginBottom: '4px' }}>Department:</strong>
-            <span style={{ color: '#2c3e50', fontWeight: '600' }}>{currentAsset?.Department || 'N/A'}</span>
-          </div>
-          
-          <div style={{ padding: '10px', backgroundColor: 'white', borderRadius: '6px', border: '1px solid #dee2e6' }}>
-            <strong style={{ color: '#7f8c8d', display: 'block', marginBottom: '4px' }}>Current Status:</strong>
-            <span className={`status-badge status-${(currentAsset?.Status || '').toLowerCase()}`}>
-              {currentAsset?.Status || 'N/A'}
-            </span>
-          </div>
+    <div className="page-container">
+      {/* Header */}
+      <div className="page-header" style={{ marginBottom: '20px' }}>
+        <div>
+          <button onClick={handleCancel} className="btn btn-secondary" style={{ marginBottom: '10px' }}>
+            <ArrowLeft size={16} style={{ marginRight: '5px' }} />
+            Back
+          </button>
+          <h1 className="page-title">Edit Asset</h1>
+          <p style={{ color: '#7f8c8d', fontSize: '0.9rem' }}>
+            Update asset information • ID: {id}
+          </p>
         </div>
       </div>
 
-      {/* Edit Asset Attributes Form */}
-      <div className="card">
-        <div style={{ display: 'flex', alignItems: 'center', marginBottom: '20px', borderBottom: '2px solid #e9ecef', paddingBottom: '15px' }}>
-          <h3 style={{ margin: 0, color: '#2c3e50' }}>Edit Asset Attributes</h3>
-          <span style={{ 
-            marginLeft: 'auto', 
-            padding: '6px 12px', 
-            backgroundColor: '#dff0d8', 
-            color: '#3c763d', 
-            borderRadius: '4px', 
-            fontSize: '0.8rem',
-            fontWeight: '600'
-          }}>
-            ✏️ Editable Fields
-          </span>
-        </div>
-        
-        <div style={{ 
-          marginBottom: '20px', 
-          padding: '12px', 
-          backgroundColor: '#e3f2fd', 
-          border: '1px solid #bbdefb', 
-          borderRadius: '6px',
-          fontSize: '0.9rem',
-          color: '#1565c0'
+      {/* Success Message */}
+      {success && (
+        <div style={{
+          backgroundColor: '#d4edda',
+          border: '1px solid #c3e6cb',
+          color: '#155724',
+          padding: '15px 20px',
+          marginBottom: '20px',
+          borderRadius: '8px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '10px'
         }}>
-          💡 <strong>How to edit:</strong> Fill in only the fields you want to change. Leave fields blank to keep current values. Current values are shown in grey placeholders for reference.
+          <CheckCircle size={20} />
+          <span>{success}</span>
         </div>
+      )}
 
-        <style>
-          {`
-            .edit-form input::placeholder,
-            .edit-form select::placeholder,
-            .edit-form select option:first-child {
-              color: #9ca3af !important;
-              opacity: 0.8;
-            }
-            .edit-form input::-webkit-input-placeholder {
-              color: #9ca3af !important;
-              opacity: 0.8;
-            }
-            .edit-form input::-moz-placeholder {
-              color: #9ca3af !important;
-              opacity: 0.8;
-            }
-            .edit-form input:-ms-input-placeholder {
-              color: #9ca3af !important;
-              opacity: 0.8;
-            }
-            .edit-form select option:first-child {
-              color: #9ca3af !important;
-            }
-            .edit-form select:invalid {
-              color: #9ca3af;
-            }
-            .edit-form select:valid {
-              color: #2c3e50;
-            }
-            .form-group {
-              margin-bottom: 20px;
-            }
-            .form-group label {
-              display: block;
-              margin-bottom: 5px;
-              font-weight: 600;
-              color: #2c3e50;
-            }
-            .form-group input,
-            .form-group select {
-              width: 100%;
-              padding: 12px;
-              border: 2px solid #e1e8ed;
-              border-radius: 6px;
-              font-size: 14px;
-              transition: border-color 0.3s ease;
-            }
-            .form-group input:focus,
-            .form-group select:focus {
-              outline: none;
-              border-color: #3498db;
-              box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
-            }
-            .current-value-hint {
-              color: #6c757d;
-              font-size: 0.8rem;
-              margin-top: 4px;
-              font-style: italic;
-            }
-          `}
-        </style>
+      {/* Error Message */}
+      {error && (
+        <div style={{
+          backgroundColor: '#f8d7da',
+          border: '1px solid #f5c6cb',
+          color: '#721c24',
+          padding: '15px 20px',
+          marginBottom: '20px',
+          borderRadius: '8px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '10px'
+        }}>
+          <AlertCircle size={20} />
+          <span>{error}</span>
+          <button
+            onClick={() => setError(null)}
+            style={{
+              marginLeft: 'auto',
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              color: '#721c24'
+            }}
+          >
+            <X size={18} />
+          </button>
+        </div>
+      )}
 
-        {error && (
-          <div style={{ 
-            padding: '12px', 
-            backgroundColor: '#f8d7da', 
-            color: '#721c24', 
-            borderRadius: '6px', 
-            marginBottom: '20px',
-            border: '1px solid #f5c6cb'
-          }}>
-            {error}
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="edit-form">
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-            <div className="form-group">
-              <label>Asset Serial Number</label>
-              <input
-                type="text"
-                name="Asset_Serial_Number"
-                value={asset.Asset_Serial_Number}
-                onChange={handleChange}
-                placeholder={currentAsset?.Asset_Serial_Number || 'Enter serial number...'}
-              />
-              <div className="current-value-hint">
-                Current: {currentAsset?.Asset_Serial_Number || 'N/A'}
-              </div>
-            </div>
-
-            <div className="form-group">
-              <label>Asset Tag ID</label>
-              <input
-                type="text"
-                name="Asset_Tag_ID"
-                value={asset.Asset_Tag_ID}
-                onChange={handleChange}
-                placeholder={currentAsset?.Asset_Tag_ID || 'Enter tag ID...'}
-              />
-              <div className="current-value-hint">
-                Current: {currentAsset?.Asset_Tag_ID || 'N/A'}
-              </div>
-            </div>
-
-            <div className="form-group">
-              <label>Item Name</label>
-              <input
-                type="text"
-                name="Item_Name"
-                value={asset.Item_Name}
-                onChange={handleChange}
-                placeholder={currentAsset?.Item_Name || 'Enter item name...'}
-              />
-              <div className="current-value-hint">
-                Current: {currentAsset?.Item_Name || 'N/A'}
-              </div>
-            </div>
-
-            <div className="form-group">
-              <label>Status</label>
-              <select 
-                name="Status" 
-                value={asset.Status} 
-                onChange={handleChange}
-              >
-                <option value="">
-                  {currentAsset?.Status ? `Current: ${currentAsset.Status}` : 'Select status...'}
-                </option>
-                <option value="Active">Active</option>
-                <option value="Inactive">Inactive</option>
-                <option value="Maintenance">Maintenance</option>
-                <option value="Retired">Retired</option>
-                <option value="Under Repair">Under Repair</option>
-              </select>
-              <div className="current-value-hint">
-                Current: {currentAsset?.Status || 'N/A'}
-              </div>
-            </div>
-
-            <div className="form-group">
-              <label>Assigned Recipient</label>
-              <input
-                type="text"
-                name="Recipient_Name"
-                value={asset.Recipient_Name || ''}
-                onChange={handleChange}
-                placeholder={currentAsset?.Recipient_Name || 'Enter recipient name...'}
-              />
-              <div className="current-value-hint">
-                Current: {currentAsset?.Recipient_Name || 'N/A'}
-              </div>
-            </div>
-
-            <div className="form-group">
-              <label>Department</label>
-              <input
-                type="text"
-                name="Department"
-                value={asset.Department || ''}
-                onChange={handleChange}
-                placeholder={currentAsset?.Department || 'Enter department...'}
-              />
-              <div className="current-value-hint">
-                Current: {currentAsset?.Department || 'N/A'}
-              </div>
-            </div>
-
-            <div className="form-group">
-              <label>Category</label>
-              <input
-                type="text"
-                name="Category"
-                value={asset.Category || ''}
-                onChange={handleChange}
-                placeholder={currentAsset?.Category || 'Enter category...'}
-              />
-              <div className="current-value-hint">
-                Current: {currentAsset?.Category || 'N/A'}
-              </div>
-            </div>
-
-            <div className="form-group">
-              <label>Model</label>
-              <input
-                type="text"
-                name="Model"
-                value={asset.Model || ''}
-                onChange={handleChange}
-                placeholder={currentAsset?.Model || 'Enter model...'}
-              />
-              <div className="current-value-hint">
-                Current: {currentAsset?.Model || 'N/A'}
-              </div>
-            </div>
-          </div>
-
-          <div style={{ display: 'flex', gap: '10px', marginTop: '30px', paddingTop: '20px', borderTop: '2px solid #e9ecef' }}>
-            <button type="submit" className="btn btn-primary" style={{ padding: '12px 24px', fontSize: '1rem' }}>
-              <Save size={16} style={{ marginRight: '8px' }} />
-              Update Asset
-            </button>
-            <button type="button" onClick={() => navigate('/assets')} className="btn btn-secondary" style={{ padding: '12px 24px', fontSize: '1rem' }}>
-              Cancel
-            </button>
-          </div>
-        </form>
+      {/* Tab Navigation */}
+      <div className="card" style={{ marginBottom: '20px', padding: 0 }}>
+        <div style={{
+          display: 'flex',
+          borderBottom: '2px solid #e9ecef',
+          background: '#f8f9fa'
+        }}>
+          <button
+            onClick={() => setActiveTab('asset')}
+            style={{
+              flex: 1,
+              padding: '16px 24px',
+              border: 'none',
+              background: activeTab === 'asset' ? 'white' : 'transparent',
+              borderBottom: activeTab === 'asset' ? '3px solid #667eea' : '3px solid transparent',
+              color: activeTab === 'asset' ? '#667eea' : '#6c757d',
+              fontWeight: activeTab === 'asset' ? '600' : '500',
+              fontSize: '1rem',
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+              marginBottom: '-2px'
+            }}
+          >
+            📦 Asset Info
+          </button>
+          <button
+            onClick={() => setActiveTab('customer')}
+            style={{
+              flex: 1,
+              padding: '16px 24px',
+              border: 'none',
+              background: activeTab === 'customer' ? 'white' : 'transparent',
+              borderBottom: activeTab === 'customer' ? '3px solid #667eea' : '3px solid transparent',
+              color: activeTab === 'customer' ? '#667eea' : '#6c757d',
+              fontWeight: activeTab === 'customer' ? '600' : '500',
+              fontSize: '1rem',
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+              marginBottom: '-2px'
+            }}
+          >
+            🏢 Customer Info
+          </button>
+          <button
+            onClick={() => setActiveTab('project')}
+            style={{
+              flex: 1,
+              padding: '16px 24px',
+              border: 'none',
+              background: activeTab === 'project' ? 'white' : 'transparent',
+              borderBottom: activeTab === 'project' ? '3px solid #667eea' : '3px solid transparent',
+              color: activeTab === 'project' ? '#667eea' : '#6c757d',
+              fontWeight: activeTab === 'project' ? '600' : '500',
+              fontSize: '1rem',
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+              marginBottom: '-2px'
+            }}
+          >
+            📋 Project Info
+          </button>
+        </div>
       </div>
 
-      {/* Confirmation Modal */}
-      <ConfirmationModal />
+      {/* Form */}
+      <form onSubmit={handleSubmit}>
+        <div className="card">
+          {/* Tab 1: Asset Info */}
+          {activeTab === 'asset' && (
+            <div>
+              <h3 style={{ marginTop: 0, marginBottom: '20px', color: '#2c3e50' }}>Asset Information</h3>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px' }}>
+                <div className="form-group">
+                  <label>Serial Number <span style={{ color: '#e74c3c' }}>*</span></label>
+                  <input
+                    type="text"
+                    name="Asset_Serial_Number"
+                    value={formData.Asset_Serial_Number}
+                    onChange={handleInputChange}
+                    required
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label>Tag ID <span style={{ color: '#e74c3c' }}>*</span></label>
+                  <input
+                    type="text"
+                    name="Asset_Tag_ID"
+                    value={formData.Asset_Tag_ID}
+                    onChange={handleInputChange}
+                    required
+                  />
+                </div>
+
+                <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+                  <label>Item Name <span style={{ color: '#e74c3c' }}>*</span></label>
+                  <input
+                    type="text"
+                    name="Item_Name"
+                    value={formData.Item_Name}
+                    onChange={handleInputChange}
+                    required
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label>Status</label>
+                  <select
+                    name="Status"
+                    value={formData.Status}
+                    onChange={handleInputChange}
+                  >
+                    <option value="Active">Active</option>
+                    <option value="Inactive">Inactive</option>
+                    <option value="Maintenance">Maintenance</option>
+                    <option value="Retired">Retired</option>
+                  </select>
+                </div>
+
+                <div className="form-group">
+                  <label>Windows Version</label>
+                  <select
+                    name="Windows"
+                    value={formData.Windows}
+                    onChange={handleInputChange}
+                  >
+                    <option value="">
+                      {originalData?.Windows ? ` ${originalData.Windows}` : 'Select Windows Version'}
+                    </option>
+                    <option value="Windows 10">Windows 10</option>
+                    <option value="Windows 11">Windows 11</option>
+                    <option value="Windows Server">Windows Server</option>
+                    <option value="None">None</option>
+                  </select>
+                </div>
+
+                <div className="form-group">
+                  <label>Microsoft Office</label>
+                  <select
+                    name="Microsoft_Office"
+                    value={formData.Microsoft_Office}
+                    onChange={handleInputChange}
+                  >
+                    <option value="">
+                      {originalData?.Microsoft_Office ? ` ${originalData.Microsoft_Office}` : 'Select Office Version'}
+                    </option>
+                    <option value="Office 2019">Office 2019</option>
+                    <option value="Office 2021">Office 2021</option>
+                    <option value="Microsoft 365">Microsoft 365</option>
+                    <option value="None">None</option>
+                  </select>
+                </div>
+
+                <div className="form-group">
+                  <label>Monthly Price (RM)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    name="Monthly_Prices"
+                    value={formData.Monthly_Prices}
+                    onChange={handleInputChange}
+                    placeholder="0.00"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Tab 2: Customer Info */}
+          {activeTab === 'customer' && (
+            <div>
+              <h3 style={{ marginTop: 0, marginBottom: '20px', color: '#2c3e50' }}>Customer & Recipient Information</h3>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px' }}>
+                <div className="form-group">
+                  <label>Customer Name</label>
+                  <input
+                    type="text"
+                    name="Customer_Name"
+                    value={formData.Customer_Name}
+                    onChange={handleInputChange}
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label>Customer Reference</label>
+                  <input
+                    type="text"
+                    name="Customer_Ref_Number"
+                    value={formData.Customer_Ref_Number}
+                    onChange={handleInputChange}
+                  />
+                </div>
+
+                <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+                  <label>Branch / Location</label>
+                  <input
+                    type="text"
+                    name="Branch"
+                    value={formData.Branch}
+                    onChange={handleInputChange}
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label>Recipient Name</label>
+                  <input
+                    type="text"
+                    name="Recipient_Name"
+                    value={formData.Recipient_Name}
+                    onChange={handleInputChange}
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label>Position</label>
+                  <input
+                    type="text"
+                    name="Position"
+                    value={formData.Position}
+                    onChange={handleInputChange}
+                  />
+                </div>
+
+                <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+                  <label>Department</label>
+                  <input
+                    type="text"
+                    name="Department"
+                    value={formData.Department}
+                    onChange={handleInputChange}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Tab 3: Project Info */}
+          {activeTab === 'project' && (
+            <div>
+              <h3 style={{ marginTop: 0, marginBottom: '20px', color: '#2c3e50' }}>Project Information</h3>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px' }}>
+                <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+                  <label>Project Reference Number</label>
+                  <input
+                    type="text"
+                    name="Project_Ref_Number"
+                    value={formData.Project_Ref_Number}
+                    onChange={handleInputChange}
+                  />
+                </div>
+
+                <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+                  <label>Warranty</label>
+                  <input
+                    type="text"
+                    name="Warranty"
+                    value={formData.Warranty}
+                    onChange={handleInputChange}
+                    placeholder="e.g., 3 years manufacturer warranty"
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label>Start Date</label>
+                  <input
+                    type="date"
+                    name="Start_Date"
+                    value={formData.Start_Date}
+                    onChange={handleInputChange}
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label>End Date</label>
+                  <input
+                    type="date"
+                    name="End_Date"
+                    value={formData.End_Date}
+                    onChange={handleInputChange}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Action Buttons */}
+        <div style={{ 
+          marginTop: '20px', 
+          display: 'flex', 
+          gap: '15px', 
+          justifyContent: 'flex-end' 
+        }}>
+          <button
+            type="button"
+            onClick={handleCancel}
+            className="btn btn-secondary"
+            disabled={saving}
+          >
+            <X size={16} style={{ marginRight: '5px' }} />
+            Cancel
+          </button>
+          <button
+            type="submit"
+            className="btn btn-primary"
+            disabled={saving}
+          >
+            <Save size={16} style={{ marginRight: '5px' }} />
+            {saving ? 'Saving...' : 'Save Changes'}
+          </button>
+        </div>
+      </form>
     </div>
   );
 };

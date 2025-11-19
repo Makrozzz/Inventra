@@ -2,13 +2,13 @@ import React, { useState, useRef, useEffect } from 'react';
 import ColumnConfigService from '../services/columnConfigService';
 
 /**
- * ColumnFilterPopup - Modal component for customizing table columns
+ * ColumnFilterPopup - Right sidebar component for customizing table columns
  * Features:
  * - Toggle column visibility with checkboxes
  * - Drag-and-drop reordering
  * - Search/filter columns
  * - Reset to default
- * - Live preview of changes
+ * - Sidebar design with smooth slide animation
  */
 const ColumnFilterPopup = ({ isOpen, onClose, columns, onApply }) => {
   const [localColumns, setLocalColumns] = useState([]);
@@ -132,7 +132,7 @@ const ColumnFilterPopup = ({ isOpen, onClose, columns, onApply }) => {
 
   return (
     <div className="column-filter-overlay">
-      <div className="column-filter-popup" ref={popupRef}>
+      <div className={`column-filter-sidebar ${isOpen ? 'column-filter-sidebar-open' : ''}`} ref={popupRef}>
         {/* Header */}
         <div className="column-filter-header">
           <h3>Customize Columns</h3>
@@ -173,7 +173,7 @@ const ColumnFilterPopup = ({ isOpen, onClose, columns, onApply }) => {
         {/* Column list */}
         <div className="column-filter-list-container">
           <div className="column-filter-list-header">
-            <span className="column-filter-drag-hint">💡 Drag to reorder • Top = Leftmost</span>
+            <span className="column-filter-drag-hint">💡 Drag to reorder</span>
             <span className="column-filter-visible-count">
               {visibleCount} of {localColumns.length} visible
             </span>
@@ -216,37 +216,14 @@ const ColumnFilterPopup = ({ isOpen, onClose, columns, onApply }) => {
                     />
                     <span className="column-filter-label-text">{column.label}</span>
                   </label>
-
-                  {/* Order indicator */}
-                  <span className="column-filter-order-badge">
-                    {column.order + 1}
-                  </span>
                 </div>
               ))
             )}
           </div>
         </div>
 
-        {/* Footer with preview and action buttons */}
+        {/* Footer action buttons */}
         <div className="column-filter-footer">
-          <div className="column-filter-preview">
-            <strong>Preview order:</strong>
-            <div className="column-filter-preview-list">
-              {ColumnConfigService.getVisibleColumns(localColumns)
-                .slice(0, 5)
-                .map((col, idx) => (
-                  <span key={col.key} className="column-filter-preview-tag">
-                    {idx + 1}. {col.label}
-                  </span>
-                ))}
-              {visibleCount > 5 && (
-                <span className="column-filter-preview-more">
-                  +{visibleCount - 5} more
-                </span>
-              )}
-            </div>
-          </div>
-
           <div className="column-filter-footer-buttons">
             <button 
               className="column-filter-cancel-btn" 

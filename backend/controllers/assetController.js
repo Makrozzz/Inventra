@@ -338,11 +338,12 @@ const updateAssetById = async (req, res, next) => {
     if (updateData.Model_ID) finalUpdateData.Model_ID = updateData.Model_ID;
 
     // Handle name-based updates by updating existing records in-place
-    if (updateData.Recipient_Name || updateData.Department) {
+    if (updateData.Recipient_Name || updateData.Department || updateData.Position !== undefined) {
       try {
         const recipientId = await Asset.updateRecipientInfo(
           updateData.Recipient_Name,
           updateData.Department,
+          updateData.Position,
           existingAsset.Recipients_ID
         );
         if (recipientId) {
