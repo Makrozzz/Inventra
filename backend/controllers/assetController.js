@@ -33,24 +33,15 @@ const getAllAssets = async (req, res, next) => {
     res.status(200).json(assets);
   } catch (error) {
     logger.error('Error in getAllAssets:', error);
-    console.error('Error fetching assets:', error);
+    console.error('Error fetching assets from database:', error);
     
-    // Return mock data if database query fails
-    const mockAssets = [
-      {
-        Asset_ID: 1,
-        Asset_Serial_Number: 'MOCK-001',
-        Asset_Tag_ID: 'TAG-001',
-        Item_Name: 'Mock Desktop PC',
-        Status: 'Active',
-        Category: 'Desktop',
-        Model: 'OptiPlex Mock',
-        Recipient_Name: 'Test User',
-        Department: 'IT Department'
-      }
-    ];
-    
-    res.status(200).json(mockAssets);
+    // Return proper error instead of mock data
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch assets from database',
+      message: error.message,
+      details: 'Please check database connection and ensure the server is connected to: ivmscom_Inventra'
+    });
   }
 };
 
@@ -528,30 +519,10 @@ const getAssetStatistics = async (req, res, next) => {
   } catch (error) {
     logger.error('Error in getAssetStatistics:', error);
     
-    // If database error, return mock statistics
-    if (error.message.includes('Access denied') || error.message.includes('ENOTFOUND')) {
-      logger.warn('Database not available, returning mock statistics');
-      const mockStats = {
-        total: 1,
-        totalProjects: 0,
-        byStatus: [{ status: 'Testing', count: 1 }],
-        byCategory: [{ category: 'Mock', count: 1 }],
-        recent: [{
-          serialNumber: 'MOCK-001',
-          assetModelName: 'Mock Asset',
-          assetStatus: 'Testing',
-          assetCategory: 'Mock',
-          assetLocation: 'Development'
-        }]
-      };
-      
-      res.status(200).json(
-        formatResponse(true, mockStats, 'Mock statistics returned (database not available)')
-      );
-      return;
-    }
-    
-    next(error);
+    // Return proper error instead of mock data
+    res.status(500).json(
+      formatResponse(false, null, 'Failed to fetch asset statistics from database', { error: error.message })
+    );
   }
 };
 

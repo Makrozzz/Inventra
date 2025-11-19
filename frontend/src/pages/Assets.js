@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Search, Filter, Edit, Trash2, Upload, Plus, Download, Eye, FileText, RefreshCw } from 'lucide-react';
+import { Search, Filter, Edit, Trash2, Upload, Plus, Download, FileText, RefreshCw, Columns } from 'lucide-react';
 import Pagination from '../components/Pagination';
+import ColumnFilterPopup from '../components/ColumnFilterPopup';
+import ColumnConfigService from '../services/columnConfigService';
 
 const Assets = ({ onDelete }) => {
   const navigate = useNavigate();
@@ -10,6 +12,10 @@ const Assets = ({ onDelete }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
+  
+  // Column customization state
+  const [columnConfig, setColumnConfig] = useState([]);
+  const [showColumnFilter, setShowColumnFilter] = useState(false);
   
   // Column-specific filters
   const [columnFilters, setColumnFilters] = useState({});
@@ -22,15 +28,18 @@ const Assets = ({ onDelete }) => {
   // State for all assets (loaded once)
   const [allAssets, setAllAssets] = useState([]);
   
-  // State for expanded row details
-  const [expandedRow, setExpandedRow] = useState(null);
-  
   // Sorting state
   const [sortField, setSortField] = useState('Inventory_ID');
   const [sortDirection, setSortDirection] = useState('desc'); // Show newest first
   
   // Success message state
   const [successMessage, setSuccessMessage] = useState('');
+
+  // Load column configuration on mount
+  useEffect(() => {
+    const savedConfig = ColumnConfigService.loadConfig();
+    setColumnConfig(savedConfig);
+  }, []);
 
   // Fetch all assets from database
   const fetchAssets = async () => {
@@ -49,23 +58,25 @@ const Assets = ({ onDelete }) => {
         
         setAllAssets(assets);
         
-        // Create columns based on INVENTORY table structure (includes Project, Customer, Asset details)
-        // Column order: Project → Customer → Asset details
+        // Create columns based on new database schema
+        // Default columns in specified order:
+        // 1. Customer name, 2. Branch, 3. Serial number, 4. Tag ID, 5. Status
+        // 6. Item name, 7. Model, 8. Category, 9. Antivirus, 10. Windows version
+        // 11. Microsoft Office version, 12. Software, 13. Recipient name
         const assetColumns = [
-          { Field: 'Inventory_ID', Type: 'int' },
-          { Field: 'Project_Ref_Number', Type: 'varchar(100)' },
-          { Field: 'Project_Title', Type: 'text' },
-          { Field: 'Customer_Ref_Number', Type: 'varchar(100)' },
-          { Field: 'Customer_Name', Type: 'varchar(255)' },
-          { Field: 'Branch', Type: 'varchar(255)' },
-          { Field: 'Asset_Serial_Number', Type: 'varchar(100)' },
-          { Field: 'Asset_Tag_ID', Type: 'varchar(100)' },
-          { Field: 'Item_Name', Type: 'varchar(100)' },
-          { Field: 'Status', Type: 'varchar(50)' },
-          { Field: 'Category', Type: 'varchar(100)' },
-          { Field: 'Model', Type: 'varchar(100)' },
-          { Field: 'Recipient_Name', Type: 'varchar(100)' },
-          { Field: 'Department', Type: 'varchar(100)' }
+          { Field: 'Customer_Name', Type: 'varchar(255)', Label: 'Customer Name' },
+          { Field: 'Branch', Type: 'varchar(255)', Label: 'Branch' },
+          { Field: 'Asset_Serial_Number', Type: 'varchar(255)', Label: 'Serial Number' },
+          { Field: 'Asset_Tag_ID', Type: 'varchar(255)', Label: 'Tag ID' },
+          { Field: 'Status', Type: 'varchar(50)', Label: 'Status' },
+          { Field: 'Item_Name', Type: 'varchar(255)', Label: 'Item Name' },
+          { Field: 'Model', Type: 'varchar(255)', Label: 'Model' },
+          { Field: 'Category', Type: 'varchar(255)', Label: 'Category' },
+          { Field: 'Antivirus', Type: 'varchar(255)', Label: 'Antivirus' },
+          { Field: 'Windows', Type: 'varchar(255)', Label: 'Windows Version' },
+          { Field: 'Microsoft_Office', Type: 'varchar(255)', Label: 'Microsoft Office' },
+          { Field: 'Software', Type: 'text', Label: 'Software' },
+          { Field: 'Recipient_Name', Type: 'varchar(255)', Label: 'Recipient Name' }
         ];
         setColumns(assetColumns);
       } catch (err) {
@@ -108,6 +119,19 @@ const Assets = ({ onDelete }) => {
   const refreshAssets = () => {
     fetchAssets();
   };
+
+  // Handle column configuration changes
+  const handleColumnConfigApply = (newConfig) => {
+    setColumnConfig(newConfig);
+    ColumnConfigService.saveConfig(newConfig);
+    console.log('Column configuration updated:', {
+      visible: ColumnConfigService.getVisibleColumns(newConfig).length,
+      total: newConfig.length
+    });
+  };
+
+  // Get currently visible columns
+  const visibleColumns = ColumnConfigService.getVisibleColumns(columnConfig);
 
   // Filter and sort assets based on search, column-specific filters, and sort settings
   const filteredAssets = allAssets
@@ -216,11 +240,17 @@ const Assets = ({ onDelete }) => {
     'Recipients_ID',
     'Category_ID',
     'Model_ID',
-    'Solution_Principal',
+    'Created_By',
+    'Updated_By',
+    'Customer_Ref_Number', // Hide customer ref as we show customer name
+    'Project_Ref_Number',  // Hide unless specifically needed
+    'Project_Title',       // Hide unless specifically needed
+    'Department',          // Hide for cleaner view (can be shown on demand)
     'Warranty',
     'Preventive_Maintenance',
     'Start_Date',
     'End_Date',
+    'Monthly_Prices',
     'Created_At', 
     'Updated_At', 
     'Deleted_At', 
@@ -228,12 +258,24 @@ const Assets = ({ onDelete }) => {
     'updatedAt'
   ];
   
-  // Get displayable columns (exclude hidden ones)
-  const displayColumns = columns.filter(col => !hiddenColumns.includes(col.Field));
+  // Get displayable columns using ColumnConfigService
+  // Map visible columns from config to column objects for backward compatibility
+  const displayColumns = visibleColumns.map(configCol => {
+    const backendField = ColumnConfigService.getBackendFieldName(configCol.key);
+    return {
+      Field: backendField,
+      Label: configCol.label,
+      Type: 'varchar(255)' // Default type
+    };
+  });
   
   // Helper function to format column names for display
-  const formatColumnName = (columnName) => {
-    return columnName
+  const formatColumnName = (column) => {
+    // Use Label if available, otherwise format the Field name
+    if (column.Label) {
+      return column.Label;
+    }
+    return column.Field
       .replace(/_/g, ' ')
       .replace(/\b\w/g, l => l.toUpperCase());
   };
@@ -255,8 +297,8 @@ const Assets = ({ onDelete }) => {
       return;
     }
     
-    // Create headers from column names
-    const headers = displayColumns.map(col => formatColumnName(col.Field));
+    // Create headers from column labels or names
+    const headers = displayColumns.map(col => col.Label || formatColumnName(col));
     
     // Create rows with all asset data (not just filtered)
     const rows = allAssets.map(asset => 
@@ -352,6 +394,21 @@ const Assets = ({ onDelete }) => {
               <Download size={16} style={{ marginRight: '5px' }} />
               Export CSV
             </button>
+            <button 
+              onClick={() => setShowColumnFilter(true)} 
+              className="btn btn-secondary" 
+              style={{
+                backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                color: 'white',
+                border: '1px solid rgba(255, 255, 255, 0.3)',
+                backdropFilter: 'blur(10px)',
+                marginRight: '10px'
+              }}
+              title="Customize columns"
+            >
+              <Columns size={16} style={{ marginRight: '5px' }} />
+              Columns
+            </button>
             <Link to="/add-asset" className="btn btn-primary" style={{
               backgroundColor: 'rgba(255, 255, 255, 0.9)',
               color: '#667eea',
@@ -394,18 +451,6 @@ const Assets = ({ onDelete }) => {
               style={{ paddingLeft: '35px' }}
             />
           </div>
-        </div>
-
-        <div style={{
-          padding: '12px 16px',
-          background: '#e3f2fd',
-          borderRadius: '6px',
-          border: '1px solid #90caf9',
-          marginBottom: '10px',
-          fontSize: '0.85rem',
-          color: '#1565c0'
-        }}>
-          <strong>💡 Tip:</strong> Click on any row to view detailed project, customer, and maintenance information
         </div>
 
         <div className="table-info" style={{ 
@@ -460,7 +505,7 @@ const Assets = ({ onDelete }) => {
                   {displayColumns.map(column => (
                     <th key={column.Field} style={{ position: 'relative' }}>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
-                        <span>{formatColumnName(column.Field)}</span>
+                        <span>{formatColumnName(column)}</span>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                           {columnFilters[column.Field] && (
                             <span 
@@ -497,7 +542,7 @@ const Assets = ({ onDelete }) => {
                               e.stopPropagation();
                               toggleFilterPopup(column.Field);
                             }}
-                            title={`Filter by ${formatColumnName(column.Field)}`}
+                            title={`Filter by ${formatColumnName(column)}`}
                           />
                         </div>
                       </div>
@@ -521,7 +566,7 @@ const Assets = ({ onDelete }) => {
                           onClick={(e) => e.stopPropagation()}
                         >
                           <div style={{ marginBottom: '8px', fontWeight: '600', fontSize: '0.85rem', color: '#2c3e50' }}>
-                            Filter {formatColumnName(column.Field)}
+                            Filter {formatColumnName(column)}
                           </div>
                           <input
                             type="text"
@@ -588,10 +633,7 @@ const Assets = ({ onDelete }) => {
               <tbody>
                 {paginatedAssets.map((asset, index) => (
                   <React.Fragment key={asset.Inventory_ID || asset.Asset_ID || index}>
-                    <tr 
-                      style={{ cursor: 'pointer', backgroundColor: expandedRow === index ? '#f8f9fa' : 'transparent' }}
-                      onClick={() => setExpandedRow(expandedRow === index ? null : index)}
-                    >
+                    <tr>
                       {displayColumns.map(column => (
                         <td key={column.Field}>
                           {(column.Field === 'Status' || column.Field === 'assetStatus' || column.Field === 'Asset_Status') ? (
@@ -620,27 +662,10 @@ const Assets = ({ onDelete }) => {
                       ))}
                       <td>
                         <div className="action-buttons">
-                          <button 
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setExpandedRow(expandedRow === index ? null : index);
-                            }}
-                            className="btn btn-secondary"
-                            title="View Details"
-                            style={{
-                              padding: '12px 16px',
-                              fontSize: '1rem',
-                              minWidth: '50px',
-                              minHeight: '44px'
-                            }}
-                          >
-                            <Eye size={18} />
-                          </button>
                           <Link 
                             to={`/asset-detail/${asset.Asset_ID}`} 
                             className="btn btn-primary"
                             title="View Full Details"
-                            onClick={(e) => e.stopPropagation()}
                             style={{ 
                               display: 'inline-flex', 
                               alignItems: 'center', 
@@ -658,7 +683,6 @@ const Assets = ({ onDelete }) => {
                             to={`/edit-asset/${asset.Asset_ID}`} 
                             className="btn btn-secondary"
                             title="Edit Asset"
-                            onClick={(e) => e.stopPropagation()}
                             style={{
                               padding: '12px 16px',
                               fontSize: '1rem',
@@ -672,10 +696,7 @@ const Assets = ({ onDelete }) => {
                             <Edit size={18} />
                           </Link>
                           <button 
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onDelete && onDelete(asset.Asset_ID);
-                            }} 
+                            onClick={() => onDelete && onDelete(asset.Asset_ID)} 
                             className="btn btn-danger"
                             title="Delete Asset"
                             style={{
@@ -690,205 +711,6 @@ const Assets = ({ onDelete }) => {
                         </div>
                       </td>
                     </tr>
-                    
-                    {/* Expanded Row Details */}
-                    {expandedRow === index && (
-                      <tr style={{ backgroundColor: '#f8f9fa' }}>
-                        <td colSpan={displayColumns.length + 1} style={{ padding: '20px' }}>
-                          <div style={{ 
-                            display: 'grid', 
-                            gridTemplateColumns: 'repeat(2, 1fr)', 
-                            gap: '20px',
-                            fontSize: '0.9rem',
-                            maxWidth: '100%',
-                            overflow: 'hidden'
-                          }}>
-                            {/* Left Column - Project Information */}
-                            <div style={{ 
-                              padding: '15px', 
-                              background: 'white', 
-                              borderRadius: '8px',
-                              border: '1px solid #dee2e6',
-                              minWidth: 0,
-                              overflow: 'hidden'
-                            }}>
-                              <h4 style={{ 
-                                marginTop: 0, 
-                                marginBottom: '15px',
-                                color: '#2c3e50',
-                                fontSize: '1rem',
-                                borderBottom: '2px solid #3498db',
-                                paddingBottom: '8px',
-                                wordWrap: 'break-word',
-                                textAlign: 'left'
-                              }}>
-                                📋 Project Information
-                              </h4>
-                              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                                <div style={{ minWidth: 0 }}>
-                                  <strong style={{ color: '#7f8c8d', display: 'block', marginBottom: '4px', textAlign: 'left' }}>Project Ref:</strong>
-                                  <div style={{ 
-                                    color: '#2c3e50', 
-                                    wordWrap: 'break-word',
-                                    overflowWrap: 'break-word',
-                                    wordBreak: 'break-word',
-                                    textAlign: 'left'
-                                  }}>
-                                    {asset.Project_Ref_Number || 'N/A'}
-                                  </div>
-                                </div>
-                                <div style={{ minWidth: 0 }}>
-                                  <strong style={{ color: '#7f8c8d', display: 'block', marginBottom: '4px', textAlign: 'left' }}>Project Title:</strong>
-                                  <div style={{ 
-                                    color: '#2c3e50', 
-                                    lineHeight: '1.5',
-                                    wordWrap: 'break-word',
-                                    overflowWrap: 'break-word',
-                                    wordBreak: 'break-word',
-                                    whiteSpace: 'normal',
-                                    textAlign: 'left'
-                                  }}>
-                                    {asset.Project_Title || 'N/A'}
-                                  </div>
-                                </div>
-                                <div style={{ minWidth: 0 }}>
-                                  <strong style={{ color: '#7f8c8d', display: 'block', marginBottom: '4px', textAlign: 'left' }}>Duration:</strong>
-                                  <div style={{ 
-                                    color: '#2c3e50',
-                                    wordWrap: 'break-word',
-                                    overflowWrap: 'break-word',
-                                    textAlign: 'left'
-                                  }}>
-                                    {asset.Start_Date && asset.End_Date 
-                                      ? `${new Date(asset.Start_Date).toLocaleDateString()} - ${new Date(asset.End_Date).toLocaleDateString()}`
-                                      : 'N/A'
-                                    }
-                                  </div>
-                                </div>
-                                <div style={{ minWidth: 0 }}>
-                                  <strong style={{ color: '#7f8c8d', display: 'block', marginBottom: '4px', textAlign: 'left' }}>Warranty:</strong>
-                                  <div style={{ 
-                                    color: '#2c3e50',
-                                    wordWrap: 'break-word',
-                                    overflowWrap: 'break-word',
-                                    textAlign: 'left'
-                                  }}>
-                                    {asset.Warranty || 'N/A'}
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-
-                            {/* Right Column - Customer & Maintenance Information */}
-                            <div style={{ 
-                              padding: '15px', 
-                              background: 'white', 
-                              borderRadius: '8px',
-                              border: '1px solid #dee2e6',
-                              minWidth: 0,
-                              overflow: 'hidden'
-                            }}>
-                              <h4 style={{ 
-                                marginTop: 0, 
-                                marginBottom: '15px',
-                                color: '#2c3e50',
-                                fontSize: '1rem',
-                                borderBottom: '2px solid #e74c3c',
-                                paddingBottom: '8px',
-                                wordWrap: 'break-word',
-                                textAlign: 'left'
-                              }}>
-                                🏢 Customer Information
-                              </h4>
-                              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                                <div style={{ minWidth: 0 }}>
-                                  <strong style={{ color: '#7f8c8d', display: 'block', marginBottom: '4px', textAlign: 'left' }}>Customer:</strong>
-                                  <div style={{ 
-                                    color: '#2c3e50',
-                                    wordWrap: 'break-word',
-                                    overflowWrap: 'break-word',
-                                    textAlign: 'left'
-                                  }}>
-                                    {asset.Customer_Name || 'N/A'}
-                                  </div>
-                                </div>
-                                <div style={{ minWidth: 0 }}>
-                                  <strong style={{ color: '#7f8c8d', display: 'block', marginBottom: '4px', textAlign: 'left' }}>Branch:</strong>
-                                  <div style={{ 
-                                    color: '#2c3e50',
-                                    wordWrap: 'break-word',
-                                    overflowWrap: 'break-word',
-                                    textAlign: 'left'
-                                  }}>
-                                    {asset.Branch || 'N/A'}
-                                  </div>
-                                </div>
-                                <div style={{ minWidth: 0 }}>
-                                  <strong style={{ color: '#7f8c8d', display: 'block', marginBottom: '4px', textAlign: 'left' }}>Customer Ref:</strong>
-                                  <div style={{ 
-                                    color: '#2c3e50',
-                                    wordWrap: 'break-word',
-                                    overflowWrap: 'break-word',
-                                    textAlign: 'left'
-                                  }}>
-                                    {asset.Customer_Ref_Number || 'N/A'}
-                                  </div>
-                                </div>
-                              </div>
-                              
-                              <h4 style={{ 
-                                marginTop: '20px', 
-                                marginBottom: '15px',
-                                color: '#2c3e50',
-                                fontSize: '1rem',
-                                borderBottom: '2px solid #27ae60',
-                                paddingBottom: '8px',
-                                wordWrap: 'break-word',
-                                textAlign: 'left'
-                              }}>
-                                🔧 Maintenance
-                              </h4>
-                              <div style={{ 
-                                color: '#2c3e50', 
-                                lineHeight: '1.6', 
-                                fontSize: '0.85rem',
-                                wordWrap: 'break-word',
-                                overflowWrap: 'break-word',
-                                wordBreak: 'break-word',
-                                whiteSpace: 'normal',
-                                textAlign: 'left'
-                              }}>
-                                {asset.Preventive_Maintenance || 'No maintenance information available'}
-                              </div>
-                            </div>
-                          </div>
-                          
-                          {/* Additional Info Row */}
-                          <div style={{ 
-                            marginTop: '15px',
-                            padding: '12px 15px',
-                            background: 'white',
-                            borderRadius: '8px',
-                            border: '1px solid #dee2e6',
-                            fontSize: '0.85rem',
-                            overflow: 'hidden'
-                          }}>
-                            <strong style={{ color: '#7f8c8d', display: 'block', marginBottom: '8px', textAlign: 'left' }}>Solution Principal:</strong>
-                            <div style={{ 
-                              color: '#2c3e50', 
-                              lineHeight: '1.6',
-                              wordWrap: 'break-word',
-                              overflowWrap: 'break-word',
-                              wordBreak: 'break-word',
-                              whiteSpace: 'normal',
-                              textAlign: 'left'
-                            }}>
-                              {asset.Solution_Principal || 'N/A'}
-                            </div>
-                          </div>
-                        </td>
-                      </tr>
-                    )}
                   </React.Fragment>
                 ))}
               </tbody>
@@ -918,6 +740,14 @@ const Assets = ({ onDelete }) => {
         )}
       </div>
       </div>
+      
+      {/* Column Filter Popup */}
+      <ColumnFilterPopup
+        isOpen={showColumnFilter}
+        onClose={() => setShowColumnFilter(false)}
+        columns={columnConfig}
+        onApply={handleColumnConfigApply}
+      />
     </div>
   );
 };

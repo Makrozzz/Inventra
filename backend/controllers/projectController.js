@@ -7,56 +7,17 @@ exports.getAllProjects = async (req, res) => {
   try {
     const projects = await Project.findAll();
     
-    // If no projects found, return mock data for development
+    // Return empty array if no projects found (instead of mock data)
     if (!projects || projects.length === 0) {
-      const mockProjects = [
-        {
-          Project_ID: 1,
-          Project_Ref_Number: "PRJ-2024-001",
-          Project_Title: "Office Digital Transformation",
-          Customer_Name: "Tech Solutions Inc.",
-          Customer_Ref_Number: "CUST-001",
-          Solution_Principal: "John Smith",
-          Warranty: "2 Years Extended",
-          Preventive_Maintenance: "Quarterly Service",
-          Start_Date: "2024-01-15",
-          End_Date: "2024-12-31"
-        },
-        {
-          Project_ID: 2,
-          Project_Ref_Number: "PRJ-2024-002",
-          Project_Title: "IT Infrastructure Upgrade",
-          Customer_Name: "Global Systems Ltd.",
-          Customer_Ref_Number: "CUST-002",
-          Solution_Principal: "Sarah Johnson",
-          Warranty: "1 Year Standard",
-          Preventive_Maintenance: "Monthly Checkup",
-          Start_Date: "2024-03-01",
-          End_Date: "2025-02-28"
-        },
-        {
-          Project_ID: 3,
-          Project_Ref_Number: "PRJ-2024-003",
-          Project_Title: "Security System Implementation",
-          Customer_Name: "SecureNet Corp.",
-          Customer_Ref_Number: "CUST-003",
-          Solution_Principal: "Mike Wilson",
-          Warranty: "3 Years Premium",
-          Preventive_Maintenance: "Bi-weekly Monitoring",
-          Start_Date: "2024-06-01",
-          End_Date: "2024-11-30"
-        }
-      ];
-      
-      console.log('No projects found in database, returning mock data');
-      return res.json(mockProjects);
+      console.log('No projects found in database');
+      return res.json([]);
     }
 
     res.json(projects);
   } catch (error) {
     console.error('Error fetching projects:', error);
     res.status(500).json({ 
-      error: 'Failed to fetch projects',
+      error: 'Failed to fetch projects from database',
       message: error.message 
     });
   }

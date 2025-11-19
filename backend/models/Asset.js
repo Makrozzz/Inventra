@@ -54,14 +54,18 @@ class Asset {
           a.Asset_Tag_ID,
           a.Item_Name,
           a.Status,
+          a.Windows,
+          a.Microsoft_Office,
+          a.Monthly_Prices,
           c.Category,
-          m.Model,
+          m.Model_Name AS Model,
           r.Recipient_Name,
           r.Department,
+          r.Position,
           p.Project_ID,
           p.Project_Ref_Number,
           p.Project_Title,
-          p.Solution_Principal,
+          p.Antivirus,
           p.Warranty,
           p.Preventive_Maintenance,
           p.Start_Date,
@@ -69,7 +73,11 @@ class Asset {
           cust.Customer_ID,
           cust.Customer_Ref_Number,
           cust.Customer_Name,
-          cust.Branch
+          cust.Branch,
+          GROUP_CONCAT(DISTINCT s.Software_Name SEPARATOR ', ') AS Software,
+          GROUP_CONCAT(DISTINCT s.Price SEPARATOR ', ') AS Software_Prices,
+          GROUP_CONCAT(DISTINCT CONCAT(pt.Peripheral_Type_Name, '|', per.Serial_Code, '|', per.Condition, '|', COALESCE(per.Remarks, '')) SEPARATOR '||') AS Peripheral_Data,
+          GROUP_CONCAT(DISTINCT specs.Attributes_Name SEPARATOR ', ') AS Specs_Attributes
         FROM INVENTORY i
         INNER JOIN ASSET a ON i.Asset_ID = a.Asset_ID
         LEFT JOIN CATEGORY c ON a.Category_ID = c.Category_ID
@@ -77,6 +85,12 @@ class Asset {
         LEFT JOIN RECIPIENTS r ON a.Recipients_ID = r.Recipients_ID
         LEFT JOIN PROJECT p ON i.Project_ID = p.Project_ID
         LEFT JOIN CUSTOMER cust ON i.Customer_ID = cust.Customer_ID
+        LEFT JOIN ASSET_SOFTWARE_BRIDGE asb ON a.Asset_ID = asb.Asset_ID
+        LEFT JOIN SOFTWARE s ON asb.Software_ID = s.Software_ID
+        LEFT JOIN PERIPHERAL per ON a.Asset_ID = per.Asset_ID
+        LEFT JOIN PERIPHERAL_TYPE pt ON per.Peripheral_Type_ID = pt.Peripheral_Type_ID
+        LEFT JOIN SPECS specs ON a.Category_ID = specs.Category_ID
+        GROUP BY i.Inventory_ID, a.Asset_ID
         ORDER BY i.Inventory_ID DESC
       `);
       
@@ -88,10 +102,83 @@ class Asset {
         console.log(`Latest 5 Inventory_IDs: ${inventoryIds.slice(-5).join(', ')}`);
       }
       
+      // Post-process to extract peripheral details into separate columns
+      const processedRows = rows.map(row => {
+        const processed = { ...row };
+        
+        if (row.Peripheral_Data) {
+          // Format: "Type1|Serial1|Condition1|Remarks1||Type2|Serial2|Condition2|Remarks2"
+          const peripherals = row.Peripheral_Data.split('||').filter(p => p.trim());
+          
+          // Build formatted lists for each peripheral attribute
+          const formattedPeripherals = peripherals.map(p => {
+            const [type, serial, condition, remark] = p.split('|');
+            return {
+              type: type || '',
+              serial: serial || '',
+              condition: condition || '',
+              remark: remark || ''
+            };
+          });
+          
+          // Separate columns - each shows ONLY its own data
+          processed.Peripheral_Type = formattedPeripherals
+            .map(p => p.type)
+            .filter(t => t)
+            .join(', ') || null;
+          
+          processed.Peripheral_Serial = formattedPeripherals
+            .map(p => p.serial)
+            .filter(s => s)
+            .join(', ') || null;
+          
+          processed.Peripheral_Condition = formattedPeripherals
+            .map(p => p.condition)
+            .filter(c => c)
+            .join(', ') || null;
+          
+          processed.Peripheral_Remarks = formattedPeripherals
+            .map(p => p.remark)
+            .filter(r => r)
+            .join(', ') || null;
+            
+          // Combined column: "Type1 (Serial1, Condition1); Type2 (Serial2, Condition2)"
+          processed.Peripheral_Details = formattedPeripherals
+            .map(p => {
+              const parts = [];
+              if (p.type) parts.push(p.type);
+              
+              const details = [];
+              if (p.serial) details.push(p.serial);
+              if (p.condition) details.push(p.condition);
+              
+              if (parts.length > 0) {
+                if (details.length > 0) {
+                  return `${parts[0]} (${details.join(', ')})`;
+                }
+                return parts[0];
+              }
+              return '';
+            })
+            .filter(d => d.trim())
+            .join('; ') || null;
+        } else {
+          processed.Peripheral_Type = null;
+          processed.Peripheral_Serial = null;
+          processed.Peripheral_Condition = null;
+          processed.Peripheral_Remarks = null;
+          processed.Peripheral_Details = null;
+        }
+        
+        // Remove temporary field
+        delete processed.Peripheral_Data;
+        
+        return processed;
+      });
+      
       console.log('=== End Asset.findAll() DEBUG ===');
       
-      // Return rows with all joined data
-      return rows;
+      return processedRows;
     } catch (error) {
       console.error('Error in Asset.findAll:', error);
       throw error;
@@ -341,22 +428,29 @@ class Asset {
   // Get complete asset detail with all related information (Project, Customer, Peripherals, etc.)
   static async findDetailById(id) {
     try {
-      // Get main asset information with project, customer, recipients
+      console.log('🔄 Fetching complete asset details for ID:', id);
+      
+      // Get main asset information with project, customer, recipients, and all attributes
       const [assetRows] = await pool.execute(`
         SELECT 
+          i.Inventory_ID,
           a.Asset_ID,
           a.Asset_Serial_Number,
           a.Asset_Tag_ID,
           a.Item_Name,
           a.Status,
+          a.Windows,
+          a.Microsoft_Office,
+          a.Monthly_Prices,
           c.Category,
-          m.Model,
+          m.Model_Name AS Model,
           r.Recipient_Name,
           r.Department,
+          r.Position,
           p.Project_ID,
           p.Project_Ref_Number,
           p.Project_Title,
-          p.Solution_Principal,
+          p.Antivirus,
           p.Warranty,
           p.Preventive_Maintenance,
           p.Start_Date,
@@ -364,7 +458,10 @@ class Asset {
           cust.Customer_ID,
           cust.Customer_Ref_Number,
           cust.Customer_Name,
-          cust.Branch
+          cust.Branch,
+          GROUP_CONCAT(DISTINCT s.Software_Name SEPARATOR ', ') AS Software,
+          GROUP_CONCAT(DISTINCT s.Price SEPARATOR ', ') AS Software_Prices,
+          GROUP_CONCAT(DISTINCT specs.Attributes_Name SEPARATOR ', ') AS Specs_Attributes
         FROM ASSET a
         LEFT JOIN CATEGORY c ON a.Category_ID = c.Category_ID
         LEFT JOIN MODEL m ON a.Model_ID = m.Model_ID
@@ -372,15 +469,25 @@ class Asset {
         LEFT JOIN INVENTORY i ON a.Asset_ID = i.Asset_ID
         LEFT JOIN PROJECT p ON i.Project_ID = p.Project_ID
         LEFT JOIN CUSTOMER cust ON i.Customer_ID = cust.Customer_ID
+        LEFT JOIN ASSET_SOFTWARE_BRIDGE asb ON a.Asset_ID = asb.Asset_ID
+        LEFT JOIN SOFTWARE s ON asb.Software_ID = s.Software_ID
+        LEFT JOIN SPECS specs ON a.Category_ID = specs.Category_ID
         WHERE a.Asset_ID = ?
+        GROUP BY a.Asset_ID
         LIMIT 1
       `, [id]);
       
       if (assetRows.length === 0) {
+        console.log('❌ Asset not found with ID:', id);
         return null;
       }
 
       const assetData = assetRows[0];
+      console.log('✅ Asset found:', {
+        serial: assetData.Asset_Serial_Number,
+        tag: assetData.Asset_Tag_ID,
+        customer: assetData.Customer_Name
+      });
 
       // Get peripherals for this asset
       const [peripheralRows] = await pool.execute(`
@@ -395,6 +502,8 @@ class Asset {
         WHERE per.Asset_ID = ?
         ORDER BY pt.Peripheral_Type_Name
       `, [id]);
+
+      console.log(`✅ Found ${peripheralRows.length} peripherals for asset`);
 
       // Combine asset data with peripherals
       return {

@@ -25,6 +25,8 @@ const AssetDetail = () => {
       setLoading(true);
       setError(null);
 
+      console.log('🔄 Fetching asset detail for ID:', assetId);
+
       // Fetch complete asset information from backend
       const response = await fetch(`http://localhost:5000/api/v1/assets/detail/${assetId}`);
       
@@ -33,10 +35,23 @@ const AssetDetail = () => {
       }
       
       const data = await response.json();
-      console.log('Asset Detail:', data);
+      console.log('✅ Asset Detail received:', data);
+      console.log('Asset attributes:', {
+        serial: data.Asset_Serial_Number,
+        tag: data.Asset_Tag_ID,
+        item: data.Item_Name,
+        customer: data.Customer_Name,
+        branch: data.Branch,
+        category: data.Category,
+        model: data.Model,
+        windows: data.Windows,
+        office: data.Microsoft_Office,
+        software: data.Software,
+        peripherals: data.Peripherals?.length || 0
+      });
       setAssetData(data);
     } catch (err) {
-      console.error('Error fetching asset detail:', err);
+      console.error('❌ Error fetching asset detail:', err);
       setError(err.message || 'Failed to load asset details');
     } finally {
       setLoading(false);
@@ -219,6 +234,119 @@ const AssetDetail = () => {
       {/* Main Content Grid */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px', marginBottom: '20px' }}>
         
+        {/* Asset Specifications */}
+        <div className="card">
+          <div style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: '10px', 
+            marginBottom: '20px',
+            paddingBottom: '15px',
+            borderBottom: '2px solid #9b59b6'
+          }}>
+            <Monitor size={24} color="#9b59b6" />
+            <h3 style={{ margin: 0, color: '#2c3e50', fontSize: '1.2rem' }}>Asset Specifications</h3>
+          </div>
+          
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+              <div>
+                <div style={{ color: '#7f8c8d', fontSize: '0.85rem', marginBottom: '5px', fontWeight: '600' }}>
+                  Windows
+                </div>
+                <div style={{ color: '#2c3e50', fontSize: '1rem' }}>
+                  {assetData.Windows || 'N/A'}
+                </div>
+              </div>
+              <div>
+                <div style={{ color: '#7f8c8d', fontSize: '0.85rem', marginBottom: '5px', fontWeight: '600' }}>
+                  Microsoft Office
+                </div>
+                <div style={{ color: '#2c3e50', fontSize: '1rem' }}>
+                  {assetData.Microsoft_Office || 'N/A'}
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <div style={{ color: '#7f8c8d', fontSize: '0.85rem', marginBottom: '5px', fontWeight: '600' }}>
+                <Shield size={14} style={{ marginRight: '5px', verticalAlign: 'middle' }} />
+                Antivirus
+              </div>
+              <div style={{ color: '#2c3e50', fontSize: '1rem' }}>
+                {assetData.Antivirus || 'N/A'}
+              </div>
+            </div>
+
+            <div>
+              <div style={{ color: '#7f8c8d', fontSize: '0.85rem', marginBottom: '5px', fontWeight: '600' }}>
+                Software Installed
+              </div>
+              <div style={{ 
+                color: '#2c3e50', 
+                fontSize: '0.9rem', 
+                lineHeight: '1.6',
+                padding: '10px',
+                background: '#f8f9fa',
+                borderRadius: '6px',
+                border: '1px solid #e9ecef',
+                maxHeight: '100px',
+                overflowY: 'auto'
+              }}>
+                {assetData.Software || 'No software installed'}
+              </div>
+            </div>
+
+            {assetData.Software_Prices && (
+              <div>
+                <div style={{ color: '#7f8c8d', fontSize: '0.85rem', marginBottom: '5px', fontWeight: '600' }}>
+                  Software Prices
+                </div>
+                <div style={{ color: '#2c3e50', fontSize: '0.95rem' }}>
+                  {assetData.Software_Prices.split(',').map((p, idx) => {
+                    const price = parseFloat(p.trim());
+                    return isNaN(price) ? '' : `RM ${price.toFixed(2)}`;
+                  }).filter(p => p).join(', ') || 'N/A'}
+                </div>
+              </div>
+            )}
+
+            {assetData.Specs_Attributes && (
+              <div>
+                <div style={{ color: '#7f8c8d', fontSize: '0.85rem', marginBottom: '5px', fontWeight: '600' }}>
+                  Specifications
+                </div>
+                <div style={{ 
+                  color: '#2c3e50', 
+                  fontSize: '0.9rem', 
+                  lineHeight: '1.6',
+                  padding: '10px',
+                  background: '#f8f9fa',
+                  borderRadius: '6px',
+                  border: '1px solid #e9ecef'
+                }}>
+                  {assetData.Specs_Attributes}
+                </div>
+              </div>
+            )}
+
+            {assetData.Monthly_Prices && parseFloat(assetData.Monthly_Prices) > 0 && (
+              <div>
+                <div style={{ color: '#7f8c8d', fontSize: '0.85rem', marginBottom: '5px', fontWeight: '600' }}>
+                  Monthly Price
+                </div>
+                <div style={{ 
+                  color: '#27ae60', 
+                  fontSize: '1.3rem', 
+                  fontWeight: '600' 
+                }}>
+                  RM {parseFloat(assetData.Monthly_Prices).toFixed(2)}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+        
         {/* Project Information */}
         <div className="card">
           <div style={{ 
@@ -282,26 +410,12 @@ const AssetDetail = () => {
                 {assetData.Warranty || 'N/A'}
               </div>
             </div>
-
-            <div>
-              <div style={{ color: '#7f8c8d', fontSize: '0.85rem', marginBottom: '5px', fontWeight: '600' }}>
-                Solution Principal
-              </div>
-              <div style={{ 
-                color: '#2c3e50', 
-                fontSize: '0.9rem', 
-                lineHeight: '1.6',
-                padding: '10px',
-                background: '#f8f9fa',
-                borderRadius: '6px',
-                border: '1px solid #e9ecef'
-              }}>
-                {assetData.Solution_Principal || 'N/A'}
-              </div>
-            </div>
           </div>
         </div>
+      </div>
 
+      {/* Customer and Recipient Information Row */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px', marginBottom: '20px' }}>
         {/* Customer Information */}
         <div className="card">
           <div style={{ 
@@ -344,35 +458,45 @@ const AssetDetail = () => {
               </div>
             </div>
           </div>
+        </div>
 
-          {/* Recipient Information */}
-          <div style={{ marginTop: '30px', paddingTop: '20px', borderTop: '1px solid #e9ecef' }}>
-            <div style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              gap: '10px', 
-              marginBottom: '15px'
-            }}>
-              <Users size={20} color="#9b59b6" />
-              <h4 style={{ margin: 0, color: '#2c3e50', fontSize: '1rem' }}>Recipient</h4>
-            </div>
-            
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <div>
-                <div style={{ color: '#7f8c8d', fontSize: '0.85rem', marginBottom: '5px', fontWeight: '600' }}>
-                  Name
-                </div>
-                <div style={{ color: '#2c3e50', fontSize: '1rem' }}>
-                  {assetData.Recipient_Name || 'N/A'}
-                </div>
+        {/* Recipient Information */}
+        <div className="card">
+          <div style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: '10px', 
+            marginBottom: '20px',
+            paddingBottom: '15px',
+            borderBottom: '2px solid #9b59b6'
+          }}>
+            <Users size={24} color="#9b59b6" />
+            <h3 style={{ margin: 0, color: '#2c3e50', fontSize: '1.2rem' }}>Recipient Information</h3>
+          </div>
+          
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+            <div>
+              <div style={{ color: '#7f8c8d', fontSize: '0.85rem', marginBottom: '5px', fontWeight: '600' }}>
+                Recipient Name
               </div>
-              <div>
-                <div style={{ color: '#7f8c8d', fontSize: '0.85rem', marginBottom: '5px', fontWeight: '600' }}>
-                  Department / Position
-                </div>
-                <div style={{ color: '#2c3e50', fontSize: '1rem' }}>
-                  {assetData.Department || 'N/A'}
-                </div>
+              <div style={{ color: '#2c3e50', fontSize: '1.1rem', fontWeight: '600' }}>
+                {assetData.Recipient_Name || 'N/A'}
+              </div>
+            </div>
+            <div>
+              <div style={{ color: '#7f8c8d', fontSize: '0.85rem', marginBottom: '5px', fontWeight: '600' }}>
+                Department
+              </div>
+              <div style={{ color: '#2c3e50', fontSize: '1rem' }}>
+                {assetData.Department || 'N/A'}
+              </div>
+            </div>
+            <div>
+              <div style={{ color: '#7f8c8d', fontSize: '0.85rem', marginBottom: '5px', fontWeight: '600' }}>
+                Position
+              </div>
+              <div style={{ color: '#2c3e50', fontSize: '1rem' }}>
+                {assetData.Position || 'N/A'}
               </div>
             </div>
           </div>
