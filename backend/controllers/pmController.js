@@ -393,10 +393,10 @@ const getPMReport = async (req, res, next) => {
       // PDF exists, use existing file
       filepath = pdfCheck.filepath;
       filename = path.basename(filepath);
-      logger.info(`Using existing PDF for PM_ID ${pmId}: ${filename}`);
+      logger.info(`✅ Using existing PDF for PM_ID ${pmId}: ${filename}`);
     } else {
-      // Generate new PDF
-      logger.info(`Generating new PDF for PM_ID ${pmId}`);
+      // Generate new PDF (either doesn't exist or file missing locally)
+      logger.info(`⚙️ Generating new PDF for PM_ID ${pmId}`);
       const result = await pdfGenerator.generatePMReport(pmId);
 
       if (!result.success) {
@@ -408,12 +408,16 @@ const getPMReport = async (req, res, next) => {
 
       filepath = result.filepath;
       filename = result.filename;
+      logger.info(`✅ PDF generated successfully: ${filename}`);
     }
 
+    // Convert relative path to absolute path for res.download()
+    const absolutePath = path.join(__dirname, '../', filepath);
+
     // Send file for download
-    res.download(filepath, filename, (err) => {
+    res.download(absolutePath, filename, (err) => {
       if (err) {
-        logger.error('Error sending PDF file:', err);
+        logger.error('❌ Error sending PDF file:', err);
         if (!res.headersSent) {
           res.status(500).json({
             error: 'Failed to download PDF',
@@ -421,7 +425,7 @@ const getPMReport = async (req, res, next) => {
           });
         }
       } else {
-        logger.info(`PDF sent successfully: ${filename}`);
+        logger.info(`📥 PDF downloaded successfully: ${filename}`);
       }
     });
 

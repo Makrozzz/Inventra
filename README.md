@@ -23,14 +23,14 @@ A comprehensive full-stack asset management system built with React frontend and
 
 ## 🎯 Overview
 
-Inventra is a full-featured asset management system designed for companies that lease equipment to clients and need to track assets, manage projects, and maintain equipment schedules. The system provides a clean, intuitive interface for managing all aspects of your asset lifecycle.
+Inventra is a full-stack asset management system built with React (frontend) and Node.js/Express (backend) with MySQL database. Designed for companies that lease equipment to clients, providing complete asset lifecycle tracking, project management, and preventive maintenance scheduling with PDF report generation.
 
 ### Key Capabilities
 - **Asset Tracking**: Complete inventory management with search, filter, and categorization
 - **Project Management**: Client project tracking with support levels and asset assignments
-- **Preventive Maintenance**: Bi-annual maintenance scheduling and tracking system
+- **Preventive Maintenance**: Bi-annual maintenance scheduling with automated PDF report generation
 - **Dashboard Analytics**: Real-time insights into assets, customers, and device distribution
-- **User Management**: Comprehensive account settings and preferences
+- **User Authentication**: JWT-based authentication with role management
 
 ## ✨ Features
 
@@ -62,7 +62,9 @@ Inventra is a full-featured asset management system designed for companies that 
 - **Smart Dashboard**: Overview of scheduled, overdue, and completed maintenance
 - **Priority Management**: High, Medium, Low priority classification
 - **Technician Assignment**: Assign and track maintenance technicians
-- **Maintenance Checklists**: Detailed task lists for each maintenance type
+- **Maintenance Checklists**: Detailed task lists for each maintenance type (Yes/No checkboxes)
+- **PDF Report Generation**: Auto-generate professional A4 reports with customer name, asset serial, and checklist
+- **Smart File Handling**: Auto-regeneration when files missing, relative path storage for team collaboration
 - **Timeline Alerts**: Visual warnings for upcoming and overdue maintenance
 - **Customer Integration**: Link maintenance to customer assets and contracts
 
@@ -75,36 +77,98 @@ Inventra is a full-featured asset management system designed for companies that 
 
 ## 🏗️ System Architecture
 
-### Frontend Stack
-- **React 18.x**: Modern React with functional components and hooks
-- **React Router**: Client-side routing for SPA navigation
-- **Lucide React**: Modern icon library for consistent UI elements
-- **CSS3**: Custom CSS with modern design patterns and responsive layouts
+### Tech Stack
 
-### Component Structure
+**Frontend:**
+- React 18.x with functional components and hooks
+- React Router v6 for client-side routing
+- Lucide React for icons
+- Axios for API communication
+
+**Backend:**
+- Node.js with Express.js
+- MySQL2 with connection pooling
+- JWT for authentication
+- Puppeteer for PDF generation
+- Handlebars for PDF templating
+
+**Database:**
+- MySQL 8.0+
+- Tables: ASSET, INVENTORY, CUSTOMER, PROJECT, PMAINTENANCE, PM_RESULT, PM_CHECKLIST, USER
+
+### Project Structure
 ```
-src/
-├── components/
-│   └── Sidebar.js           # Main navigation sidebar
-├── pages/
-│   ├── Dashboard.js         # Landing page with analytics
-│   ├── Projects.js          # Project management interface
-│   ├── Assets.js            # Asset management system
-│   ├── PreventiveMaintenance.js  # Maintenance scheduling
-│   ├── AccountSettings.js   # User settings and preferences
-│   ├── Login.js            # Authentication interface
-│   ├── AddAsset.js         # Asset creation form
-│   └── EditAsset.js        # Asset modification form
-├── App.js                   # Main application component
-├── index.js                # Application entry point
-└── index.css               # Global styles and theme
+Inventra/
+├── frontend/
+│   ├── src/
+│   │   ├── components/
+│   │   │   ├── Sidebar.js                    # Main navigation
+│   │   │   ├── PMReportDownload.js           # Smart PDF download button
+│   │   │   ├── SearchableDropdown.js         # Dropdown with search
+│   │   │   └── Pagination.js                 # Table pagination
+│   │   ├── pages/
+│   │   │   ├── Dashboard.js                  # Analytics dashboard
+│   │   │   ├── Assets.js                     # Asset management
+│   │   │   ├── Projects.js                   # Project management
+│   │   │   ├── PreventiveMaintenance.js      # PM scheduling
+│   │   │   ├── PMDetail.js                   # PM record details
+│   │   │   ├── Login.js                      # Authentication
+│   │   │   └── AccountSettings.js            # User preferences
+│   │   ├── services/
+│   │   │   └── apiService.js                 # API communication layer
+│   │   ├── App.js                            # Main app component
+│   │   └── index.js                          # Entry point
+│   └── package.json
+├── backend/
+│   ├── controllers/
+│   │   ├── pmController.js                   # PM business logic
+│   │   ├── assetController.js                # Asset operations
+│   │   ├── authController.js                 # Authentication
+│   │   └── projectController.js              # Project operations
+│   ├── models/
+│   │   ├── PMaintenance.js                   # PM data access
+│   │   ├── Asset.js                          # Asset data access
+│   │   └── User.js                           # User data access
+│   ├── routes/
+│   │   ├── pm.js                             # PM endpoints
+│   │   ├── assets.js                         # Asset endpoints
+│   │   ├── auth.js                           # Auth endpoints
+│   │   └── projects.js                       # Project endpoints
+│   ├── middleware/
+│   │   ├── auth.js                           # JWT verification
+│   │   └── validation.js                     # Request validation
+│   ├── utils/
+│   │   ├── pdfGenerator.js                   # PDF generation logic
+│   │   └── logger.js                         # Logging utility
+│   ├── templates/
+│   │   └── pm-report-template.html           # PDF template (A4, B&W)
+│   ├── uploads/
+│   │   └── pm-reports/                       # Generated PDFs (local)
+│   ├── config/
+│   │   └── database.js                       # MySQL connection pool
+│   ├── server.js                             # Express server
+│   └── package.json
+└── README.md
 ```
 
-### Data Management
-- **State Management**: React useState and useEffect hooks
-- **Mock Data**: Comprehensive sample data for development and testing
-- **Local Storage Ready**: Prepared for localStorage integration
-- **API Ready**: Structured for easy backend integration
+### Database Relationships
+```
+USER (User_ID) ────┐
+                   │
+CUSTOMER (Customer_ID) ────┐
+                           │
+PROJECT (Project_ID, Customer_ID) ────┐
+                                      │
+INVENTORY (Inventory_ID, Customer_ID, Asset_ID)
+                                      │
+ASSET (Asset_ID) ─────────────────────┤
+                                      │
+PMAINTENANCE (PM_ID, Asset_ID, file_path) ────┐
+                                               │
+PM_RESULT (Result_ID, PM_ID, Checklist_ID) ───┤
+                                               │
+PM_CHECKLIST (Checklist_ID, Checklist_Name) ──┘
+```
 
 ## 🚀 Installation & Setup
 
@@ -121,31 +185,71 @@ src/
    cd Inventra
    ```
 
-2. **Install Dependencies**
+2. **Install Backend Dependencies**
    ```bash
+   cd backend
    npm install
    ```
 
-3. **Start Development Server**
-   ```bash
-   npm start
+3. **Configure Database**
+   - Create `.env` file in `backend/` folder:
+   ```env
+   DB_HOST=your_mysql_host
+   DB_USER=your_mysql_user
+   DB_PASSWORD=your_mysql_password
+   DB_NAME=ivmscom_Inventra
+   JWT_SECRET=your_secret_key
+   PORT=5000
    ```
 
-4. **Access the Application**
-   - Open your browser to `http://localhost:3000`
-   - Login with any credentials (authentication is currently mock)
+4. **Setup Database Schema**
+   ```bash
+   # Import database schema from config/setup.sql
+   mysql -u your_user -p ivmscom_Inventra < config/setup.sql
+   ```
+
+5. **Start Backend Server**
+   ```bash
+   # In backend folder
+   npm start
+   # Server runs on http://localhost:5000
+   ```
+
+6. **Install Frontend Dependencies**
+   ```bash
+   cd ../frontend
+   npm install
+   ```
+
+7. **Start Frontend Development Server**
+   ```bash
+   npm start
+   # Frontend runs on http://localhost:3000
+   ```
+
+8. **Access the Application**
+   - Open browser to `http://localhost:3000`
+   - Login with registered credentials
 
 ### Build for Production
 ```bash
+# Frontend
+cd frontend
 npm run build
+
+# Backend
+cd backend
+# Use PM2 or similar process manager
+pm2 start server.js
 ```
 
 ## 📖 Usage Guide
 
 ### Getting Started
-1. **Login**: Use any username/password (currently mock authentication)
-2. **Dashboard**: Review your asset and customer statistics
-3. **Navigation**: Use the sidebar to navigate between different sections
+1. **Register**: Create a new account or use existing credentials
+2. **Login**: JWT-based authentication with secure token storage
+3. **Dashboard**: Review your asset and customer statistics
+4. **Navigation**: Use the sidebar to navigate between different sections
 
 ### Managing Assets
 1. **View Assets**: Click "Assets" in the sidebar
@@ -166,6 +270,99 @@ npm run build
 3. **Priority Management**: High priority items are highlighted
 4. **Technician Tracking**: See assigned technicians and estimated duration
 5. **Checklist Management**: Review maintenance task lists
+6. **PM Reports**: Generate and download PDF reports for completed maintenance
+
+#### PM Report File Handling
+
+**System Logic Flow:**
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ USER CLICKS BUTTON (Generate Form / Download Form)         │
+└────────────────────────┬────────────────────────────────────┘
+                         ↓
+                ┌─────────────────────┐
+                │ Check Database      │
+                │ file_path column    │
+                └─────────┬───────────┘
+                          ↓
+                  ┌───────────────┐
+                  │ file_path =   │
+                  │ NULL?         │
+                  └───┬───────┬───┘
+                     YES      NO
+                      ↓        ↓
+            ┌─────────────┐   │
+            │ Generate    │   │
+            │ New PDF     │   │
+            │ (~3 sec)    │   │
+            └──────┬──────┘   │
+                   ↓          ↓
+            ┌──────────────────────────┐
+            │ Build Absolute Path:     │
+            │ backend/uploads/...      │
+            └──────────┬───────────────┘
+                       ↓
+            ┌──────────────────────┐
+            │ Check: Does file     │
+            │ exist on THIS        │
+            │ computer?            │
+            └────┬────────┬────────┘
+                YES       NO
+                 ↓         ↓
+                 │   ┌─────────────┐
+                 │   │ Auto-       │
+                 │   │ Regenerate  │
+                 │   │ (~3 sec)    │
+                 │   └──────┬──────┘
+                 ↓          ↓
+            ┌─────────────────────┐
+            │ Download PDF File   │
+            └─────────────────────┘
+```
+
+**Key Points:**
+
+1. **First Generation:**
+   - `file_path = NULL` in database
+   - Button displays: "Generate Form"
+   - Click → Generate PDF → Save to `backend/uploads/pm-reports/`
+   - Store **relative path** in database: `uploads/pm-reports/PM_Report_NADMA_123.pdf`
+
+2. **Subsequent Downloads:**
+   - `file_path` has value (relative path)
+   - Button displays: "Download Form"
+   - System builds absolute path from relative path
+   - Checks if file exists locally:
+     - **EXISTS**: Instant download ⚡ (< 100ms)
+     - **MISSING**: Auto-regenerate (~3 seconds) → Download
+
+3. **Team Collaboration (Development):**
+   - PDF files are **NOT committed to Git** (`.gitignore`)
+   - Database **IS committed** (contains relative paths)
+   - Each team member auto-generates their own local copies
+   - Content is identical (same database = same PDF)
+   - Why relative path? Works on any computer regardless of username/directory
+
+4. **File Storage:**
+   - **Development**: Local file system (`backend/uploads/pm-reports/`)
+   - **Production**: Cloud storage recommended (see Deployment section)
+
+**Example Scenario:**
+
+```
+Developer A:
+  Generate PM Report #1 → File: C:\Users\Amirul\...\backend\uploads\pm-reports\PM_Report_NADMA_123.pdf
+  Database stores: "uploads/pm-reports/PM_Report_NADMA_123.pdf"
+  Commit & push → GitHub (code + database, NO PDF)
+
+Developer B:
+  Pull from GitHub → Database has path, but NO local PDF file
+  Click "Download Form" → System checks local file → Not found
+  Auto-regenerate → File: C:\Users\Teammate\...\backend\uploads\pm-reports\PM_Report_NADMA_123.pdf
+  Download succeeds! ✅
+  Next time: Instant download (cached locally)
+```
 
 ### User Settings
 1. **Profile Settings**: Update personal and company information
@@ -173,173 +370,172 @@ npm run build
 3. **Notifications**: Customize email and system notifications
 4. **Appearance**: Adjust theme, colors, and layout preferences
 
-## 📁 Project Structure
+## 📁 API Endpoints
 
+### Authentication
+- `POST /api/auth/login` - User login (returns JWT token)
+- `POST /api/auth/register` - User registration
+- `GET /api/auth/verify` - Verify JWT token
+
+### Assets
+- `GET /api/assets` - Get all assets (with filters)
+- `GET /api/assets/:id` - Get asset details
+- `POST /api/assets` - Create new asset
+- `PUT /api/assets/:id` - Update asset
+- `DELETE /api/assets/:id` - Delete asset
+
+### Projects
+- `GET /api/projects` - Get all projects
+- `GET /api/projects/:id` - Get project details
+- `POST /api/projects` - Create new project
+- `PUT /api/projects/:id` - Update project
+- `DELETE /api/projects/:id` - Delete project
+
+### Preventive Maintenance
+- `GET /api/pm` - Get all PM records
+- `GET /api/pm/:id` - Get PM details with checklist
+- `POST /api/pm` - Create new PM record
+- `PUT /api/pm/:id` - Update PM record
+- `GET /api/pm/:id/report` - Generate/Download PDF report
+- `GET /api/pm/statistics` - Get PM statistics (scheduled, overdue, completed)
+
+## 🚀 Deployment
+
+### Development Environment
+- Frontend: `http://localhost:3000`
+- Backend: `http://localhost:5000`
+- Database: Local MySQL or remote MySQL server
+- PDF Storage: Local file system (`backend/uploads/pm-reports/`)
+
+### Production Deployment on cPanel
+
+#### Prerequisites:
+- cPanel account with Node.js support
+- MySQL database access
+- Domain name configured
+
+#### Quick Deployment Steps:
+
+**1. Setup MySQL Database**
+- cPanel → MySQL Databases → Create database
+- Create user and assign to database (ALL PRIVILEGES)
+- Import schema: phpMyAdmin → Import `backend/config/setup.sql`
+
+**2. Deploy Backend**
+- cPanel → Setup Node.js App → Create Application
+- Configure:
+  - Node.js version: 16.x or 18.x
+  - Application root: `inventra_backend`
+  - Startup file: `server.js`
+- Upload all backend files to application root
+- Create `.env` file:
+  ```env
+  NODE_ENV=production
+  PORT=3000
+  DB_HOST=localhost
+  DB_USER=your_db_user
+  DB_PASSWORD=your_db_password
+  DB_NAME=your_db_name
+  JWT_SECRET=your_secret_key
+  ```
+- Run NPM Install → Start App
+
+**3. Create Uploads Folder** ⭐
+```bash
+# Via SSH:
+cd ~/inventra_backend
+mkdir -p uploads/pm-reports
+chmod 755 uploads uploads/pm-reports
+
+# Or via File Manager:
+# Create folders: uploads/pm-reports
+# Set permissions: 755
 ```
-inventra/
-├── public/
-│   ├── index.html          # Main HTML template
-│   └── logo.png           # Application logo
-├── src/
-│   ├── components/
-│   │   ├── Navbar.js      # Legacy navbar (replaced by Sidebar)
-│   │   └── Sidebar.js     # Main navigation sidebar
-│   ├── pages/
-│   │   ├── Dashboard.js         # Analytics dashboard
-│   │   ├── Projects.js          # Project management
-│   │   ├── Assets.js           # Asset management (renamed from Inventory)
-│   │   ├── PreventiveMaintenance.js  # Maintenance system
-│   │   ├── AccountSettings.js   # User preferences
-│   │   ├── Login.js            # Authentication
-│   │   ├── AddAsset.js         # Asset creation
-│   │   └── EditAsset.js        # Asset editing
-│   ├── App.js             # Main application component
-│   ├── index.js          # Application entry point
-│   └── index.css         # Global styles and responsive design
-├── package.json          # Project dependencies and scripts
-└── README.md            # This file
+
+**4. Deploy Frontend**
+- Build locally: `cd frontend && npm run build`
+- Upload `build/` contents to `public_html/`
+- Create `.htaccess` for React Router:
+  ```apache
+  <IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteBase /
+    RewriteRule ^index\.html$ - [L]
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule . /index.html [L]
+  </IfModule>
+  ```
+- Update API URL in `apiService.js` before building
+
+**5. Setup SSL & Domain**
+- cPanel → SSL/TLS → Enable AutoSSL or Let's Encrypt
+- Configure domain to point to Node.js app
+
+**PDF Storage on cPanel:**
+- ✅ Uses file system: `~/inventra_backend/uploads/pm-reports/`
+- ✅ Files persist forever (not ephemeral)
+- ✅ All users access same server = same files
+- ✅ No cloud storage needed for single-server setup
+- 🔴 **Important**: Setup automatic backups in cPanel
+
+**File Structure on cPanel:**
+```
+~/inventra_backend/
+├── uploads/
+│   └── pm-reports/          # PDF storage (create this!)
+│       ├── PM_Report_NADMA_123.pdf
+│       └── PM_Report_JPIC_456.pdf
+├── server.js
+├── .env
+├── package.json
+└── ...
 ```
 
-## 🔄 Recent Changes
+**Common Issues:**
+- **Puppeteer not working**: Contact host to install chromium or enable Puppeteer support
+- **Cannot write to uploads/**: Check folder permissions (chmod 755)
+- **App crashes**: Check logs in cPanel Node.js App section
 
-### Major Redesign (September 2024)
-
-#### 🎨 **UI/UX Overhaul**
-- **Sidebar Navigation**: Replaced top navbar with professional left sidebar
-- **Modern Design Language**: Implemented card-based layouts with shadows and hover effects
-- **Responsive Design**: Added mobile-responsive breakpoints and layouts
-- **Color Scheme Update**: Professional blue gradient theme with improved contrast
-- **Typography**: Enhanced font hierarchy and spacing
-
-#### 🏗️ **Architecture Changes**
-- **Component Restructure**: Reorganized from navbar-based to sidebar-based navigation
-- **Page Layout**: Implemented new `app-layout` with `main-content` structure
-- **Routing Update**: Added new routes for projects, maintenance, and settings
-- **State Management**: Centralized asset state in App.js with proper prop drilling
-
-#### 📊 **New Features Added**
-
-**Dashboard Enhancements:**
-- Real-time statistics cards with icons
-- Customer device distribution chart
-- Recent assets table with improved styling
-- Quick action buttons
-
-**Project Management System:**
-- Complete project lifecycle tracking
-- Client relationship management
-- Post-support level tracking
-- Status-based color coding
-- Asset assignment to projects
-
-**Enhanced Asset Management:**
-- Renamed from "Inventory" to "Assets" for clarity
-- Advanced search with multiple filter criteria
-- CSV import/export functionality
-- Asset depreciation tracking
-- Location-based organization
-- Category management system
-
-**Preventive Maintenance System:**
-- Bi-annual maintenance scheduling
-- Priority-based task management
-- Technician assignment system
-- Maintenance checklist management
-- Timeline tracking with alerts
-- Customer integration
-
-**Account Settings:**
-- Tabbed interface (Profile, Security, Notifications, Appearance)
-- Password management with visibility toggles
-- Two-factor authentication options
-- Notification preference center
-- Theme customization options
-
-#### 🔧 **Technical Improvements**
-- **Performance**: Optimized rendering with proper React patterns
-- **Accessibility**: Added proper ARIA labels and keyboard navigation
-- **Code Organization**: Separated concerns with dedicated page components
-- **CSS Architecture**: Modular CSS with component-specific styles
-- **Error Handling**: Improved error states and user feedback
-- **Data Structure**: Enhanced mock data with realistic relationships
-
-#### 📱 **Responsive Design**
-- **Mobile-First**: Responsive breakpoints for all screen sizes
-- **Sidebar Collapse**: Mobile-friendly navigation patterns
-- **Grid Layouts**: Flexible grid systems for different content types
-- **Touch-Friendly**: Improved button sizes and touch targets
-
-### Authentication System
-- **Mock Authentication**: Simple login system for development
-- **Session Management**: Basic session handling
-- **Protected Routes**: Route protection for authenticated users
-
-### Data Management
-- **Mock Data Enhancement**: Comprehensive sample data across all modules
-- **State Management**: React hooks for local state management
-- **Data Relationships**: Proper linking between assets, projects, and maintenance
+**That's it!** Your PM report system works exactly like development - just create the uploads folder and deploy.
 
 ## 🚦 Development Status
 
 ### ✅ Completed Features
+- [x] Full-stack architecture (React + Node.js + MySQL)
+- [x] JWT authentication system
 - [x] Responsive sidebar navigation
-- [x] Dashboard with analytics
-- [x] Complete asset management system
-- [x] Project management interface
-- [x] Preventive maintenance scheduling
-- [x] User account settings
-- [x] Modern UI/UX design
-- [x] Mock authentication system
-- [x] CSV import/export functionality
+- [x] Dashboard with real-time analytics
+- [x] Complete asset management with CRUD operations
+- [x] Project management with customer integration
+- [x] Preventive maintenance scheduling system
+- [x] PDF report generation with Puppeteer
+- [x] Smart file handling with auto-regeneration
+- [x] Checklist management (Yes/No format)
 - [x] Search and filtering systems
-
-### 🔄 In Development
-- [ ] Backend API integration
-- [ ] Real user authentication
-- [ ] Database connection
-- [ ] Real-time notifications
-- [ ] Advanced reporting features
+- [x] User account settings
 
 ### 🎯 Future Enhancements
-- [ ] Role-based access control
-- [ ] Advanced analytics and reporting
-- [ ] Mobile application
-- [ ] Integration with external systems
-- [ ] Automated maintenance scheduling
-- [ ] Barcode/QR code scanning
-- [ ] Document management system
-- [ ] Audit trail and logging
-
-## 🤝 Contributing
-
-We welcome contributions to improve Inventra! Please follow these steps:
-
-1. **Fork the Repository**
-2. **Create Feature Branch**: `git checkout -b feature/AmazingFeature`
-3. **Commit Changes**: `git commit -m 'Add some AmazingFeature'`
-4. **Push to Branch**: `git push origin feature/AmazingFeature`
-5. **Open Pull Request**
-
-### Development Guidelines
-- Follow React best practices and hooks patterns
-- Maintain responsive design principles
-- Add proper error handling and user feedback
-- Update documentation for new features
-- Test across different browsers and devices
+- [ ] Cloud storage integration (Cloudflare R2/AWS S3) for production
+- [ ] Role-based access control (Admin/Manager/Technician)
+- [ ] Email notifications for PM schedules
+- [ ] Advanced analytics and charts
+- [ ] Mobile-responsive improvements
+- [ ] Barcode/QR code scanning for assets
+- [ ] Audit trail and activity logging
+- [ ] CSV import/export for all modules
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details.
+This project is licensed under the MIT License.
 
 ## 📞 Support
 
-For support and questions:
-- **Repository Issues**: [GitHub Issues](https://github.com/Makrozzz/Inventra/issues)
-- **Documentation**: This README and inline code comments
-- **Developer**: Contact repository maintainer
+For issues and questions:
+- **GitHub Issues**: [Report bugs or request features](https://github.com/Makrozzz/Inventra/issues)
+- **Documentation**: See README and inline code comments
 
 ---
 
-**Built with ❤️ using React.js**
-
-*Inventra - Simplifying Asset Management for Modern Businesses*
+**Inventra** - Asset Management System with Preventive Maintenance  
+Built with React + Node.js + MySQL

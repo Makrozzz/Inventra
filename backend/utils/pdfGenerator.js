@@ -101,12 +101,14 @@ class PDFGenerator {
 
             console.log(`PDF generated successfully: ${filename}`);
 
-            // 7. Update database with file path
-            await this.updatePMFilePath(pmId, filepath);
+            // 7. Update database with RELATIVE file path (not absolute)
+            // Store relative path so it works across different developer machines
+            const relativePath = path.join('uploads', 'pm-reports', filename);
+            await this.updatePMFilePath(pmId, relativePath);
 
             return {
                 success: true,
-                filepath: filepath,
+                filepath: relativePath,  // Return relative path
                 filename: filename
             };
 
@@ -265,11 +267,16 @@ class PDFGenerator {
             if (rows.length > 0 && rows[0].file_path) {
                 const filepath = rows[0].file_path;
                 
+                // Build absolute path from relative path stored in database
+                const absolutePath = path.join(__dirname, '../', filepath);
+                
                 // Check if file actually exists on disk
                 try {
-                    await fs.access(filepath);
+                    await fs.access(absolutePath);
+                    console.log(`✅ PDF exists locally: ${absolutePath}`);
                     return { exists: true, filepath };
                 } catch {
+                    console.log(`❌ PDF path in DB but file missing locally: ${absolutePath}`);
                     return { exists: false, filepath: null };
                 }
             }
