@@ -1,6 +1,8 @@
 const PMaintenance = require('../models/PMaintenance');
 const { formatResponse } = require('../utils/helpers');
 const logger = require('../utils/logger');
+const pdfGenerator = require('../utils/pdfGenerator');
+const path = require('path');
 
 /**
  * Get all PM records
@@ -366,6 +368,72 @@ const createCategory = async (req, res, next) => {
   }
 };
 
+/**
+ * Generate and download PM report PDF
+ */
+const getPMReport = async (req, res, next) => {
+  try {
+    const { pmId } = req.params;
+
+    // Check if PM exists
+    const pmDetail = await PMaintenance.getDetailedPM(pmId);
+    if (!pmDetail) {
+      return res.status(404).json({
+        error: 'PM record not found'
+      });
+    }
+
+    // Check if PDF already exists
+    const pdfCheck = await pdfGenerator.checkPDFExists(pmId);
+    
+    let filepath;
+    let filename;
+
+    if (pdfCheck.exists) {
+      // PDF exists, use existing file
+      filepath = pdfCheck.filepath;
+      filename = path.basename(filepath);
+      logger.info(`Using existing PDF for PM_ID ${pmId}: ${filename}`);
+    } else {
+      // Generate new PDF
+      logger.info(`Generating new PDF for PM_ID ${pmId}`);
+      const result = await pdfGenerator.generatePMReport(pmId);
+
+      if (!result.success) {
+        return res.status(500).json({
+          error: 'Failed to generate PDF report',
+          message: result.error
+        });
+      }
+
+      filepath = result.filepath;
+      filename = result.filename;
+    }
+
+    // Send file for download
+    res.download(filepath, filename, (err) => {
+      if (err) {
+        logger.error('Error sending PDF file:', err);
+        if (!res.headersSent) {
+          res.status(500).json({
+            error: 'Failed to download PDF',
+            message: err.message
+          });
+        }
+      } else {
+        logger.info(`PDF sent successfully: ${filename}`);
+      }
+    });
+
+  } catch (error) {
+    logger.error('Error in getPMReport:', error);
+    res.status(500).json({
+      error: 'Failed to retrieve PM report',
+      message: error.message
+    });
+  }
+};
+
 module.exports = {
   getAllPM,
   getPMStatistics,
@@ -382,5 +450,6 @@ module.exports = {
   createChecklistItem,
   updateChecklistItem,
   deleteChecklistItem,
-  createCategory
+  createCategory,
+  getPMReport
 };
