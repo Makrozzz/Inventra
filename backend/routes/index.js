@@ -7,6 +7,7 @@ const inventoryRoutes = require('./inventory');
 const categoryRoutes = require('./categories');
 const peripheralRoutes = require('./peripherals');
 const modelRoutes = require('./models');
+const optionsRoutes = require('./options');
 
 const router = express.Router();
 
@@ -19,6 +20,7 @@ router.use('/inventory', inventoryRoutes);
 router.use('/categories', categoryRoutes);
 router.use('/peripherals', peripheralRoutes);
 router.use('/models', modelRoutes);
+router.use('/options', optionsRoutes);
 
 // Additional routes can be added here
 // router.use('/reports', reportRoutes);

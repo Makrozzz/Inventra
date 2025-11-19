@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Save, ArrowLeft, AlertCircle, CheckCircle, X } from 'lucide-react';
+import { Save, ArrowLeft, AlertCircle, CheckCircle, X, Plus } from 'lucide-react';
 
 const EditAsset = () => {
   const navigate = useNavigate();
@@ -11,6 +11,17 @@ const EditAsset = () => {
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState('asset');
   
+  // Dropdown options state
+  const [windowsOptions, setWindowsOptions] = useState([]);
+  const [officeOptions, setOfficeOptions] = useState([]);
+  const [softwareOptions, setSoftwareOptions] = useState([]);
+  
+  // Modal states for adding new options
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [modalType, setModalType] = useState(''); // 'windows', 'office', or 'software'
+  const [newOptionValue, setNewOptionValue] = useState('');
+  const [addingOption, setAddingOption] = useState(false);
+  
   const [originalData, setOriginalData] = useState(null);
   const [formData, setFormData] = useState({
     // Asset Info
@@ -20,6 +31,7 @@ const EditAsset = () => {
     Status: 'Active',
     Windows: '',
     Microsoft_Office: '',
+    Software: '',
     Monthly_Prices: '',
     
     // Customer Info
@@ -40,6 +52,7 @@ const EditAsset = () => {
   // Fetch asset data on component mount
   useEffect(() => {
     fetchAssetData();
+    fetchDropdownOptions();
   }, [id]);
 
   const fetchAssetData = async () => {
@@ -69,6 +82,7 @@ const EditAsset = () => {
         Status: data.Status || 'Active',
         Windows: data.Windows || '',
         Microsoft_Office: data.Microsoft_Office || '',
+        Software: data.Software || '',
         Monthly_Prices: data.Monthly_Prices || '',
         Customer_Name: data.Customer_Name || '',
         Customer_Ref_Number: data.Customer_Ref_Number || '',
@@ -96,6 +110,91 @@ const EditAsset = () => {
       ...prev,
       [name]: value
     }));
+  };
+
+  const fetchDropdownOptions = async () => {
+    try {
+      // Fetch Windows versions
+      const windowsRes = await fetch('http://localhost:5000/api/v1/options/windows');
+      if (windowsRes.ok) {
+        const windowsData = await windowsRes.json();
+        setWindowsOptions(windowsData.data || []);
+      }
+
+      // Fetch Office versions
+      const officeRes = await fetch('http://localhost:5000/api/v1/options/office');
+      if (officeRes.ok) {
+        const officeData = await officeRes.json();
+        setOfficeOptions(officeData.data || []);
+      }
+
+      // Fetch Software options
+      const softwareRes = await fetch('http://localhost:5000/api/v1/options/software');
+      if (softwareRes.ok) {
+        const softwareData = await softwareRes.json();
+        setSoftwareOptions(softwareData.data || []);
+      }
+    } catch (err) {
+      console.error('Error fetching dropdown options:', err);
+      // Set default options as fallback
+      setWindowsOptions(['Windows 10', 'Windows 11', 'Windows Server', 'None']);
+      setOfficeOptions(['Office 2019', 'Office 2021', 'Microsoft 365', 'None']);
+      setSoftwareOptions([]);
+    }
+  };
+
+  const handleOpenAddModal = (type) => {
+    setModalType(type);
+    setNewOptionValue('');
+    setShowAddModal(true);
+  };
+
+  const handleCloseAddModal = () => {
+    setShowAddModal(false);
+    setModalType('');
+    setNewOptionValue('');
+    setAddingOption(false);
+  };
+
+  const handleAddNewOption = async () => {
+    if (!newOptionValue.trim()) {
+      alert('Please enter a value');
+      return;
+    }
+
+    setAddingOption(true);
+    try {
+      const response = await fetch(`http://localhost:5000/api/v1/options/${modalType}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ value: newOptionValue.trim() })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to add new option');
+      }
+
+      const result = await response.json();
+      
+      // Update the appropriate state based on type
+      if (modalType === 'windows') {
+        setWindowsOptions(prev => [...prev, newOptionValue.trim()]);
+        setFormData(prev => ({ ...prev, Windows: newOptionValue.trim() }));
+      } else if (modalType === 'office') {
+        setOfficeOptions(prev => [...prev, newOptionValue.trim()]);
+        setFormData(prev => ({ ...prev, Microsoft_Office: newOptionValue.trim() }));
+      } else if (modalType === 'software') {
+        setSoftwareOptions(prev => [...prev, newOptionValue.trim()]);
+        setFormData(prev => ({ ...prev, Software: newOptionValue.trim() }));
+      }
+
+      handleCloseAddModal();
+    } catch (err) {
+      console.error('Error adding new option:', err);
+      alert('Failed to add new option. Please try again.');
+    } finally {
+      setAddingOption(false);
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -359,36 +458,117 @@ const EditAsset = () => {
                 </div>
 
                 <div className="form-group">
-                  <label>Windows Version</label>
+                  <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span>Windows Version</span>
+                    <button
+                      type="button"
+                      onClick={() => handleOpenAddModal('windows')}
+                      style={{
+                        background: '#4CAF50',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '4px',
+                        padding: '4px 8px',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        fontSize: '12px'
+                      }}
+                      title="Add new Windows version"
+                    >
+                      <Plus size={14} /> 
+                    </button>
+                  </label>
                   <select
                     name="Windows"
                     value={formData.Windows}
                     onChange={handleInputChange}
                   >
                     <option value="">
-                      {originalData?.Windows ? ` ${originalData.Windows}` : 'Select Windows Version'}
+                      {originalData?.Windows ? `Current: ${originalData.Windows}` : 'Select Windows Version'}
                     </option>
-                    <option value="Windows 10">Windows 10</option>
-                    <option value="Windows 11">Windows 11</option>
-                    <option value="Windows Server">Windows Server</option>
-                    <option value="None">None</option>
+                    {windowsOptions.map((option, index) => (
+                      <option key={index} value={option}>
+                        {option}
+                      </option>
+                    ))}
                   </select>
                 </div>
 
                 <div className="form-group">
-                  <label>Microsoft Office</label>
+                  <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span>Microsoft Office</span>
+                    <button
+                      type="button"
+                      onClick={() => handleOpenAddModal('office')}
+                      style={{
+                        background: '#4CAF50',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '4px',
+                        padding: '4px 8px',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        fontSize: '12px'
+                      }}
+                      title="Add new Office version"
+                    >
+                      <Plus size={14} /> 
+                    </button>
+                  </label>
                   <select
                     name="Microsoft_Office"
                     value={formData.Microsoft_Office}
                     onChange={handleInputChange}
                   >
                     <option value="">
-                      {originalData?.Microsoft_Office ? ` ${originalData.Microsoft_Office}` : 'Select Office Version'}
+                      {originalData?.Microsoft_Office ? `Current: ${originalData.Microsoft_Office}` : 'Select Office Version'}
                     </option>
-                    <option value="Office 2019">Office 2019</option>
-                    <option value="Office 2021">Office 2021</option>
-                    <option value="Microsoft 365">Microsoft 365</option>
-                    <option value="None">None</option>
+                    {officeOptions.map((option, index) => (
+                      <option key={index} value={option}>
+                        {option}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="form-group">
+                  <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span>Software</span>
+                    <button
+                      type="button"
+                      onClick={() => handleOpenAddModal('software')}
+                      style={{
+                        background: '#4CAF50',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '4px',
+                        padding: '4px 8px',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        fontSize: '12px'
+                      }}
+                      title="Add new Software"
+                    >
+                      <Plus size={14} /> 
+                    </button>
+                  </label>
+                  <select
+                    name="Software"
+                    value={formData.Software}
+                    onChange={handleInputChange}
+                  >
+                    <option value="">Select Software</option>
+                    {softwareOptions.map((option, index) => (
+                      <option key={index} value={option}>
+                        {option}
+                      </option>
+                    ))}
                   </select>
                 </div>
 
@@ -551,6 +731,96 @@ const EditAsset = () => {
           </button>
         </div>
       </form>
+
+      {/* Add New Option Modal */}
+      {showAddModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            background: 'white',
+            borderRadius: '8px',
+            padding: '24px',
+            minWidth: '400px',
+            maxWidth: '500px',
+            boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <h3 style={{ margin: 0, color: '#2c3e50' }}>
+                Add New {modalType === 'windows' ? 'Windows Version' : modalType === 'office' ? 'Office Version' : 'Software'}
+              </h3>
+              <button
+                onClick={handleCloseAddModal}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  padding: '4px',
+                  display: 'flex',
+                  alignItems: 'center'
+                }}
+                disabled={addingOption}
+              >
+                <X size={20} color="#666" />
+              </button>
+            </div>
+
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{ display: 'block', marginBottom: '8px', color: '#34495e', fontWeight: '500' }}>
+                {modalType === 'windows' ? 'Windows Version Name' : modalType === 'office' ? 'Office Version Name' : 'Software Name'}
+              </label>
+              <input
+                type="text"
+                value={newOptionValue}
+                onChange={(e) => setNewOptionValue(e.target.value)}
+                placeholder={modalType === 'office' ? 'e.g., Office LTSC 2024' : modalType === 'windows' ? 'e.g., Windows 12' : 'e.g., Adobe Acrobat'}
+                style={{
+                  width: '100%',
+                  padding: '10px',
+                  border: '1px solid #ddd',
+                  borderRadius: '4px',
+                  fontSize: '14px'
+                }}
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter') {
+                    handleAddNewOption();
+                  }
+                }}
+                autoFocus
+                disabled={addingOption}
+              />
+            </div>
+
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+              <button
+                onClick={handleCloseAddModal}
+                className="btn btn-secondary"
+                disabled={addingOption}
+                style={{ padding: '8px 16px' }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleAddNewOption}
+                className="btn btn-primary"
+                disabled={addingOption || !newOptionValue.trim()}
+                style={{ padding: '8px 16px' }}
+              >
+                {addingOption ? 'Adding...' : 'Add Option'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

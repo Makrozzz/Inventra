@@ -34,6 +34,15 @@ const AddAsset = () => {
   const [showProjectDropdown, setShowProjectDropdown] = useState(false);
   const [branches, setBranches] = useState([]);
   const [recipients, setRecipients] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [models, setModels] = useState([]);
+  const [peripheralTypes, setPeripheralTypes] = useState([]);
+
+  // Modal states for adding new options dynamically
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [modalType, setModalType] = useState(''); // 'category', 'model', 'peripheral'
+  const [newOptionValue, setNewOptionValue] = useState('');
+  const [addingOption, setAddingOption] = useState(false);
   
   // Form data
   const [selectedBranch, setSelectedBranch] = useState('');
@@ -47,7 +56,8 @@ const AddAsset = () => {
     model: '',
     status: 'Active',
     recipient_name: '',
-    department_name: ''
+    department_name: '',
+    position: ''
   });
 
   // Peripheral data
@@ -69,6 +79,9 @@ const AddAsset = () => {
   useEffect(() => {
     fetchAvailableProjects();
     fetchRecipients();
+    fetchCategories();
+    fetchModels();
+    fetchPeripheralTypes();
   }, []);
 
   // Filter projects based on search term
@@ -300,6 +313,128 @@ const AddAsset = () => {
     }
   };
 
+  const fetchCategories = async () => {
+    try {
+      const response = await apiService.getCategories();
+      setCategories(response.data || []);
+    } catch (err) {
+      console.error('Error fetching categories:', err);
+      setCategories([]);
+    }
+  };
+
+  const fetchModels = async () => {
+    try {
+      const response = await apiService.getModels();
+      setModels(response.data || []);
+    } catch (err) {
+      console.error('Error fetching models:', err);
+      setModels([]);
+    }
+  };
+
+  const fetchPeripheralTypes = async () => {
+    try {
+      const response = await apiService.getPeripheralTypes();
+      setPeripheralTypes(response.data || []);
+    } catch (err) {
+      console.error('Error fetching peripheral types:', err);
+      setPeripheralTypes([]);
+    }
+  };
+
+  // Modal handlers for adding new options
+  const handleOpenAddModal = (type) => {
+    setModalType(type);
+    setNewOptionValue('');
+    setShowAddModal(true);
+  };
+
+  const handleCloseAddModal = () => {
+    setShowAddModal(false);
+    setModalType('');
+    setNewOptionValue('');
+    setAddingOption(false);
+  };
+
+  const handleAddNewOption = async () => {
+    if (!newOptionValue.trim()) {
+      alert('Please enter a value');
+      return;
+    }
+
+    setAddingOption(true);
+    try {
+      let endpoint = '';
+      let updateStateFunction = null;
+      let autoSelectField = '';
+
+      // Determine endpoint and state update function based on modalType
+      if (modalType === 'category') {
+        endpoint = '/categories';
+        updateStateFunction = setCategories;
+        autoSelectField = 'category';
+      } else if (modalType === 'model') {
+        endpoint = '/models';
+        updateStateFunction = setModels;
+        autoSelectField = 'model';
+      } else if (modalType === 'peripheral') {
+        endpoint = '/peripherals/types';
+        updateStateFunction = setPeripheralTypes;
+        autoSelectField = 'peripheral_name';
+      }
+
+      const response = await fetch(`http://localhost:5000/api/v1${endpoint}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ name: newOptionValue.trim() }),
+      });
+
+      const result = await response.json();
+
+      if (response.ok && result.success) {
+        // Update the appropriate state array with the new option
+        const newOption = result.data;
+        updateStateFunction(prev => [...prev, newOption]);
+
+        // Auto-select the new value in the form
+        // The value should match what's displayed in the dropdown options
+        let selectedValue = '';
+        
+        if (modalType === 'category') {
+          // Category dropdown uses: cat.Category || cat
+          selectedValue = newOption.Category || newOption.name;
+        } else if (modalType === 'model') {
+          // Model dropdown uses: mod.Model_Name || mod.Model || mod
+          selectedValue = newOption.Model_Name || newOption.Model || newOption.name;
+        } else if (modalType === 'peripheral') {
+          // Peripheral dropdown uses: type.Peripheral_Type_Name || type
+          selectedValue = newOption.Peripheral_Type_Name || newOption.name;
+        }
+        
+        if (autoSelectField === 'category' || autoSelectField === 'model') {
+          setAsset(prevAsset => ({
+            ...prevAsset,
+            [autoSelectField]: selectedValue
+          }));
+        }
+        // Note: For peripheral, we can't auto-select since it's in a dynamic array
+        // The user will need to manually select it from the dropdown
+
+        handleCloseAddModal();
+      } else {
+        alert(result.error || 'Failed to add new option');
+        setAddingOption(false);
+      }
+    } catch (error) {
+      console.error('Error adding new option:', error);
+      alert('Failed to add new option. Please try again.');
+      setAddingOption(false);
+    }
+  };
+
   const handleSubmitClick = (e) => {
     e.preventDefault();
     
@@ -353,6 +488,7 @@ const AddAsset = () => {
         status: asset.status,
         recipient_name: asset.recipient_name,
         department_name: asset.department_name,
+        position: asset.position,
         
         // Include only valid peripherals (those with both name and serial code)
         peripherals: peripherals.filter(p => p.peripheral_name.trim() && p.serial_code_name.trim())
@@ -826,7 +962,7 @@ const AddAsset = () => {
                     name="serial_number"
                     value={asset.serial_number}
                     onChange={handleAssetChange}
-                    placeholder="e.g., 78HT574"
+                    placeholder="78HT574"
                     required
                   />
                 </div>
@@ -838,7 +974,7 @@ const AddAsset = () => {
                     name="tag_id"
                     value={asset.tag_id}
                     onChange={handleAssetChange}
-                    placeholder="e.g., NADMA-A25001"
+                    placeholder="NADMA-A25001"
                     required
                   />
                 </div>
@@ -850,7 +986,7 @@ const AddAsset = () => {
                     name="item_name"
                     value={asset.item_name}
                     onChange={handleAssetChange}
-                    placeholder="e.g., Komputer Meja (All-in-One)"
+                    placeholder="Komputer Meja (All-in-One)"
                     required
                   />
                 </div>
@@ -866,29 +1002,79 @@ const AddAsset = () => {
                 </div>
 
                 <div className="form-group">
-                  <label>
-                    Category <span style={{ color: '#f44336' }}>*</span>
+                  <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span>
+                      Category <span style={{ color: '#f44336' }}>*</span>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => handleOpenAddModal('category')}
+                      style={{
+                        background: '#4caf50',
+                        color: 'white',
+                        border: 'none',
+                        padding: '4px 8px',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        fontSize: '12px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px'
+                      }}
+                    >
+                      <Plus size={14} /> 
+                    </button>
                   </label>
-                  <input
-                    type="text"
+                  <select
                     value={asset.category}
                     onChange={(e) => setAsset({ ...asset, category: e.target.value })}
-                    placeholder="Enter category (e.g., Desktop, Laptop, Server)"
                     required
-                  />
+                  >
+                    <option value="">Select category</option>
+                    {categories.map((cat, index) => (
+                      <option key={index} value={cat.Category || cat}>
+                        {cat.Category || cat}
+                      </option>
+                    ))}
+                  </select>
                 </div>
 
                 <div className="form-group">
-                  <label>
-                    Model <span style={{ color: '#f44336' }}>*</span>
+                  <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span>
+                      Model <span style={{ color: '#f44336' }}>*</span>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => handleOpenAddModal('model')}
+                      style={{
+                        background: '#4caf50',
+                        color: 'white',
+                        border: 'none',
+                        padding: '4px 8px',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        fontSize: '12px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px'
+                      }}
+                    >
+                      <Plus size={14} /> 
+                    </button>
                   </label>
-                  <input
-                    type="text"
+                  <select
                     value={asset.model}
                     onChange={(e) => setAsset({ ...asset, model: e.target.value })}
-                    placeholder="Enter model (e.g., Dell OptiPlex 7420, HP M480f)"
                     required
-                  />
+                  >
+                    <option value="">Select model</option>
+                    {models.map((mod, index) => (
+                      <option key={index} value={mod.Model_Name || mod.Model || mod}>
+                        {mod.Model_Name || mod.Model || mod}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
             </div>
@@ -922,7 +1108,7 @@ const AddAsset = () => {
                     name="recipient_name"
                     value={asset.recipient_name}
                     onChange={handleAssetChange}
-                    placeholder="e.g., Insp Abdullah bin Ahmad Sobri"
+                    placeholder="Insp Abdullah bin Ahmad Sobri"
                     required
                   />
                 </div>
@@ -934,8 +1120,19 @@ const AddAsset = () => {
                     name="department_name"
                     value={asset.department_name}
                     onChange={handleAssetChange}
-                    placeholder="e.g., Ketua SHU C (ETK) Ajutan"
+                    placeholder="Ketua SHU C (ETK) Ajutan"
                     required
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label>Position</label>
+                  <input
+                    type="text"
+                    name="position"
+                    value={asset.position}
+                    onChange={handleAssetChange}
+                    placeholder="Manager, Officer"
                   />
                 </div>
               </div>
@@ -1023,17 +1220,42 @@ const AddAsset = () => {
                   
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
                     <div className="form-group" style={{ marginBottom: '10px' }}>
-                      <label>
-                        Peripheral Name
-                        {peripheral.peripheral_name.trim() !== '' && <span style={{ color: '#4caf50' }}> ✓</span>}
+                      <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span>
+                          Peripheral Name
+                          {peripheral.peripheral_name.trim() !== '' && <span style={{ color: '#4caf50' }}> ✓</span>}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleOpenAddModal('peripheral')}
+                          style={{
+                            background: '#4caf50',
+                            color: 'white',
+                            border: 'none',
+                            padding: '4px 8px',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            fontSize: '12px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px'
+                          }}
+                        >
+                          <Plus size={14} />
+                        </button>
                       </label>
-                      <input
-                        type="text"
+                      <select
                         value={peripheral.peripheral_name}
                         onChange={(e) => handlePeripheralChange(index, 'peripheral_name', e.target.value)}
-                        placeholder="Enter peripheral type (e.g., Keyboard, Mouse, Monitor)"
                         className={peripheral.peripheral_name.trim() && !peripheral.serial_code_name.trim() ? 'peripheral-warning' : ''}
-                      />
+                      >
+                        <option value="">Select peripheral type</option>
+                        {peripheralTypes.map((type, idx) => (
+                          <option key={idx} value={type.Peripheral_Type_Name || type}>
+                            {type.Peripheral_Type_Name || type}
+                          </option>
+                        ))}
+                      </select>
                     </div>
 
                     <div className="form-group" style={{ marginBottom: '10px' }}>
@@ -1048,7 +1270,7 @@ const AddAsset = () => {
                         type="text"
                         value={peripheral.serial_code_name}
                         onChange={(e) => handlePeripheralChange(index, 'serial_code_name', e.target.value)}
-                        placeholder="e.g., CN-GE90-9865"
+                        placeholder="CN-GE90-9865"
                         style={{
                           borderColor: peripheral.peripheral_name.trim() && !peripheral.serial_code_name.trim() ? '#ff9800' : ''
                         }}
@@ -1156,6 +1378,129 @@ const AddAsset = () => {
         cancelText="Continue Editing"
         type="danger"
       />
+
+      {/* Add New Option Modal */}
+      {showAddModal && (
+        <div 
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            zIndex: 1000
+          }}
+          onClick={handleCloseAddModal}
+        >
+          <div 
+            style={{
+              backgroundColor: 'white',
+              padding: '25px',
+              borderRadius: '8px',
+              minWidth: '400px',
+              maxWidth: '500px',
+              boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3 style={{ margin: 0, color: '#333' }}>
+                Add New {modalType === 'category' ? 'Category' : modalType === 'model' ? 'Model' : 'Peripheral Type'}
+              </h3>
+              <button
+                onClick={handleCloseAddModal}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  fontSize: '24px',
+                  cursor: 'pointer',
+                  color: '#666',
+                  padding: '0',
+                  lineHeight: '1'
+                }}
+              >
+                ×
+              </button>
+            </div>
+
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{ display: 'block', marginBottom: '8px', color: '#555', fontWeight: '500' }}>
+                {modalType === 'category' ? 'Category' : modalType === 'model' ? 'Model' : 'Peripheral Type'} Name
+              </label>
+              <input
+                type="text"
+                value={newOptionValue}
+                onChange={(e) => setNewOptionValue(e.target.value)}
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter' && !addingOption) {
+                    handleAddNewOption();
+                  }
+                }}
+                placeholder={
+                  modalType === 'category' 
+                    ? 'e.g., Desktop, Laptop, Server' 
+                    : modalType === 'model' 
+                    ? 'e.g., Dell OptiPlex 7420, HP EliteBook' 
+                    : 'e.g., Monitor, Keyboard, Mouse'
+                }
+                style={{
+                  width: '100%',
+                  padding: '10px',
+                  border: '1px solid #ddd',
+                  borderRadius: '4px',
+                  fontSize: '14px',
+                  boxSizing: 'border-box'
+                }}
+                autoFocus
+                disabled={addingOption}
+              />
+            </div>
+
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+              <button
+                type="button"
+                onClick={handleCloseAddModal}
+                disabled={addingOption}
+                style={{
+                  padding: '10px 20px',
+                  border: '1px solid #ddd',
+                  borderRadius: '4px',
+                  backgroundColor: 'white',
+                  color: '#666',
+                  cursor: addingOption ? 'not-allowed' : 'pointer',
+                  fontSize: '14px',
+                  opacity: addingOption ? 0.5 : 1
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleAddNewOption}
+                disabled={addingOption || !newOptionValue.trim()}
+                style={{
+                  padding: '10px 20px',
+                  border: 'none',
+                  borderRadius: '4px',
+                  backgroundColor: addingOption || !newOptionValue.trim() ? '#ccc' : '#4caf50',
+                  color: 'white',
+                  cursor: addingOption || !newOptionValue.trim() ? 'not-allowed' : 'pointer',
+                  fontSize: '14px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '5px'
+                }}
+              >
+                {addingOption ? 'Adding...' : 'Add'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

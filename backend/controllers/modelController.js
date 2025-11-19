@@ -9,12 +9,12 @@ const getAllModels = async (req, res, next) => {
     const [models] = await pool.execute(`
       SELECT 
         Model_ID as id,
-        Model as name,
+        Model_Name as name,
         Model_ID,
-        Model,
+        Model_Name,
         created_at
       FROM MODEL 
-      ORDER BY Model ASC
+      ORDER BY Model_Name ASC
     `);
 
     res.status(200).json({
@@ -27,10 +27,10 @@ const getAllModels = async (req, res, next) => {
     
     // Return fallback models if database query fails
     const fallbackModels = [
-      { id: 1, name: 'Dell OptiPlex All-in-One Plus 7420', Model_ID: 1, Model: 'Dell OptiPlex All-in-One Plus 7420' },
-      { id: 2, name: 'HP Color LaserJet Enterprise MFP M480f', Model_ID: 2, Model: 'HP Color LaserJet Enterprise MFP M480f' },
-      { id: 3, name: 'Lenovo ThinkPad X1 Carbon', Model_ID: 3, Model: 'Lenovo ThinkPad X1 Carbon' },
-      { id: 4, name: 'Dell PowerEdge R740', Model_ID: 4, Model: 'Dell PowerEdge R740' }
+      { id: 1, name: 'Dell OptiPlex All-in-One Plus 7420', Model_ID: 1, Model_Name: 'Dell OptiPlex All-in-One Plus 7420' },
+      { id: 2, name: 'HP Color LaserJet Enterprise MFP M480f', Model_ID: 2, Model_Name: 'HP Color LaserJet Enterprise MFP M480f' },
+      { id: 3, name: 'Lenovo ThinkPad X1 Carbon', Model_ID: 3, Model_Name: 'Lenovo ThinkPad X1 Carbon' },
+      { id: 4, name: 'Dell PowerEdge R740', Model_ID: 4, Model_Name: 'Dell PowerEdge R740' }
     ];
     
     res.status(200).json({
@@ -61,19 +61,19 @@ const getOrCreateModel = async (req, res, next) => {
 
     // First try to find existing model (case-insensitive)
     const [existing] = await pool.execute(
-      'SELECT Model_ID, Model FROM MODEL WHERE LOWER(Model) = LOWER(?)',
+      'SELECT Model_ID, Model_Name FROM MODEL WHERE LOWER(Model_Name) = LOWER(?)',
       [modelName]
     );
     
     if (existing.length > 0) {
-      console.log(`Found existing model: ID=${existing[0].Model_ID}, Name="${existing[0].Model}"`);
+      console.log(`Found existing model: ID=${existing[0].Model_ID}, Name="${existing[0].Model_Name}"`);
       return res.status(200).json({
         success: true,
         data: {
           id: existing[0].Model_ID,
-          name: existing[0].Model,
+          name: existing[0].Model_Name,
           Model_ID: existing[0].Model_ID,
-          Model: existing[0].Model,
+          Model_Name: existing[0].Model_Name,
           isNew: false
         }
       });
@@ -81,7 +81,7 @@ const getOrCreateModel = async (req, res, next) => {
 
     // Create new model
     const [result] = await pool.execute(
-      'INSERT INTO MODEL (Model) VALUES (?)',
+      'INSERT INTO MODEL (Model_Name) VALUES (?)',
       [modelName]
     );
 
@@ -96,7 +96,7 @@ const getOrCreateModel = async (req, res, next) => {
         id: newModelId,
         name: modelName,
         Model_ID: newModelId,
-        Model: modelName,
+        Model_Name: modelName,
         isNew: true
       },
       message: `New model "${modelName}" created successfully`
@@ -107,7 +107,7 @@ const getOrCreateModel = async (req, res, next) => {
       try {
         // Try to get the model that was created by another request
         const [existing] = await pool.execute(
-          'SELECT Model_ID, Model FROM MODEL WHERE LOWER(Model) = LOWER(?)',
+          'SELECT Model_ID, Model_Name FROM MODEL WHERE LOWER(Model_Name) = LOWER(?)',
           [req.body.name.trim()]
         );
         
@@ -116,9 +116,9 @@ const getOrCreateModel = async (req, res, next) => {
             success: true,
             data: {
               id: existing[0].Model_ID,
-              name: existing[0].Model,
+              name: existing[0].Model_Name,
               Model_ID: existing[0].Model_ID,
-              Model: existing[0].Model,
+              Model_Name: existing[0].Model_Name,
               isNew: false
             }
           });
@@ -156,14 +156,14 @@ const searchModels = async (req, res, next) => {
     const [models] = await pool.execute(`
       SELECT 
         Model_ID as id,
-        Model as name,
+        Model_Name as name,
         Model_ID,
-        Model
+        Model_Name
       FROM MODEL 
-      WHERE Model LIKE ?
+      WHERE Model_Name LIKE ?
       ORDER BY 
-        CASE WHEN Model LIKE ? THEN 1 ELSE 2 END,  -- Exact matches first
-        Model ASC
+        CASE WHEN Model_Name LIKE ? THEN 1 ELSE 2 END,  -- Exact matches first
+        Model_Name ASC
       LIMIT 20
     `, [searchTerm, q.trim()]);
 
@@ -201,7 +201,7 @@ const createModel = async (req, res, next) => {
 
     // Check if model already exists
     const [existing] = await pool.execute(
-      'SELECT Model_ID FROM MODEL WHERE LOWER(Model) = LOWER(?)',
+      'SELECT Model_ID FROM MODEL WHERE LOWER(Model_Name) = LOWER(?)',
       [modelName]
     );
     
@@ -215,7 +215,7 @@ const createModel = async (req, res, next) => {
 
     // Create new model
     const [result] = await pool.execute(
-      'INSERT INTO MODEL (Model) VALUES (?)',
+      'INSERT INTO MODEL (Model_Name) VALUES (?)',
       [modelName]
     );
 
@@ -228,7 +228,7 @@ const createModel = async (req, res, next) => {
         id: newModelId,
         name: modelName,
         Model_ID: newModelId,
-        Model: modelName
+        Model_Name: modelName
       },
       message: `Model "${modelName}" created successfully`
     });
@@ -263,7 +263,7 @@ const updateModel = async (req, res, next) => {
 
     // Check if model exists
     const [existing] = await pool.execute(
-      'SELECT Model_ID, Model FROM MODEL WHERE Model_ID = ?',
+      'SELECT Model_ID, Model_Name FROM MODEL WHERE Model_ID = ?',
       [id]
     );
     
@@ -276,11 +276,11 @@ const updateModel = async (req, res, next) => {
 
     // Update model
     await pool.execute(
-      'UPDATE MODEL SET Model = ? WHERE Model_ID = ?',
+      'UPDATE MODEL SET Model_Name = ? WHERE Model_ID = ?',
       [modelName, id]
     );
 
-    logger.info(`Model updated: ID=${id}, Old="${existing[0].Model}", New="${modelName}" by user ${req.user?.userId || 'system'}`);
+    logger.info(`Model updated: ID=${id}, Old="${existing[0].Model_Name}", New="${modelName}" by user ${req.user?.userId || 'system'}`);
 
     res.status(200).json({
       success: true,
@@ -288,7 +288,7 @@ const updateModel = async (req, res, next) => {
         id: parseInt(id),
         name: modelName,
         Model_ID: parseInt(id),
-        Model: modelName
+        Model_Name: modelName
       },
       message: `Model updated successfully`
     });
@@ -327,7 +327,7 @@ const deleteModel = async (req, res, next) => {
 
     // Check if model exists
     const [existing] = await pool.execute(
-      'SELECT Model FROM MODEL WHERE Model_ID = ?',
+      'SELECT Model_Name FROM MODEL WHERE Model_ID = ?',
       [id]
     );
     
@@ -344,11 +344,11 @@ const deleteModel = async (req, res, next) => {
       [id]
     );
 
-    logger.info(`Model deleted: ID=${id}, Name="${existing[0].Model}" by user ${req.user?.userId || 'system'}`);
+    logger.info(`Model deleted: ID=${id}, Name="${existing[0].Model_Name}" by user ${req.user?.userId || 'system'}`);
 
     res.status(200).json({
       success: true,
-      message: `Model "${existing[0].Model}" deleted successfully`
+      message: `Model "${existing[0].Model_Name}" deleted successfully`
     });
   } catch (error) {
     logger.error('Error in deleteModel:', error);

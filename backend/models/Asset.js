@@ -10,6 +10,9 @@ class Asset {
     this.Category_ID = data.Category_ID;
     this.Model_ID = data.Model_ID;
     this.Status = data.Status;
+    this.Windows = data.Windows;
+    this.Microsoft_Office = data.Microsoft_Office;
+    this.Monthly_Prices = data.Monthly_Prices;
     
     // Related data from JOINs
     this.Category = data.Category;
@@ -198,6 +201,9 @@ class Asset {
           a.Category_ID,
           a.Model_ID,
           a.Status,
+          a.Windows,
+          a.Microsoft_Office,
+          a.Monthly_Prices,
           c.Category,
           m.Model_Name as Model,
           r.Recipient_Name,
@@ -290,7 +296,10 @@ class Asset {
          Recipients_ID = ?, 
          Category_ID = ?, 
          Model_ID = ?, 
-         Status = ?
+         Status = ?,
+         Windows = ?,
+         Microsoft_Office = ?,
+         Monthly_Prices = ?
          WHERE Asset_ID = ?`,
         [
           this.Asset_Serial_Number,
@@ -300,6 +309,9 @@ class Asset {
           this.Category_ID,
           this.Model_ID,
           this.Status,
+          this.Windows,
+          this.Microsoft_Office,
+          this.Monthly_Prices,
           this.Asset_ID
         ]
       );

@@ -184,7 +184,8 @@ const createAssetWithDetails = async (req, res, next) => {
     if (completeData.recipient_name && completeData.department_name) {
       recipientId = await Asset.createRecipient(
         completeData.recipient_name,
-        completeData.department_name
+        completeData.department_name,
+        completeData.position || null
       );
       console.log('Recipient created with ID:', recipientId);
     }
@@ -331,6 +332,12 @@ const updateAssetById = async (req, res, next) => {
     if (updateData.Asset_Tag_ID) finalUpdateData.Asset_Tag_ID = updateData.Asset_Tag_ID;
     if (updateData.Item_Name) finalUpdateData.Item_Name = updateData.Item_Name;
     if (updateData.Status) finalUpdateData.Status = updateData.Status;
+    
+    // Add Windows, Office, Software, and Monthly_Prices fields
+    if (updateData.Windows !== undefined) finalUpdateData.Windows = updateData.Windows;
+    if (updateData.Microsoft_Office !== undefined) finalUpdateData.Microsoft_Office = updateData.Microsoft_Office;
+    if (updateData.Software !== undefined) finalUpdateData.Software = updateData.Software;
+    if (updateData.Monthly_Prices !== undefined) finalUpdateData.Monthly_Prices = updateData.Monthly_Prices;
     
     // For ID fields, use them directly if provided
     if (updateData.Recipients_ID) finalUpdateData.Recipients_ID = updateData.Recipients_ID;
