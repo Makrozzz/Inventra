@@ -21,9 +21,13 @@ const Projects = () => {
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      const data = await response.json();
-      console.log('✅ Projects API call successful, projects found:', data.length);
-      setProjects(data);
+      const responseData = await response.json();
+      console.log('✅ Projects API response:', responseData);
+      
+      // Extract projects array from response (handle both old and new format)
+      const projects = responseData.data || responseData || [];
+      console.log('✅ Projects found:', projects.length);
+      setProjects(projects);
     } catch (error) {
       console.error('❌ Error fetching projects:', error);
       console.error('❌ Error details:', error.message);
@@ -361,7 +365,10 @@ const Projects = () => {
                     boxShadow: '0 2px 15px rgba(0, 0, 0, 0.08)',
                     transition: 'all 0.3s ease',
                     cursor: 'pointer',
-                    border: '1px solid #f3f4f6'
+                    border: '1px solid #f3f4f6',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    height: '100%'
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.transform = 'translateY(-5px)';
@@ -410,8 +417,14 @@ const Projects = () => {
                       fontSize: '13px',
                       opacity: 0.85,
                       fontWeight: '400',
-                      lineHeight: '1.4',
-                      paddingRight: '100px'
+                      lineHeight: '1.5',
+                      paddingRight: '100px',
+                      display: '-webkit-box',
+                      WebkitLineClamp: 2,
+                      WebkitBoxOrient: 'vertical',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      maxHeight: '3em'
                     }}>
                       {project.Project_Title || 'No Project Title'}
                     </p>
@@ -477,7 +490,26 @@ const Projects = () => {
                         backgroundColor: '#f9fafb',
                         borderRadius: '10px'
                       }}>
-                        <Shield size={18} style={{ color: '#f59e0b', marginTop: '2px', flexShrink: 0 }} />
+                        <Shield size={18} style={{ color: '#ef4444', marginTop: '2px', flexShrink: 0 }} />
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '4px', fontWeight: '600' }}>
+                            Antivirus
+                          </div>
+                          <div style={{ fontSize: '14px', color: '#1f2937', fontWeight: '500' }}>
+                            {project.Antivirus || 'Not Specified'}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'flex-start',
+                        gap: '12px',
+                        padding: '12px',
+                        backgroundColor: '#f9fafb',
+                        borderRadius: '10px'
+                      }}>
+                        <Award size={18} style={{ color: '#f59e0b', marginTop: '2px', flexShrink: 0 }} />
                         <div style={{ flex: 1 }}>
                           <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '4px', fontWeight: '600' }}>
                             Warranty
@@ -494,14 +526,26 @@ const Projects = () => {
                         gap: '12px',
                         padding: '12px',
                         backgroundColor: '#f9fafb',
-                        borderRadius: '10px'
+                        borderRadius: '10px',
+                        minHeight: '70px'
                       }}>
                         <Wrench size={18} style={{ color: '#8b5cf6', marginTop: '2px', flexShrink: 0 }} />
-                        <div style={{ flex: 1 }}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '4px', fontWeight: '600' }}>
                             Preventive Maintenance
                           </div>
-                          <div style={{ fontSize: '14px', color: '#1f2937', fontWeight: '500' }}>
+                          <div style={{ 
+                            fontSize: '14px', 
+                            color: '#1f2937', 
+                            fontWeight: '500',
+                            display: '-webkit-box',
+                            WebkitLineClamp: 3,
+                            WebkitBoxOrient: 'vertical',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            lineHeight: '1.4',
+                            maxHeight: '4.2em'
+                          }}>
                             {project.Preventive_Maintenance || 'Not Scheduled'}
                           </div>
                         </div>

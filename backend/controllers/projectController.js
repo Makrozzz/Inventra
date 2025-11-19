@@ -9,15 +9,63 @@ exports.getAllProjects = async (req, res) => {
     
     // Return empty array if no projects found (instead of mock data)
     if (!projects || projects.length === 0) {
-      console.log('No projects found in database');
-      return res.json([]);
+      const mockProjects = [
+        {
+          Project_ID: 1,
+          Project_Ref_Number: "PRJ-2024-001",
+          Project_Title: "Office Digital Transformation",
+          Customer_Name: "Tech Solutions Inc.",
+          Customer_Ref_Number: "CUST-001",
+          Solution_Principal: "John Smith",
+          Warranty: "2 Years Extended",
+          Preventive_Maintenance: "Quarterly Service",
+          Start_Date: "2024-01-15",
+          End_Date: "2024-12-31"
+        },
+        {
+          Project_ID: 2,
+          Project_Ref_Number: "PRJ-2024-002",
+          Project_Title: "IT Infrastructure Upgrade",
+          Customer_Name: "Global Systems Ltd.",
+          Customer_Ref_Number: "CUST-002",
+          Solution_Principal: "Sarah Johnson",
+          Warranty: "1 Year Standard",
+          Preventive_Maintenance: "Monthly Checkup",
+          Start_Date: "2024-03-01",
+          End_Date: "2025-02-28"
+        },
+        {
+          Project_ID: 3,
+          Project_Ref_Number: "PRJ-2024-003",
+          Project_Title: "Security System Implementation",
+          Customer_Name: "SecureNet Corp.",
+          Customer_Ref_Number: "CUST-003",
+          Solution_Principal: "Mike Wilson",
+          Warranty: "3 Years Premium",
+          Preventive_Maintenance: "Bi-weekly Monitoring",
+          Start_Date: "2024-06-01",
+          End_Date: "2024-11-30"
+        }
+      ];
+      
+      console.log('No projects found in database, returning mock data');
+      return res.json({
+        success: true,
+        data: mockProjects,
+        message: 'Mock projects returned (no projects in database)'
+      });
     }
 
-    res.json(projects);
+    res.json({
+      success: true,
+      data: projects,
+      message: 'Projects fetched successfully'
+    });
   } catch (error) {
     console.error('Error fetching projects:', error);
     res.status(500).json({ 
-      error: 'Failed to fetch projects from database',
+      success: false,
+      error: 'Failed to fetch projects',
       message: error.message 
     });
   }
@@ -136,8 +184,8 @@ exports.createProject = async (req, res) => {
     console.log('Project created:', newProject);
 
     // Step 2: Create customer records (one for each branch)
+    // NOTE: Customer table no longer has Project_ID in new database
     const customerIds = await Customer.createMultipleBranches(
-      newProject.Project_ID,
       customer.Customer_Ref_Number,
       customer.Customer_Name,
       customer.branches
@@ -270,6 +318,94 @@ exports.getProjectStatistics = async (req, res) => {
       total: 0,
       active: 0,
       inactive: 0
+    });
+  }
+};
+
+// Update branches for a project
+exports.updateProjectBranches = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { branches } = req.body;
+
+    if (!branches || !Array.isArray(branches)) {
+      return res.status(400).json({ error: 'Branches array is required' });
+    }
+
+    console.log(`Updating branches for project ${id}:`, branches);
+
+    // Get existing inventory records to find current customers
+    const existingInventory = await Inventory.findByProject(id);
+    
+    if (existingInventory.length === 0) {
+      return res.status(404).json({ error: 'No inventory records found for this project' });
+    }
+    
+    // Get customer info from existing inventory (all records should have same customer info)
+    const customerRefNumber = existingInventory[0].Customer_Ref_Number;
+    const customerName = existingInventory[0].Customer_Name;
+    
+    if (!customerRefNumber || !customerName) {
+      return res.status(400).json({ error: 'Customer information not found in inventory records' });
+    }
+    
+    console.log('Using customer info:', { customerRefNumber, customerName });
+    
+    const existingCustomerIds = [...new Set(existingInventory.map(inv => inv.Customer_ID))];
+    
+    // Get existing branches
+    const existingBranches = [...new Set(existingInventory.map(inv => inv.Branch))];
+    console.log('Existing branches:', existingBranches);
+    console.log('New branches:', branches);
+
+    // Find branches to add and remove
+    const branchesToAdd = branches.filter(b => !existingBranches.includes(b));
+    const branchesToKeep = branches.filter(b => existingBranches.includes(b));
+    const branchesToRemove = existingBranches.filter(b => !branches.includes(b));
+
+    console.log('Branches to add:', branchesToAdd);
+    console.log('Branches to keep:', branchesToKeep);
+    console.log('Branches to remove:', branchesToRemove);
+
+    // Delete customers and inventory for removed branches
+    for (const branch of branchesToRemove) {
+      const inventoryToDelete = existingInventory.filter(inv => inv.Branch === branch);
+      for (const inv of inventoryToDelete) {
+        await Inventory.delete(inv.Inventory_ID);
+        if (inv.Customer_ID) {
+          await Customer.delete(inv.Customer_ID);
+        }
+        console.log(`Deleted inventory ${inv.Inventory_ID} and customer ${inv.Customer_ID} for branch: ${branch}`);
+      }
+    }
+
+    // Add new branches
+    if (branchesToAdd.length > 0) {
+      // Create new customer records for new branches
+      const newCustomerIds = await Customer.createMultipleBranches(
+        customerRefNumber,
+        customerName,
+        branchesToAdd
+      );
+      console.log('Created new customer IDs:', newCustomerIds);
+
+      // Create inventory records for new branches
+      const newInventoryIds = await Inventory.createForProject(id, newCustomerIds);
+      console.log('Created new inventory IDs:', newInventoryIds);
+    }
+
+    res.json({
+      success: true,
+      message: 'Branches updated successfully',
+      added: branchesToAdd.length,
+      removed: branchesToRemove.length,
+      total: branches.length
+    });
+  } catch (error) {
+    console.error('Error updating project branches:', error);
+    res.status(500).json({ 
+      error: 'Failed to update branches',
+      message: error.message 
     });
   }
 };

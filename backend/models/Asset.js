@@ -58,7 +58,7 @@ class Asset {
           a.Microsoft_Office,
           a.Monthly_Prices,
           c.Category,
-          m.Model_Name AS Model,
+          m.Model_Name as Model,
           r.Recipient_Name,
           r.Department,
           r.Position,
@@ -199,7 +199,7 @@ class Asset {
           a.Model_ID,
           a.Status,
           c.Category,
-          m.Model_Name AS Model,
+          m.Model_Name as Model,
           r.Recipient_Name,
           r.Department,
           r.Position
@@ -234,7 +234,7 @@ class Asset {
           a.Model_ID,
           a.Status,
           c.Category,
-          m.Model_Name AS Model,
+          m.Model_Name as Model,
           r.Recipient_Name,
           r.Department,
           r.Position
@@ -402,7 +402,7 @@ class Asset {
         console.log('Updating existing model:', { modelName, currentModelId });
         
         await pool.execute(
-          'UPDATE MODEL SET Model = ? WHERE Model_ID = ?',
+          'UPDATE MODEL SET Model_Name = ? WHERE Model_ID = ?',
           [modelName, currentModelId]
         );
         return currentModelId;
@@ -411,7 +411,7 @@ class Asset {
       // If no current model ID, create new model
       console.log('Creating new model:', { modelName });
       const [result] = await pool.execute(
-        'INSERT INTO MODEL (Model) VALUES (?)',
+        'INSERT INTO MODEL (Model_Name) VALUES (?)',
         [modelName]
       );
       return result.insertId;
@@ -429,6 +429,114 @@ class Asset {
     } catch (error) {
       console.error('Error in Asset.delete:', error);
       throw error;
+    }
+  }
+
+  // Delete asset by ID with cascade deletion of related records
+  static async deleteById(assetId) {
+    const connection = await pool.getConnection();
+    try {
+      await connection.beginTransaction();
+      console.log(`Starting deletion process for Asset_ID: ${assetId}`);
+
+      let pmRecordsDeleted = 0;
+      let pmResultsDeleted = 0;
+
+      // 1. Try to delete PM records and their results (handle missing tables gracefully)
+      try {
+        // First, get all PM records for this asset
+        const [pmRecords] = await connection.execute(
+          'SELECT PM_ID FROM PMAINTENANCE WHERE Asset_ID = ?',
+          [assetId]
+        );
+        console.log(`Found ${pmRecords.length} PM records to delete`);
+
+        // Try to delete PM_RESULT for each PM record (correct table name is singular)
+        try {
+          for (const pm of pmRecords) {
+            const [pmResultDeleteResult] = await connection.execute(
+              'DELETE FROM PM_RESULT WHERE PM_ID = ?',
+              [pm.PM_ID]
+            );
+            pmResultsDeleted += pmResultDeleteResult.affectedRows;
+          }
+          console.log(`Deleted ${pmResultsDeleted} PM result records`);
+        } catch (pmResultError) {
+          // PM_RESULT table might not exist, continue anyway
+          console.log(`Warning: Could not delete PM_RESULT (table might not exist): ${pmResultError.message}`);
+        }
+
+        // Delete PMAINTENANCE records
+        const [pmDeleteResult] = await connection.execute(
+          'DELETE FROM PMAINTENANCE WHERE Asset_ID = ?',
+          [assetId]
+        );
+        pmRecordsDeleted = pmDeleteResult.affectedRows;
+        console.log(`Deleted ${pmRecordsDeleted} PM maintenance records`);
+      } catch (pmError) {
+        // PMAINTENANCE table issues, log and continue
+        console.log(`Warning: Could not delete PM records: ${pmError.message}`);
+      }
+
+      // 2. Delete peripherals for this asset
+      let peripheralsDeleted = 0;
+      try {
+        const [peripheralResult] = await connection.execute(
+          'DELETE FROM PERIPHERAL WHERE Asset_ID = ?',
+          [assetId]
+        );
+        peripheralsDeleted = peripheralResult.affectedRows;
+        console.log(`Deleted ${peripheralsDeleted} peripherals`);
+      } catch (peripheralError) {
+        console.log(`Warning: Could not delete peripherals: ${peripheralError.message}`);
+      }
+
+      // 3. Update inventory records (set Asset_ID to NULL instead of deleting)
+      let inventoryUpdated = 0;
+      try {
+        const [inventoryResult] = await connection.execute(
+          'UPDATE INVENTORY SET Asset_ID = NULL WHERE Asset_ID = ?',
+          [assetId]
+        );
+        inventoryUpdated = inventoryResult.affectedRows;
+        console.log(`Updated ${inventoryUpdated} inventory records`);
+      } catch (inventoryError) {
+        console.log(`Warning: Could not update inventory: ${inventoryError.message}`);
+      }
+
+      // 4. Finally, delete the asset (this is the critical operation)
+      const [assetResult] = await connection.execute(
+        'DELETE FROM ASSET WHERE Asset_ID = ?',
+        [assetId]
+      );
+      console.log(`Deleted ${assetResult.affectedRows} asset record`);
+
+      if (assetResult.affectedRows === 0) {
+        await connection.rollback();
+        return {
+          success: false,
+          error: 'Asset not found or already deleted'
+        };
+      }
+
+      await connection.commit();
+      console.log(`✅ Successfully deleted Asset_ID: ${assetId} and all related records`);
+
+      return {
+        success: true,
+        peripheralsDeleted: peripheralsDeleted,
+        pmRecordsDeleted: pmRecordsDeleted,
+        inventoryUpdated: inventoryUpdated
+      };
+    } catch (error) {
+      await connection.rollback();
+      console.error('Error in Asset.deleteById:', error);
+      return {
+        success: false,
+        error: error.message
+      };
+    } finally {
+      connection.release();
     }
   }
 
@@ -450,7 +558,7 @@ class Asset {
           a.Microsoft_Office,
           a.Monthly_Prices,
           c.Category,
-          m.Model_Name AS Model,
+          m.Model_Name as Model,
           r.Recipient_Name,
           r.Department,
           r.Position,
@@ -701,18 +809,18 @@ class Asset {
 
       // First try to find existing model (case-insensitive)
       const [existing] = await pool.execute(
-        'SELECT Model_ID, Model FROM MODEL WHERE LOWER(Model) = LOWER(?)',
+        'SELECT Model_ID, Model_Name FROM MODEL WHERE LOWER(Model_Name) = LOWER(?)',
         [cleanModelName]
       );
       
       if (existing.length > 0) {
-        console.log(`Found existing model: ID=${existing[0].Model_ID}, Name="${existing[0].Model}"`);
+        console.log(`Found existing model: ID=${existing[0].Model_ID}, Name="${existing[0].Model_Name}"`);
         return existing[0].Model_ID;
       }
       
       // Create new model
       const [result] = await pool.execute(
-        'INSERT INTO MODEL (Model) VALUES (?)',
+        'INSERT INTO MODEL (Model_Name) VALUES (?)',
         [cleanModelName]
       );
       
@@ -724,7 +832,7 @@ class Asset {
       if (error.code === 'ER_DUP_ENTRY') {
         try {
           const [existing] = await pool.execute(
-            'SELECT Model_ID FROM MODEL WHERE LOWER(Model) = LOWER(?)',
+            'SELECT Model_ID FROM MODEL WHERE LOWER(Model_Name) = LOWER(?)',
             [modelName.trim()]
           );
           if (existing.length > 0) {

@@ -137,7 +137,7 @@ class Inventory {
           a.Item_Name,
           a.Status,
           cat.Category,
-          m.Model,
+          m.Model_Name as Model,
           r.Recipient_Name,
           r.Department
         FROM INVENTORY i

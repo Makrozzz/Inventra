@@ -213,6 +213,29 @@ class ApiService {
     });
   }
 
+  async deleteAssetById(assetId) {
+    try {
+      const url = `${this.baseURL}/assets/id/${assetId}`;
+      const response = await fetch(url, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null);
+        throw new Error(errorData?.error || errorData?.message || `HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Delete Asset Error:', error);
+      throw error;
+    }
+  }
+
   async bulkImportAssets(assets) {
     try {
       const url = `${this.baseURL}/assets/bulk-import`;

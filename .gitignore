@@ -1,4 +1,14 @@
 node_modules
+
+# Environment variables
+.env
+backend/.env
+frontend/.env
+
 # Ignore backend runtime logs
 backend/logs/
 *.log
+
+# OS files
+.DS_Store
+Thumbs.db
