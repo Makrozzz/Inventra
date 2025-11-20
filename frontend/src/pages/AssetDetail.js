@@ -313,19 +313,71 @@ const AssetDetail = () => {
 
             {assetData.Specs_Attributes && (
               <div>
-                <div style={{ color: '#7f8c8d', fontSize: '0.85rem', marginBottom: '5px', fontWeight: '600' }}>
-                  Specifications
+                <div style={{ 
+                  color: '#7f8c8d', 
+                  fontSize: '0.85rem', 
+                  marginBottom: '15px', 
+                  fontWeight: '600',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.5px'
+                }}>
+                  Technical Specifications
                 </div>
                 <div style={{ 
-                  color: '#2c3e50', 
-                  fontSize: '0.9rem', 
-                  lineHeight: '1.6',
-                  padding: '10px',
-                  background: '#f8f9fa',
-                  borderRadius: '6px',
-                  border: '1px solid #e9ecef'
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+                  gap: '12px'
                 }}>
-                  {assetData.Specs_Attributes}
+                  {assetData.Specs_Attributes.split('; ').map((spec, index) => {
+                    const [name, ...valueParts] = spec.split(': ');
+                    const value = valueParts.join(': '); // Rejoin in case value contains ':'
+                    
+                    return (
+                      <div 
+                        key={index}
+                        style={{
+                          background: '#ffffff',
+                          border: '1px solid #e0e0e0',
+                          borderLeft: '3px solid #667eea',
+                          borderRadius: '6px',
+                          padding: '14px',
+                          transition: 'all 0.2s ease',
+                          cursor: 'default',
+                          position: 'relative'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.transform = 'translateY(-2px)';
+                          e.currentTarget.style.boxShadow = '0 4px 12px rgba(102, 126, 234, 0.15)';
+                          e.currentTarget.style.borderLeftColor = '#5a67d8';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.transform = 'translateY(0)';
+                          e.currentTarget.style.boxShadow = 'none';
+                          e.currentTarget.style.borderLeftColor = '#667eea';
+                        }}
+                      >
+                        <div style={{
+                          color: '#4a5568',
+                          fontSize: '0.75rem',
+                          fontWeight: '600',
+                          marginBottom: '8px',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.5px'
+                        }}>
+                          {name}
+                        </div>
+                        <div style={{
+                          color: '#2d3748',
+                          fontSize: '0.85rem',
+                          lineHeight: '1.5',
+                          fontWeight: '400',
+                          wordBreak: 'break-word'
+                        }}>
+                          {value || 'Not specified'}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             )}

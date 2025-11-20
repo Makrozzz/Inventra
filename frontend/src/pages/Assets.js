@@ -681,24 +681,41 @@ const Assets = ({ onDelete }) => {
               <thead>
                 <tr>
                   <th style={{ 
-                    width: '50px', 
-                    minWidth: '50px',
+                    width: '60px', 
+                    minWidth: '60px',
                     textAlign: 'center',
-                    padding: '12px',
-                    backgroundColor: '#f8f9fa'
+                    padding: '14px 10px',
+                    background: 'linear-gradient(180deg, #5a67d8 0%, #6b46c1 100%)',
+                    position: 'relative'
                   }}>
-                    <input
-                      type="checkbox"
-                      checked={isAllSelected}
-                      onChange={handleSelectAll}
-                      style={{
-                        cursor: 'pointer',
-                        width: '18px',
-                        height: '18px',
-                        accentColor: '#667eea'
-                      }}
-                      title="Select all on this page"
-                    />
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}>
+                      <input
+                        type="checkbox"
+                        checked={isAllSelected}
+                        onChange={() => {
+                          console.log('Select All clicked, current state:', isAllSelected);
+                          handleSelectAll();
+                        }}
+                        className="custom-checkbox"
+                        style={{
+                          display: 'block',
+                          cursor: 'pointer',
+                          width: '17px',
+                          height: '17px',
+                          accentColor: '#667eea',
+                          borderRadius: '3px',
+                          border: '2px solid rgba(255, 255, 255, 0.6)',
+                          backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                          transition: 'all 0.2s ease',
+                          flexShrink: 0
+                        }}
+                        title="Select all on this page"
+                      />
+                    </div>
                   </th>
                   {displayColumns.map(column => (
                     <th key={column.Field} style={{ position: 'relative' }}>
@@ -839,31 +856,71 @@ const Assets = ({ onDelete }) => {
                     <tr>
                       <td style={{ 
                         textAlign: 'center', 
-                        padding: '12px',
-                        width: '50px',
-                        minWidth: '50px',
-                        backgroundColor: '#fafbfc',
-                        verticalAlign: 'middle'
+                        padding: '14px 10px',
+                        width: '60px',
+                        minWidth: '60px',
+                        backgroundColor: index % 2 === 0 ? '#fafbfc' : '#ffffff',
+                        verticalAlign: 'middle',
+                        borderLeft: selectedAssets.includes(asset.Asset_ID) ? '3px solid #667eea' : '3px solid transparent',
+                        transition: 'all 0.2s ease'
                       }}>
-                        <input
-                          type="checkbox"
-                          checked={selectedAssets.includes(asset.Asset_ID)}
-                          onChange={() => {
-                            console.log('Checkbox clicked for Asset_ID:', asset.Asset_ID);
-                            handleSelectAsset(asset.Asset_ID);
-                          }}
-                          style={{
-                            cursor: 'pointer',
-                            width: '18px',
-                            height: '18px',
-                            accentColor: '#667eea',
-                            margin: '0',
-                            display: 'block',
-                            marginLeft: 'auto',
-                            marginRight: 'auto'
-                          }}
-                          onClick={(e) => e.stopPropagation()}
-                        />
+                        <div style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          position: 'relative'
+                        }}>
+                          <input
+                            type="checkbox"
+                            checked={selectedAssets.includes(asset.Asset_ID)}
+                            onChange={() => {
+                              console.log('Checkbox clicked for Asset_ID:', asset.Asset_ID);
+                              handleSelectAsset(asset.Asset_ID);
+                            }}
+                            className="custom-checkbox"
+                            style={{
+                              display: 'block',
+                              cursor: 'pointer',
+                              width: '16px',
+                              height: '16px',
+                              accentColor: '#667eea',
+                              borderRadius: '3px',
+                              border: '1.5px solid #cbd5e0',
+                              backgroundColor: selectedAssets.includes(asset.Asset_ID) ? '#667eea' : 'white',
+                              transition: 'all 0.2s ease',
+                              position: 'relative',
+                              outline: 'none',
+                              flexShrink: 0
+                            }}
+                            onClick={(e) => e.stopPropagation()}
+                            onMouseOver={(e) => {
+                              if (!selectedAssets.includes(asset.Asset_ID)) {
+                                e.currentTarget.style.borderColor = '#667eea';
+                                e.currentTarget.style.backgroundColor = '#f0f4ff';
+                              }
+                            }}
+                            onMouseOut={(e) => {
+                              if (!selectedAssets.includes(asset.Asset_ID)) {
+                                e.currentTarget.style.borderColor = '#cbd5e0';
+                                e.currentTarget.style.backgroundColor = 'white';
+                              }
+                            }}
+                          />
+                          {selectedAssets.includes(asset.Asset_ID) && (
+                            <svg 
+                              style={{
+                                position: 'absolute',
+                                width: '10px',
+                                height: '10px',
+                                pointerEvents: 'none',
+                                fill: 'white'
+                              }}
+                              viewBox="0 0 16 16"
+                            >
+                              <path d="M13.854 3.646a.5.5 0 0 1 0 .708l-7 7a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L6.5 10.293l6.646-6.647a.5.5 0 0 1 .708 0z"/>
+                            </svg>
+                          )}
+                        </div>
                       </td>
                       {displayColumns.map(column => (
                         <td key={column.Field}>

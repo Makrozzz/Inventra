@@ -81,7 +81,7 @@ class Asset {
           GROUP_CONCAT(DISTINCT s.Software_Name SEPARATOR ', ') AS Software,
           GROUP_CONCAT(DISTINCT s.Price SEPARATOR ', ') AS Software_Prices,
           GROUP_CONCAT(DISTINCT CONCAT(pt.Peripheral_Type_Name, '|', per.Serial_Code, '|', per.Condition, '|', COALESCE(per.Remarks, '')) SEPARATOR '||') AS Peripheral_Data,
-          GROUP_CONCAT(DISTINCT specs.Attributes_Name SEPARATOR ', ') AS Specs_Attributes
+          GROUP_CONCAT(DISTINCT CONCAT(spec_names.Attributes_Value, ': ', model_specs.Attributes_Value) SEPARATOR '; ') AS Specs_Attributes
         FROM INVENTORY i
         INNER JOIN ASSET a ON i.Asset_ID = a.Asset_ID
         LEFT JOIN CATEGORY c ON a.Category_ID = c.Category_ID
@@ -93,7 +93,8 @@ class Asset {
         LEFT JOIN SOFTWARE s ON asb.Software_ID = s.Software_ID
         LEFT JOIN PERIPHERAL per ON a.Asset_ID = per.Asset_ID
         LEFT JOIN PERIPHERAL_TYPE pt ON per.Peripheral_Type_ID = pt.Peripheral_Type_ID
-        LEFT JOIN SPECS specs ON a.Category_ID = specs.Category_ID
+        LEFT JOIN MODEL_SPECS_BRIDGE model_specs ON a.Model_ID = model_specs.Model_ID
+        LEFT JOIN SPECS spec_names ON model_specs.Attributes_ID = spec_names.Attributes_ID
         GROUP BY i.Inventory_ID, a.Asset_ID
         ORDER BY i.Inventory_ID DESC
       `);
@@ -593,7 +594,7 @@ class Asset {
           cust.Branch,
           GROUP_CONCAT(DISTINCT s.Software_Name SEPARATOR ', ') AS Software,
           GROUP_CONCAT(DISTINCT s.Price SEPARATOR ', ') AS Software_Prices,
-          GROUP_CONCAT(DISTINCT specs.Attributes_Name SEPARATOR ', ') AS Specs_Attributes
+          GROUP_CONCAT(DISTINCT CONCAT(spec_names.Attributes_Value, ': ', model_specs.Attributes_Value) SEPARATOR '; ') AS Specs_Attributes
         FROM ASSET a
         LEFT JOIN CATEGORY c ON a.Category_ID = c.Category_ID
         LEFT JOIN MODEL m ON a.Model_ID = m.Model_ID
@@ -603,7 +604,8 @@ class Asset {
         LEFT JOIN CUSTOMER cust ON i.Customer_ID = cust.Customer_ID
         LEFT JOIN ASSET_SOFTWARE_BRIDGE asb ON a.Asset_ID = asb.Asset_ID
         LEFT JOIN SOFTWARE s ON asb.Software_ID = s.Software_ID
-        LEFT JOIN SPECS specs ON a.Category_ID = specs.Category_ID
+        LEFT JOIN MODEL_SPECS_BRIDGE model_specs ON a.Model_ID = model_specs.Model_ID
+        LEFT JOIN SPECS spec_names ON model_specs.Attributes_ID = spec_names.Attributes_ID
         WHERE a.Asset_ID = ?
         GROUP BY a.Asset_ID
         LIMIT 1
