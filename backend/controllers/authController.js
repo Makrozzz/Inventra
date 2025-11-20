@@ -253,6 +253,61 @@ const deleteUser = async (req, res, next) => {
   }
 };
 
+/**
+ * Create user (admin only)
+ */
+const createUser = async (req, res, next) => {
+  try {
+    const { username, email, password, firstName, lastName, department, role } = req.body;
+
+    // Check if user already exists
+    const existingUser = await User.findByEmail(email);
+    if (existingUser) {
+      return res.status(400).json(
+        formatResponse(false, null, 'User with this email already exists')
+      );
+    }
+
+    const existingUsername = await User.findByUsername(username);
+    if (existingUsername) {
+      return res.status(400).json(
+        formatResponse(false, null, 'Username already taken')
+      );
+    }
+
+    // Validate role - only allow Staff or Admin
+    const validRoles = ['staff', 'admin'];
+    const normalizedRole = role ? role.toLowerCase() : 'staff';
+    if (!validRoles.includes(normalizedRole)) {
+      return res.status(400).json(
+        formatResponse(false, null, 'Role must be either Staff or Admin')
+      );
+    }
+
+    // Create user (capitalize first letter of role for database)
+    const userId = await User.create({
+      username,
+      email,
+      password,
+      firstName,
+      lastName,
+      department: department || '',
+      role: normalizedRole.charAt(0).toUpperCase() + normalizedRole.slice(1)
+    });
+
+    const newUser = await User.findById(userId);
+
+    logger.info(`User created by admin ${req.user.userId}: ${email}`);
+
+    res.status(201).json(
+      formatResponse(true, newUser, 'User created successfully')
+    );
+  } catch (error) {
+    logger.error('Error in createUser:', error);
+    next(error);
+  }
+};
+
 module.exports = {
   register,
   login,
@@ -260,5 +315,6 @@ module.exports = {
   updateProfile,
   changePassword,
   getAllUsers,
-  deleteUser
+  deleteUser,
+  createUser
 };

@@ -19,8 +19,8 @@ class User {
     
     const query = `
       INSERT INTO USER (
-        username, User_Email, User_Password, First_Name, Last_Name, User_Department, User_Role
-      ) VALUES (?, ?, ?, ?, ?, ?, ?)
+        username, User_Email, User_Password, First_Name, Last_Name, User_Department, User_Role, Created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, NOW())
     `;
 
     const values = [

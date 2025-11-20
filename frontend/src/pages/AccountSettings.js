@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { User, Mail, Lock, Bell, Shield, Palette, Save, Eye, EyeOff, CheckCircle } from 'lucide-react';
+import { User, Mail, Lock, Bell, Shield, Palette, Save, Eye, EyeOff, CheckCircle, Users, Plus, X } from 'lucide-react';
 
 const AccountSettings = () => {
   const [activeTab, setActiveTab] = useState('profile');
@@ -7,6 +7,19 @@ const AccountSettings = () => {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [loading, setLoading] = useState(true);
   const [updateMessage, setUpdateMessage] = useState({ type: '', text: '' });
+  const [allUsers, setAllUsers] = useState([]);
+  const [loadingUsers, setLoadingUsers] = useState(false);
+  const [showAddUserModal, setShowAddUserModal] = useState(false);
+  const [showNewUserPassword, setShowNewUserPassword] = useState(false);
+  const [newUserData, setNewUserData] = useState({
+    username: '',
+    email: '',
+    password: '',
+    firstName: '',
+    lastName: '',
+    department: '',
+    role: 'Staff'
+  });
 
   const [profileData, setProfileData] = useState({
     firstName: '',
@@ -44,6 +57,13 @@ const AccountSettings = () => {
     fetchUserProfile();
   }, []);
 
+  // Fetch all users when User Management tab is active
+  useEffect(() => {
+    if (activeTab === 'users') {
+      fetchAllUsers();
+    }
+  }, [activeTab]);
+
   const fetchUserProfile = async () => {
     try {
       const token = localStorage.getItem('authToken');
@@ -69,6 +89,32 @@ const AccountSettings = () => {
       console.error('Error fetching profile:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchAllUsers = async () => {
+    setLoadingUsers(true);
+    try {
+      const token = localStorage.getItem('authToken');
+      const response = await fetch('http://localhost:5000/api/v1/auth/users', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        setAllUsers(data.data);
+      } else {
+        console.error('Failed to fetch users:', data.message);
+        setUpdateMessage({ type: 'error', text: data.message || 'Failed to fetch users' });
+      }
+    } catch (error) {
+      console.error('Error fetching users:', error);
+      setUpdateMessage({ type: 'error', text: 'Failed to fetch users. Please try again.' });
+    } finally {
+      setLoadingUsers(false);
     }
   };
 
@@ -161,6 +207,51 @@ const AccountSettings = () => {
     alert('Theme settings updated!');
   };
 
+  const handleAddUser = async (e) => {
+    e.preventDefault();
+    setUpdateMessage({ type: '', text: '' });
+
+    // Validate password
+    if (newUserData.password.length < 6) {
+      setUpdateMessage({ type: 'error', text: 'Password must be at least 6 characters long' });
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('authToken');
+      const response = await fetch('http://localhost:5000/api/v1/auth/users', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(newUserData)
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        setUpdateMessage({ type: 'success', text: `User "${newUserData.username}" created successfully!` });
+        setShowAddUserModal(false);
+        setNewUserData({
+          username: '',
+          email: '',
+          password: '',
+          firstName: '',
+          lastName: '',
+          department: '',
+          role: 'Staff'
+        });
+        // Refresh user list
+        fetchAllUsers();
+      } else {
+        setUpdateMessage({ type: 'error', text: data.message || 'Failed to create user' });
+      }
+    } catch (error) {
+      console.error('Error creating user:', error);
+      setUpdateMessage({ type: 'error', text: 'Failed to create user. Please try again.' });
+    }
+  };
+
   return (
     <div>
       <div className="page-header">
@@ -214,6 +305,13 @@ const AccountSettings = () => {
             >
               <Palette size={20} />
               Appearance
+            </button>
+            <button 
+              className={`settings-nav-item ${activeTab === 'users' ? 'active' : ''}`}
+              onClick={() => setActiveTab('users')}
+            >
+              <Users size={20} />
+              User Management
             </button>
           </nav>
         </div>
@@ -523,8 +621,385 @@ const AccountSettings = () => {
               </div>
             </div>
           )}
+
+          {activeTab === 'users' && (
+            <div className="card">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                <div>
+                  <h2 style={{ margin: 0 }}>User Management</h2>
+                  <p style={{ color: '#666', marginTop: '5px', marginBottom: 0 }}>
+                    View all registered users in the system
+                  </p>
+                </div>
+                <button
+                  onClick={() => setShowAddUserModal(true)}
+                  className="btn btn-primary"
+                  style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+                >
+                  <Plus size={18} />
+                  Add New User
+                </button>
+              </div>
+              
+              {loadingUsers ? (
+                <p>Loading users...</p>
+              ) : (
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{
+                    width: '100%',
+                    borderCollapse: 'collapse',
+                    marginTop: '10px',
+                    fontSize: '0.9rem'
+                  }}>
+                    <thead>
+                      <tr style={{ 
+                        borderBottom: '2px solid #e0e0e0',
+                        backgroundColor: '#f8f9fa'
+                      }}>
+                        <th style={{ 
+                          padding: '10px 12px', 
+                          textAlign: 'left', 
+                          fontWeight: '600', 
+                          color: '#333',
+                          fontSize: '0.85rem',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.5px',
+                          whiteSpace: 'nowrap'
+                        }}>Username</th>
+                        <th style={{ 
+                          padding: '10px 12px', 
+                          textAlign: 'left', 
+                          fontWeight: '600', 
+                          color: '#333',
+                          fontSize: '0.85rem',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.5px',
+                          whiteSpace: 'nowrap'
+                        }}>Name</th>
+                        <th style={{ 
+                          padding: '10px 12px', 
+                          textAlign: 'left', 
+                          fontWeight: '600', 
+                          color: '#333',
+                          fontSize: '0.85rem',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.5px',
+                          whiteSpace: 'nowrap'
+                        }}>Email</th>
+                        <th style={{ 
+                          padding: '10px 12px', 
+                          textAlign: 'left', 
+                          fontWeight: '600', 
+                          color: '#333',
+                          fontSize: '0.85rem',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.5px',
+                          whiteSpace: 'nowrap'
+                        }}>Department</th>
+                        <th style={{ 
+                          padding: '10px 12px', 
+                          textAlign: 'center', 
+                          fontWeight: '600', 
+                          color: '#333',
+                          fontSize: '0.85rem',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.5px',
+                          whiteSpace: 'nowrap'
+                        }}>Role</th>
+                        <th style={{ 
+                          padding: '10px 12px', 
+                          textAlign: 'left', 
+                          fontWeight: '600', 
+                          color: '#333',
+                          fontSize: '0.85rem',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.5px',
+                          whiteSpace: 'nowrap'
+                        }}>Joined</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {allUsers.length === 0 ? (
+                        <tr>
+                          <td colSpan="6" style={{ padding: '20px', textAlign: 'center', color: '#999' }}>
+                            No users found
+                          </td>
+                        </tr>
+                      ) : (
+                        allUsers.map((user) => (
+                          <tr key={user.userId} style={{ 
+                            borderBottom: '1px solid #f0f0f0',
+                            transition: 'background-color 0.2s'
+                          }}
+                          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f8f9fa'}
+                          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                          >
+                            <td style={{ 
+                              padding: '10px 12px',
+                              fontWeight: '500',
+                              whiteSpace: 'nowrap'
+                            }}>{user.username}</td>
+                            <td style={{ 
+                              padding: '10px 12px',
+                              whiteSpace: 'nowrap'
+                            }}>{user.firstName} {user.lastName}</td>
+                            <td style={{ 
+                              padding: '10px 12px',
+                              color: '#666',
+                              whiteSpace: 'nowrap',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              maxWidth: '200px'
+                            }}>{user.email}</td>
+                            <td style={{ 
+                              padding: '10px 12px',
+                              color: '#666',
+                              whiteSpace: 'nowrap'
+                            }}>{user.department || '-'}</td>
+                            <td style={{ 
+                              padding: '10px 12px',
+                              textAlign: 'center'
+                            }}>
+                              <span style={{
+                                padding: '4px 10px',
+                                borderRadius: '12px',
+                                fontSize: '0.7rem',
+                                fontWeight: '600',
+                                textTransform: 'uppercase',
+                                background: user.role.toLowerCase() === 'admin' ? '#e3d5ff' : '#d1ecf1',
+                                color: user.role.toLowerCase() === 'admin' ? '#6b21a8' : '#0c5460',
+                                whiteSpace: 'nowrap',
+                                display: 'inline-block'
+                              }}>
+                                {user.role}
+                              </span>
+                            </td>
+                            <td style={{ 
+                              padding: '10px 12px', 
+                              fontSize: '0.85rem', 
+                              color: '#666',
+                              whiteSpace: 'nowrap'
+                            }}>
+                              {user.createdAt ? new Date(user.createdAt).toLocaleDateString('en-GB', {
+                                day: 'numeric',
+                                month: 'short',
+                                year: 'numeric'
+                              }) : '-'}
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
+
+      {/* Add New User Modal */}
+      {showAddUserModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            backgroundColor: 'white',
+            borderRadius: '12px',
+            width: '90%',
+            maxWidth: '600px',
+            maxHeight: '90vh',
+            overflow: 'auto',
+            boxShadow: '0 10px 40px rgba(0,0,0,0.2)'
+          }}>
+            <div style={{
+              padding: '20px 24px',
+              borderBottom: '1px solid #e0e0e0',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center'
+            }}>
+              <h2 style={{ margin: 0, fontSize: '1.5rem' }}>Add New User</h2>
+              <button
+                onClick={() => {
+                  setShowAddUserModal(false);
+                  setNewUserData({
+                    username: '',
+                    email: '',
+                    password: '',
+                    firstName: '',
+                    lastName: '',
+                    department: '',
+                    role: 'Staff'
+                  });
+                }}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  padding: '8px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  color: '#666'
+                }}
+              >
+                <X size={24} />
+              </button>
+            </div>
+
+            <form onSubmit={handleAddUser} style={{ padding: '24px' }}>
+              <div className="form-group">
+                <label>Username *</label>
+                <input
+                  type="text"
+                  value={newUserData.username}
+                  onChange={(e) => setNewUserData({ ...newUserData, username: e.target.value })}
+                  placeholder="Enter username"
+                  required
+                  minLength={3}
+                  maxLength={50}
+                  pattern="[a-zA-Z0-9_]+"
+                  title="Username can only contain letters, numbers, and underscores"
+                />
+              </div>
+
+              <div className="form-grid">
+                <div className="form-group">
+                  <label>First Name *</label>
+                  <input
+                    type="text"
+                    value={newUserData.firstName}
+                    onChange={(e) => setNewUserData({ ...newUserData, firstName: e.target.value })}
+                    placeholder="Enter first name"
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Last Name *</label>
+                  <input
+                    type="text"
+                    value={newUserData.lastName}
+                    onChange={(e) => setNewUserData({ ...newUserData, lastName: e.target.value })}
+                    placeholder="Enter last name"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="form-group">
+                <label>Email Address *</label>
+                <input
+                  type="email"
+                  value={newUserData.email}
+                  onChange={(e) => setNewUserData({ ...newUserData, email: e.target.value })}
+                  placeholder="Enter email address"
+                  required
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Password *</label>
+                <div className="password-field">
+                  <input
+                    type={showNewUserPassword ? 'text' : 'password'}
+                    value={newUserData.password}
+                    onChange={(e) => setNewUserData({ ...newUserData, password: e.target.value })}
+                    placeholder="Enter password (min. 6 characters)"
+                    required
+                    minLength={6}
+                  />
+                  <button
+                    type="button"
+                    className="password-toggle"
+                    onClick={() => setShowNewUserPassword(!showNewUserPassword)}
+                  >
+                    {showNewUserPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
+                <small style={{ color: '#666', fontSize: '0.85rem', display: 'block', marginTop: '4px' }}>
+                  Minimum 6 characters
+                </small>
+              </div>
+
+              <div className="form-group">
+                <label>Department</label>
+                <input
+                  type="text"
+                  value={newUserData.department}
+                  onChange={(e) => setNewUserData({ ...newUserData, department: e.target.value })}
+                  placeholder="Enter department (optional)"
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Role *</label>
+                <select
+                  value={newUserData.role}
+                  onChange={(e) => setNewUserData({ ...newUserData, role: e.target.value })}
+                  required
+                  style={{
+                    width: '100%',
+                    padding: '10px',
+                    border: '1px solid #ddd',
+                    borderRadius: '6px',
+                    fontSize: '14px'
+                  }}
+                >
+                  <option value="Staff">Staff</option>
+                  <option value="Admin">Admin</option>
+                </select>
+              </div>
+
+              <div style={{ display: 'flex', gap: '12px', marginTop: '24px' }}>
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  style={{ flex: 1 }}
+                >
+                  <Plus size={16} style={{ marginRight: '5px' }} />
+                  Add User
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowAddUserModal(false);
+                    setNewUserData({
+                      username: '',
+                      email: '',
+                      password: '',
+                      firstName: '',
+                      lastName: '',
+                      department: '',
+                      role: 'Staff'
+                    });
+                  }}
+                  style={{
+                    flex: 1,
+                    padding: '10px 20px',
+                    border: '1px solid #ddd',
+                    borderRadius: '6px',
+                    background: 'white',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    fontWeight: '500'
+                  }}
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

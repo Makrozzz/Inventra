@@ -8,7 +8,8 @@ const {
   updateProfile,
   changePassword,
   getAllUsers,
-  deleteUser
+  deleteUser,
+  createUser
 } = require('../controllers/authController');
 const { authenticateToken, authorize } = require('../middleware/auth');
 const { handleValidationErrors } = require('../middleware/validation');
@@ -51,6 +52,42 @@ const registerValidationRules = [
     .optional()
     .isIn(['admin', 'manager', 'user'])
     .withMessage('Invalid role')
+];
+
+const createUserValidationRules = [
+  body('username')
+    .notEmpty()
+    .withMessage('Username is required')
+    .isLength({ min: 3, max: 50 })
+    .withMessage('Username must be between 3 and 50 characters')
+    .matches(/^[a-zA-Z0-9_]+$/)
+    .withMessage('Username can only contain letters, numbers, and underscores'),
+  body('email')
+    .isEmail()
+    .withMessage('Valid email is required')
+    .normalizeEmail(),
+  body('password')
+    .isLength({ min: 6 })
+    .withMessage('Password must be at least 6 characters long'),
+  body('firstName')
+    .notEmpty()
+    .withMessage('First name is required')
+    .isLength({ max: 100 })
+    .withMessage('First name must be less than 100 characters'),
+  body('lastName')
+    .notEmpty()
+    .withMessage('Last name is required')
+    .isLength({ max: 100 })
+    .withMessage('Last name must be less than 100 characters'),
+  body('department')
+    .optional()
+    .isLength({ max: 100 })
+    .withMessage('Department must be less than 100 characters'),
+  body('role')
+    .notEmpty()
+    .withMessage('Role is required')
+    .isIn(['Staff', 'Admin', 'staff', 'admin'])
+    .withMessage('Role must be either Staff or Admin')
 ];
 
 const loginValidationRules = [
@@ -96,11 +133,12 @@ const changePasswordValidationRules = [
 ];
 
 // Public routes
-router.post('/register', 
-  registerValidationRules, 
-  handleValidationErrors, 
-  register
-);
+// Registration disabled - only admins can create users
+// router.post('/register', 
+//   registerValidationRules, 
+//   handleValidationErrors, 
+//   register
+// );
 
 router.post('/login', 
   loginValidationRules, 
@@ -130,6 +168,14 @@ router.get('/users',
   authenticateToken, 
   authorize('admin'), 
   getAllUsers
+);
+
+router.post('/users',
+  authenticateToken,
+  authorize('admin'),
+  createUserValidationRules,
+  handleValidationErrors,
+  createUser
 );
 
 router.delete('/users/:userId', 

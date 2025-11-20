@@ -686,7 +686,8 @@ body {
 .settings-container {
   display: flex;
   gap: 30px;
-  max-width: 1200px;
+  max-width: 100%;
+  width: 100%;
 }
 
 .settings-sidebar {
@@ -727,6 +728,8 @@ body {
 
 .settings-content {
   flex: 1;
+  min-width: 0; /* Allow flex item to shrink below content size */
+  width: 100%;
 }
 
 .form-grid {

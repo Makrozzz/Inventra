@@ -80,7 +80,11 @@ const authorize = (...roles) => {
       );
     }
 
-    if (!roles.includes(req.user.role)) {
+    // Case-insensitive role comparison
+    const userRole = req.user.role.toLowerCase();
+    const allowedRoles = roles.map(role => role.toLowerCase());
+    
+    if (!allowedRoles.includes(userRole)) {
       return res.status(403).json(
         formatResponse(false, null, 'Insufficient permissions')
       );
