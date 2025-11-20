@@ -3,15 +3,14 @@ const { hashPassword, comparePassword, toCamelCase } = require('../utils/helpers
 
 class User {
   constructor(data) {
-    this.userId = data.user_id || data.userId;
+    this.userId = data.User_ID || data.userId;
     this.username = data.username;
-    this.email = data.email;
-    this.firstName = data.first_name || data.firstName;
-    this.lastName = data.last_name || data.lastName;
-    this.role = data.role || 'user';
-    this.isActive = data.is_active || data.isActive;
-    this.createdAt = data.created_at || data.createdAt;
-    this.updatedAt = data.updated_at || data.updatedAt;
+    this.email = data.User_Email || data.email;
+    this.firstName = data.First_Name || data.firstName;
+    this.lastName = data.Last_Name || data.lastName;
+    this.department = data.User_Department || data.department;
+    this.role = data.User_Role || data.role || 'user';
+    this.createdAt = data.Created_at || data.createdAt;
   }
 
   // Create new user
@@ -19,9 +18,9 @@ class User {
     const hashedPassword = await hashPassword(userData.password);
     
     const query = `
-      INSERT INTO users (
-        username, email, password_hash, first_name, last_name, role, is_active
-      ) VALUES (?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO USER (
+        username, User_Email, User_Password, First_Name, Last_Name, User_Department, User_Role, Created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, NOW())
     `;
 
     const values = [
@@ -30,8 +29,8 @@ class User {
       hashedPassword,
       userData.firstName,
       userData.lastName,
-      userData.role || 'user',
-      userData.isActive !== undefined ? userData.isActive : true
+      userData.department || '',
+      userData.role || 'user'
     ];
 
     const result = await executeQuery(query, values);
@@ -40,28 +39,61 @@ class User {
 
   // Find user by email
   static async findByEmail(email) {
-    const query = 'SELECT * FROM users WHERE email = ? AND is_active = 1';
+    const query = 'SELECT * FROM USER WHERE User_Email = ?';
     const result = await executeQuery(query, [email]);
-    return result.length > 0 ? toCamelCase(result[0]) : null;
+    if (result.length === 0) return null;
+    const user = result[0];
+    return {
+      userId: user.User_ID,
+      username: user.username,
+      email: user.User_Email,
+      firstName: user.First_Name,
+      lastName: user.Last_Name,
+      department: user.User_Department,
+      role: user.User_Role,
+      createdAt: user.Created_at
+    };
   }
 
   // Find user by username
   static async findByUsername(username) {
-    const query = 'SELECT * FROM users WHERE username = ? AND is_active = 1';
+    const query = 'SELECT * FROM USER WHERE username = ?';
     const result = await executeQuery(query, [username]);
-    return result.length > 0 ? toCamelCase(result[0]) : null;
+    if (result.length === 0) return null;
+    const user = result[0];
+    return {
+      userId: user.User_ID,
+      username: user.username,
+      email: user.User_Email,
+      firstName: user.First_Name,
+      lastName: user.Last_Name,
+      department: user.User_Department,
+      role: user.User_Role,
+      createdAt: user.Created_at
+    };
   }
 
   // Find user by ID
   static async findById(userId) {
-    const query = 'SELECT * FROM users WHERE user_id = ? AND is_active = 1';
+    const query = 'SELECT * FROM USER WHERE User_ID = ?';
     const result = await executeQuery(query, [userId]);
-    return result.length > 0 ? toCamelCase(result[0]) : null;
+    if (result.length === 0) return null;
+    const user = result[0];
+    return {
+      userId: user.User_ID,
+      username: user.username,
+      email: user.User_Email,
+      firstName: user.First_Name,
+      lastName: user.Last_Name,
+      department: user.User_Department,
+      role: user.User_Role,
+      createdAt: user.Created_at
+    };
   }
 
-  // Verify user password
+  // Verify user password by email
   static async verifyPassword(email, password) {
-    const query = 'SELECT * FROM users WHERE email = ? AND is_active = 1';
+    const query = 'SELECT * FROM USER WHERE User_Email = ?';
     const result = await executeQuery(query, [email]);
     
     if (result.length === 0) {
@@ -69,15 +101,52 @@ class User {
     }
 
     const user = result[0];
-    const isPasswordValid = await comparePassword(password, user.password_hash);
+    const isPasswordValid = await comparePassword(password, user.User_Password);
     
     if (!isPasswordValid) {
       return null;
     }
 
     // Return user without password hash
-    const { password_hash, ...userWithoutPassword } = user;
-    return toCamelCase(userWithoutPassword);
+    return {
+      userId: user.User_ID,
+      username: user.username,
+      email: user.User_Email,
+      firstName: user.First_Name,
+      lastName: user.Last_Name,
+      department: user.User_Department,
+      role: user.User_Role,
+      createdAt: user.Created_at
+    };
+  }
+
+  // Verify user password by username
+  static async verifyPasswordByUsername(username, password) {
+    const query = 'SELECT * FROM USER WHERE username = ?';
+    const result = await executeQuery(query, [username]);
+    
+    if (result.length === 0) {
+      return null;
+    }
+
+    const user = result[0];
+    const isPasswordValid = await comparePassword(password, user.User_Password);
+    
+    if (!isPasswordValid) {
+      return null;
+    }
+
+    // Return user without password hash
+    return {
+      userId: user.User_ID,
+      username: user.username,
+      email: user.User_Email,
+      firstName: user.First_Name,
+      lastName: user.Last_Name,
+      department: user.User_Department,
+      role: user.User_Role,
+      createdAt: user.Created_at
+    };
   }
 
   // Update user
@@ -85,19 +154,32 @@ class User {
     const fields = [];
     const values = [];
 
+    // Map camelCase to database column names
+    const fieldMapping = {
+      firstName: 'First_Name',
+      lastName: 'Last_Name',
+      email: 'User_Email',
+      department: 'User_Department',
+      password: 'User_Password',
+      role: 'User_Role'
+    };
+
     // Handle password update separately
     if (updateData.password) {
-      updateData.passwordHash = await hashPassword(updateData.password);
+      const hashedPassword = await hashPassword(updateData.password);
+      fields.push('User_Password = ?');
+      values.push(hashedPassword);
       delete updateData.password;
     }
 
     // Build dynamic update query
     Object.keys(updateData).forEach(key => {
-      if (updateData[key] !== undefined && key !== 'userId') {
-        // Convert camelCase to snake_case for database
-        const dbField = key.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
-        fields.push(`${dbField} = ?`);
-        values.push(updateData[key]);
+      if (updateData[key] !== undefined && key !== 'userId' && key !== 'password') {
+        const dbField = fieldMapping[key];
+        if (dbField) {
+          fields.push(`${dbField} = ?`);
+          values.push(updateData[key]);
+        }
       }
     });
 
@@ -106,15 +188,15 @@ class User {
     }
 
     values.push(userId);
-    const query = `UPDATE users SET ${fields.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE user_id = ?`;
+    const query = `UPDATE USER SET ${fields.join(', ')} WHERE User_ID = ?`;
     
     const result = await executeQuery(query, values);
     return result.affectedRows > 0;
   }
 
-  // Soft delete user
+  // Delete user
   static async delete(userId) {
-    const query = 'UPDATE users SET is_active = 0, updated_at = CURRENT_TIMESTAMP WHERE user_id = ?';
+    const query = 'DELETE FROM USER WHERE User_ID = ?';
     const result = await executeQuery(query, [userId]);
     return result.affectedRows > 0;
   }
@@ -124,23 +206,32 @@ class User {
     const offset = (page - 1) * limit;
     
     // Get total count
-    const countQuery = 'SELECT COUNT(*) as total FROM users WHERE is_active = 1';
+    const countQuery = 'SELECT COUNT(*) as total FROM USER';
     const countResult = await executeQuery(countQuery);
     const totalCount = countResult[0].total;
 
     // Get paginated results without password hashes
     const dataQuery = `
-      SELECT user_id, username, email, first_name, last_name, role, is_active, created_at, updated_at
-      FROM users 
-      WHERE is_active = 1 
-      ORDER BY created_at DESC 
+      SELECT User_ID, username, User_Email, First_Name, Last_Name, User_Department, User_Role, Created_at
+      FROM USER 
+      ORDER BY Created_at DESC 
       LIMIT ? OFFSET ?
     `;
 
-    const users = await executeQuery(dataQuery, [limit, offset]);
+    const rawUsers = await executeQuery(dataQuery, [limit, offset]);
+    const users = rawUsers.map(user => ({
+      userId: user.User_ID,
+      username: user.username,
+      email: user.User_Email,
+      firstName: user.First_Name,
+      lastName: user.Last_Name,
+      department: user.User_Department,
+      role: user.User_Role,
+      createdAt: user.Created_at
+    }));
     
     return {
-      users: toCamelCase(users),
+      users,
       pagination: {
         currentPage: page,
         itemsPerPage: limit,

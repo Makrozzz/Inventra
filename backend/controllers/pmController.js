@@ -408,6 +408,10 @@ const getPMReport = async (req, res, next) => {
 
       filepath = result.filepath;
       filename = result.filename;
+      
+      // Update database with new file path
+      await pdfGenerator.updateFilePath(pmId, filepath);
+      
       logger.info(`✅ PDF generated successfully: ${filename}`);
     }
 
@@ -438,6 +442,86 @@ const getPMReport = async (req, res, next) => {
   }
 };
 
+/**
+ * Bulk download PM reports as single PDF
+ */
+const bulkDownloadPM = async (req, res, next) => {
+  try {
+    const { pmIds } = req.body;
+
+    if (!pmIds || !Array.isArray(pmIds) || pmIds.length === 0) {
+      logger.error('Invalid pmIds in bulk download request');
+      return res.status(400).json({
+        error: 'Invalid request',
+        message: 'pmIds array is required and must not be empty'
+      });
+    }
+
+    logger.info(`📦 Bulk download requested for ${pmIds.length} PM records: ${pmIds.join(', ')}`);
+
+    // Fetch all PM records with details
+    const pmRecordsPromises = pmIds.map(pmId => PMaintenance.getDetailedPM(pmId));
+    const pmRecords = await Promise.all(pmRecordsPromises);
+
+    // Filter out any null results (in case some PM IDs don't exist)
+    const validPMRecords = pmRecords.filter(record => record !== null);
+
+    if (validPMRecords.length === 0) {
+      logger.error('No valid PM records found for provided IDs');
+      return res.status(404).json({
+        error: 'No valid PM records found',
+        message: 'None of the provided PM IDs exist'
+      });
+    }
+
+    logger.info(`✅ Found ${validPMRecords.length} valid PM records out of ${pmIds.length} requested`);
+
+    // Generate combined PDF using pdfGenerator
+    logger.info('Starting bulk PDF generation...');
+    const result = await pdfGenerator.generateBulkPM(validPMRecords);
+    
+    if (!result || !result.success || !result.absolutePath) {
+      logger.error('PDF generation failed:', result?.error);
+      throw new Error(result?.error || 'Failed to generate bulk PDF');
+    }
+
+    const absolutePath = result.absolutePath; // Use absolutePath directly from generator
+    const filename = result.filename;
+
+    logger.info(`✅ Bulk PDF generated successfully: ${filename}`);
+
+    // Send file for download and delete after sending
+    res.download(absolutePath, filename, (err) => {
+      if (err) {
+        logger.error('❌ Error sending bulk PDF file:', err);
+        if (!res.headersSent) {
+          res.status(500).json({
+            error: 'Failed to download bulk PDF',
+            message: err.message
+          });
+        }
+      } else {
+        logger.info(`📥 Bulk PDF downloaded successfully: ${filename}`);
+        
+        // Delete bulk PDF file after successful download
+        const fs = require('fs').promises;
+        fs.unlink(absolutePath)
+          .then(() => logger.info(`🗑️  Cleaned up bulk PDF: ${filename}`))
+          .catch(unlinkErr => logger.error('Error deleting bulk PDF:', unlinkErr));
+      }
+    });
+
+  } catch (error) {
+    logger.error('Error in bulkDownloadPM:', error);
+    if (!res.headersSent) {
+      res.status(500).json({
+        error: 'Failed to generate bulk PM report',
+        message: error.message
+      });
+    }
+  }
+};
+
 module.exports = {
   getAllPM,
   getPMStatistics,
@@ -455,5 +539,6 @@ module.exports = {
   updateChecklistItem,
   deleteChecklistItem,
   createCategory,
-  getPMReport
+  getPMReport,
+  bulkDownloadPM
 };

@@ -32,7 +32,7 @@ const authenticateToken = async (req, res, next) => {
     // Optional: Verify user still exists in database
     console.log('Checking user in database with ID:', decoded.userId);
     const user = await executeQuery(
-      'SELECT user_id, username, email, role FROM users WHERE user_id = ? AND is_active = 1',
+      'SELECT User_ID, username, User_Email, User_Role FROM USER WHERE User_ID = ?',
       [decoded.userId]
     );
     console.log('Database user query result:', user);
@@ -80,7 +80,11 @@ const authorize = (...roles) => {
       );
     }
 
-    if (!roles.includes(req.user.role)) {
+    // Case-insensitive role comparison
+    const userRole = req.user.role.toLowerCase();
+    const allowedRoles = roles.map(role => role.toLowerCase());
+    
+    if (!allowedRoles.includes(userRole)) {
       return res.status(403).json(
         formatResponse(false, null, 'Insufficient permissions')
       );

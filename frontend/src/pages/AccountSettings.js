@@ -1,19 +1,33 @@
-import React, { useState } from 'react';
-import { User, Mail, Lock, Bell, Shield, Palette, Save, Eye, EyeOff } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { User, Mail, Lock, Bell, Shield, Palette, Save, Eye, EyeOff, CheckCircle, Users, Plus, X } from 'lucide-react';
 
 const AccountSettings = () => {
   const [activeTab, setActiveTab] = useState('profile');
   const [showPassword, setShowPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [updateMessage, setUpdateMessage] = useState({ type: '', text: '' });
+  const [allUsers, setAllUsers] = useState([]);
+  const [loadingUsers, setLoadingUsers] = useState(false);
+  const [showAddUserModal, setShowAddUserModal] = useState(false);
+  const [showNewUserPassword, setShowNewUserPassword] = useState(false);
+  const [newUserData, setNewUserData] = useState({
+    username: '',
+    email: '',
+    password: '',
+    firstName: '',
+    lastName: '',
+    department: '',
+    role: 'Staff'
+  });
 
   const [profileData, setProfileData] = useState({
-    firstName: 'John',
-    lastName: 'Doe',
-    email: 'john.doe@company.com',
-    phone: '+1 (555) 123-4567',
-    position: 'Asset Manager',
-    department: 'IT Operations',
-    company: 'AssetPro Management'
+    firstName: '',
+    lastName: '',
+    email: '',
+    username: '',
+    department: '',
+    role: ''
   });
 
   const [securityData, setSecurityData] = useState({
@@ -38,19 +52,154 @@ const AccountSettings = () => {
     sidebarCollapsed: false
   });
 
-  const handleProfileUpdate = (e) => {
-    e.preventDefault();
-    alert('Profile updated successfully!');
+  // Fetch user profile on component mount
+  useEffect(() => {
+    fetchUserProfile();
+  }, []);
+
+  // Fetch all users when User Management tab is active
+  useEffect(() => {
+    if (activeTab === 'users') {
+      fetchAllUsers();
+    }
+  }, [activeTab]);
+
+  const fetchUserProfile = async () => {
+    try {
+      const token = localStorage.getItem('authToken');
+      const response = await fetch('http://localhost:5000/api/v1/auth/profile', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        setProfileData({
+          firstName: data.data.firstName || '',
+          lastName: data.data.lastName || '',
+          email: data.data.email || '',
+          username: data.data.username || '',
+          department: data.data.department || '',
+          role: data.data.role || ''
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching profile:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handlePasswordChange = (e) => {
-    e.preventDefault();
-    if (securityData.newPassword !== securityData.confirmPassword) {
-      alert('New passwords do not match!');
+  const fetchAllUsers = async () => {
+    // Only fetch if user is admin
+    if (profileData.role.toLowerCase() !== 'admin') {
       return;
     }
-    alert('Password changed successfully!');
-    setSecurityData({ ...securityData, currentPassword: '', newPassword: '', confirmPassword: '' });
+    
+    setLoadingUsers(true);
+    try {
+      const token = localStorage.getItem('authToken');
+      const response = await fetch('http://localhost:5000/api/v1/auth/users', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        setAllUsers(data.data);
+      } else {
+        console.error('Failed to fetch users:', data.message);
+      }
+    } catch (error) {
+      console.error('Error fetching users:', error);
+    } finally {
+      setLoadingUsers(false);
+    }
+  };
+
+  const handleProfileUpdate = async (e) => {
+    e.preventDefault();
+    setUpdateMessage({ type: '', text: '' });
+
+    try {
+      const token = localStorage.getItem('authToken');
+      const response = await fetch('http://localhost:5000/api/v1/auth/profile', {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          firstName: profileData.firstName,
+          lastName: profileData.lastName,
+          email: profileData.email,
+          department: profileData.department
+        })
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        setUpdateMessage({ type: 'success', text: 'Profile updated successfully!' });
+        // Update localStorage with new user info
+        const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
+        localStorage.setItem('userInfo', JSON.stringify({ ...userInfo, ...data.data }));
+      } else {
+        setUpdateMessage({ type: 'error', text: data.message || 'Failed to update profile' });
+      }
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      setUpdateMessage({ type: 'error', text: 'Failed to update profile. Please try again.' });
+    }
+  };
+
+  const handlePasswordChange = async (e) => {
+    e.preventDefault();
+    setUpdateMessage({ type: '', text: '' });
+
+    if (securityData.newPassword !== securityData.confirmPassword) {
+      setUpdateMessage({ type: 'error', text: 'New passwords do not match!' });
+      return;
+    }
+
+    if (securityData.newPassword.length < 6) {
+      setUpdateMessage({ type: 'error', text: 'Password must be at least 6 characters long' });
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('authToken');
+      const response = await fetch('http://localhost:5000/api/v1/auth/change-password', {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          currentPassword: securityData.currentPassword,
+          newPassword: securityData.newPassword
+        })
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        setUpdateMessage({ type: 'success', text: 'Password changed successfully!' });
+        setSecurityData({ 
+          ...securityData, 
+          currentPassword: '', 
+          newPassword: '', 
+          confirmPassword: '' 
+        });
+      } else {
+        setUpdateMessage({ type: 'error', text: data.message || 'Failed to change password' });
+      }
+    } catch (error) {
+      console.error('Error changing password:', error);
+      setUpdateMessage({ type: 'error', text: 'Failed to change password. Please try again.' });
+    }
   };
 
   const handleNotificationUpdate = () => {
@@ -61,11 +210,73 @@ const AccountSettings = () => {
     alert('Theme settings updated!');
   };
 
+  const handleAddUser = async (e) => {
+    e.preventDefault();
+    setUpdateMessage({ type: '', text: '' });
+
+    // Validate password
+    if (newUserData.password.length < 6) {
+      setUpdateMessage({ type: 'error', text: 'Password must be at least 6 characters long' });
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('authToken');
+      const response = await fetch('http://localhost:5000/api/v1/auth/users', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(newUserData)
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        setUpdateMessage({ type: 'success', text: `User "${newUserData.username}" created successfully!` });
+        setShowAddUserModal(false);
+        setNewUserData({
+          username: '',
+          email: '',
+          password: '',
+          firstName: '',
+          lastName: '',
+          department: '',
+          role: 'Staff'
+        });
+        // Refresh user list
+        fetchAllUsers();
+      } else {
+        setUpdateMessage({ type: 'error', text: data.message || 'Failed to create user' });
+      }
+    } catch (error) {
+      console.error('Error creating user:', error);
+      setUpdateMessage({ type: 'error', text: 'Failed to create user. Please try again.' });
+    }
+  };
+
   return (
     <div>
       <div className="page-header">
         <h1 className="page-title">Account Settings</h1>
       </div>
+
+      {updateMessage.text && (
+        <div style={{
+          padding: '12px 20px',
+          margin: '0 20px 20px',
+          borderRadius: '6px',
+          background: updateMessage.type === 'success' ? '#d4edda' : '#f8d7da',
+          color: updateMessage.type === 'success' ? '#155724' : '#721c24',
+          border: `1px solid ${updateMessage.type === 'success' ? '#c3e6cb' : '#f5c6cb'}`,
+          display: 'flex',
+          alignItems: 'center',
+          gap: '10px'
+        }}>
+          {updateMessage.type === 'success' && <CheckCircle size={18} />}
+          {updateMessage.text}
+        </div>
+      )}
 
       <div className="settings-container">
         <div className="settings-sidebar">
@@ -98,84 +309,102 @@ const AccountSettings = () => {
               <Palette size={20} />
               Appearance
             </button>
+            <button 
+              className={`settings-nav-item ${activeTab === 'users' ? 'active' : ''}`}
+              onClick={() => setActiveTab('users')}
+            >
+              <Users size={20} />
+              User Management
+            </button>
           </nav>
         </div>
 
         <div className="settings-content">
           {activeTab === 'profile' && (
             <div className="card">
-              <h2>Profile Information</h2>
-              <form onSubmit={handleProfileUpdate}>
-                <div className="form-grid">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                <h2 style={{ margin: 0 }}>Profile Information</h2>
+                {profileData.role && (
+                  <span style={{
+                    padding: '6px 16px',
+                    borderRadius: '20px',
+                    fontSize: '0.85rem',
+                    fontWeight: '600',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.5px',
+                    background: profileData.role.toLowerCase() === 'admin' ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+                    color: 'white',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.15)'
+                  }}>
+                    {profileData.role}
+                  </span>
+                )}
+              </div>
+              {loading ? (
+                <p>Loading profile...</p>
+              ) : (
+                <form onSubmit={handleProfileUpdate}>
                   <div className="form-group">
-                    <label>First Name</label>
+                    <label>Username (Read-only)</label>
                     <input
                       type="text"
-                      value={profileData.firstName}
-                      onChange={(e) => setProfileData({ ...profileData, firstName: e.target.value })}
+                      value={profileData.username}
+                      placeholder={profileData.username || 'Username'}
+                      disabled
+                      style={{ background: '#f5f5f5', cursor: 'not-allowed' }}
                     />
                   </div>
+
+                  <div className="form-grid">
+                    <div className="form-group">
+                      <label>First Name</label>
+                      <input
+                        type="text"
+                        value={profileData.firstName}
+                        onChange={(e) => setProfileData({ ...profileData, firstName: e.target.value })}
+                        placeholder={profileData.firstName || 'First Name'}
+                        required
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>Last Name</label>
+                      <input
+                        type="text"
+                        value={profileData.lastName}
+                        onChange={(e) => setProfileData({ ...profileData, lastName: e.target.value })}
+                        placeholder={profileData.lastName || 'Last Name'}
+                        required
+                      />
+                    </div>
+                  </div>
+
                   <div className="form-group">
-                    <label>Last Name</label>
+                    <label>Email Address</label>
                     <input
-                      type="text"
-                      value={profileData.lastName}
-                      onChange={(e) => setProfileData({ ...profileData, lastName: e.target.value })}
+                      type="email"
+                      value={profileData.email}
+                      onChange={(e) => setProfileData({ ...profileData, email: e.target.value })}
+                      placeholder={profileData.email || 'Email Address'}
+                      required
                     />
                   </div>
-                </div>
 
-                <div className="form-group">
-                  <label>Email Address</label>
-                  <input
-                    type="email"
-                    value={profileData.email}
-                    onChange={(e) => setProfileData({ ...profileData, email: e.target.value })}
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label>Phone Number</label>
-                  <input
-                    type="tel"
-                    value={profileData.phone}
-                    onChange={(e) => setProfileData({ ...profileData, phone: e.target.value })}
-                  />
-                </div>
-
-                <div className="form-grid">
-                  <div className="form-group">
-                    <label>Position</label>
-                    <input
-                      type="text"
-                      value={profileData.position}
-                      onChange={(e) => setProfileData({ ...profileData, position: e.target.value })}
-                    />
-                  </div>
                   <div className="form-group">
                     <label>Department</label>
                     <input
                       type="text"
                       value={profileData.department}
                       onChange={(e) => setProfileData({ ...profileData, department: e.target.value })}
+                      placeholder={profileData.department || 'Department'}
                     />
                   </div>
-                </div>
 
-                <div className="form-group">
-                  <label>Company</label>
-                  <input
-                    type="text"
-                    value={profileData.company}
-                    onChange={(e) => setProfileData({ ...profileData, company: e.target.value })}
-                  />
-                </div>
-
-                <button type="submit" className="btn btn-primary">
-                  <Save size={16} style={{ marginRight: '5px' }} />
-                  Update Profile
-                </button>
-              </form>
+                  <button type="submit" className="btn btn-primary">
+                    <Save size={16} style={{ marginRight: '5px' }} />
+                    Update Profile
+                  </button>
+                </form>
+              )}
             </div>
           )}
 
@@ -395,8 +624,410 @@ const AccountSettings = () => {
               </div>
             </div>
           )}
+
+          {activeTab === 'users' && (
+            <div className="card">
+              {profileData.role.toLowerCase() !== 'admin' ? (
+                // Non-admin view - restricted access
+                <div>
+                  <h2 style={{ margin: 0, marginBottom: '20px' }}>User Management</h2>
+                  <div style={{
+                    padding: '60px 20px',
+                    textAlign: 'center',
+                    backgroundColor: '#f8f9fa',
+                    borderRadius: '8px',
+                    border: '2px dashed #dee2e6'
+                  }}>
+                    <Shield size={64} style={{ color: '#6c757d', marginBottom: '20px' }} />
+                    <h3 style={{ color: '#495057', marginBottom: '10px', fontSize: '1.25rem' }}>
+                      Access Restricted
+                    </h3>
+                    <p style={{ color: '#6c757d', fontSize: '1rem', margin: 0 }}>
+                      Only Admin can access this section
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                // Admin view - full access
+                <>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                    <div>
+                      <h2 style={{ margin: 0 }}>User Management</h2>
+                      <p style={{ color: '#666', marginTop: '5px', marginBottom: 0 }}>
+                        View all registered users in the system
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => setShowAddUserModal(true)}
+                      className="btn btn-primary"
+                      style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+                    >
+                      <Plus size={18} />
+                      Add New User
+                    </button>
+                  </div>
+                  
+                  {loadingUsers ? (
+                    <p>Loading users...</p>
+                  ) : (
+                    <div style={{ overflowX: 'auto' }}>
+                  <table style={{
+                    width: '100%',
+                    borderCollapse: 'collapse',
+                    marginTop: '10px',
+                    fontSize: '0.9rem'
+                  }}>
+                    <thead>
+                      <tr style={{ 
+                        borderBottom: '2px solid #e0e0e0',
+                        backgroundColor: '#f8f9fa'
+                      }}>
+                        <th style={{ 
+                          padding: '10px 12px', 
+                          textAlign: 'left', 
+                          fontWeight: '600', 
+                          color: '#333',
+                          fontSize: '0.85rem',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.5px',
+                          whiteSpace: 'nowrap'
+                        }}>Username</th>
+                        <th style={{ 
+                          padding: '10px 12px', 
+                          textAlign: 'left', 
+                          fontWeight: '600', 
+                          color: '#333',
+                          fontSize: '0.85rem',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.5px',
+                          whiteSpace: 'nowrap'
+                        }}>Name</th>
+                        <th style={{ 
+                          padding: '10px 12px', 
+                          textAlign: 'left', 
+                          fontWeight: '600', 
+                          color: '#333',
+                          fontSize: '0.85rem',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.5px',
+                          whiteSpace: 'nowrap'
+                        }}>Email</th>
+                        <th style={{ 
+                          padding: '10px 12px', 
+                          textAlign: 'left', 
+                          fontWeight: '600', 
+                          color: '#333',
+                          fontSize: '0.85rem',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.5px',
+                          whiteSpace: 'nowrap'
+                        }}>Department</th>
+                        <th style={{ 
+                          padding: '10px 12px', 
+                          textAlign: 'center', 
+                          fontWeight: '600', 
+                          color: '#333',
+                          fontSize: '0.85rem',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.5px',
+                          whiteSpace: 'nowrap'
+                        }}>Role</th>
+                        <th style={{ 
+                          padding: '10px 12px', 
+                          textAlign: 'left', 
+                          fontWeight: '600', 
+                          color: '#333',
+                          fontSize: '0.85rem',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.5px',
+                          whiteSpace: 'nowrap'
+                        }}>Joined</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {allUsers.length === 0 ? (
+                        <tr>
+                          <td colSpan="6" style={{ padding: '20px', textAlign: 'center', color: '#999' }}>
+                            No users found
+                          </td>
+                        </tr>
+                      ) : (
+                        allUsers.map((user) => (
+                          <tr key={user.userId} style={{ 
+                            borderBottom: '1px solid #f0f0f0',
+                            transition: 'background-color 0.2s'
+                          }}
+                          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f8f9fa'}
+                          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                          >
+                            <td style={{ 
+                              padding: '10px 12px',
+                              fontWeight: '500',
+                              whiteSpace: 'nowrap'
+                            }}>{user.username}</td>
+                            <td style={{ 
+                              padding: '10px 12px',
+                              whiteSpace: 'nowrap'
+                            }}>{user.firstName} {user.lastName}</td>
+                            <td style={{ 
+                              padding: '10px 12px',
+                              color: '#666',
+                              whiteSpace: 'nowrap',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              maxWidth: '200px'
+                            }}>{user.email}</td>
+                            <td style={{ 
+                              padding: '10px 12px',
+                              color: '#666',
+                              whiteSpace: 'nowrap'
+                            }}>{user.department || '-'}</td>
+                            <td style={{ 
+                              padding: '10px 12px',
+                              textAlign: 'center'
+                            }}>
+                              <span style={{
+                                padding: '4px 10px',
+                                borderRadius: '12px',
+                                fontSize: '0.7rem',
+                                fontWeight: '600',
+                                textTransform: 'uppercase',
+                                background: user.role.toLowerCase() === 'admin' ? '#e3d5ff' : '#d1ecf1',
+                                color: user.role.toLowerCase() === 'admin' ? '#6b21a8' : '#0c5460',
+                                whiteSpace: 'nowrap',
+                                display: 'inline-block'
+                              }}>
+                                {user.role}
+                              </span>
+                            </td>
+                            <td style={{ 
+                              padding: '10px 12px', 
+                              fontSize: '0.85rem', 
+                              color: '#666',
+                              whiteSpace: 'nowrap'
+                            }}>
+                              {user.createdAt ? new Date(user.createdAt).toLocaleDateString('en-GB', {
+                                day: 'numeric',
+                                month: 'short',
+                                year: 'numeric'
+                              }) : '-'}
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+                </>
+              )}
+            </div>
+          )}
         </div>
       </div>
+
+      {/* Add New User Modal */}
+      {showAddUserModal && profileData.role.toLowerCase() === 'admin' && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            backgroundColor: 'white',
+            borderRadius: '12px',
+            width: '90%',
+            maxWidth: '600px',
+            maxHeight: '90vh',
+            overflow: 'auto',
+            boxShadow: '0 10px 40px rgba(0,0,0,0.2)'
+          }}>
+            <div style={{
+              padding: '20px 24px',
+              borderBottom: '1px solid #e0e0e0',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center'
+            }}>
+              <h2 style={{ margin: 0, fontSize: '1.5rem' }}>Add New User</h2>
+              <button
+                onClick={() => {
+                  setShowAddUserModal(false);
+                  setNewUserData({
+                    username: '',
+                    email: '',
+                    password: '',
+                    firstName: '',
+                    lastName: '',
+                    department: '',
+                    role: 'Staff'
+                  });
+                }}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  padding: '8px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  color: '#666'
+                }}
+              >
+                <X size={24} />
+              </button>
+            </div>
+
+            <form onSubmit={handleAddUser} style={{ padding: '24px' }}>
+              <div className="form-group">
+                <label>Username *</label>
+                <input
+                  type="text"
+                  value={newUserData.username}
+                  onChange={(e) => setNewUserData({ ...newUserData, username: e.target.value })}
+                  placeholder="Enter username"
+                  required
+                  minLength={3}
+                  maxLength={50}
+                  pattern="[a-zA-Z0-9_]+"
+                  title="Username can only contain letters, numbers, and underscores"
+                />
+              </div>
+
+              <div className="form-grid">
+                <div className="form-group">
+                  <label>First Name *</label>
+                  <input
+                    type="text"
+                    value={newUserData.firstName}
+                    onChange={(e) => setNewUserData({ ...newUserData, firstName: e.target.value })}
+                    placeholder="Enter first name"
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Last Name *</label>
+                  <input
+                    type="text"
+                    value={newUserData.lastName}
+                    onChange={(e) => setNewUserData({ ...newUserData, lastName: e.target.value })}
+                    placeholder="Enter last name"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="form-group">
+                <label>Email Address *</label>
+                <input
+                  type="email"
+                  value={newUserData.email}
+                  onChange={(e) => setNewUserData({ ...newUserData, email: e.target.value })}
+                  placeholder="Enter email address"
+                  required
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Password *</label>
+                <div className="password-field">
+                  <input
+                    type={showNewUserPassword ? 'text' : 'password'}
+                    value={newUserData.password}
+                    onChange={(e) => setNewUserData({ ...newUserData, password: e.target.value })}
+                    placeholder="Enter password (min. 6 characters)"
+                    required
+                    minLength={6}
+                  />
+                  <button
+                    type="button"
+                    className="password-toggle"
+                    onClick={() => setShowNewUserPassword(!showNewUserPassword)}
+                  >
+                    {showNewUserPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
+                <small style={{ color: '#666', fontSize: '0.85rem', display: 'block', marginTop: '4px' }}>
+                  Minimum 6 characters
+                </small>
+              </div>
+
+              <div className="form-group">
+                <label>Department</label>
+                <input
+                  type="text"
+                  value={newUserData.department}
+                  onChange={(e) => setNewUserData({ ...newUserData, department: e.target.value })}
+                  placeholder="Enter department (optional)"
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Role *</label>
+                <select
+                  value={newUserData.role}
+                  onChange={(e) => setNewUserData({ ...newUserData, role: e.target.value })}
+                  required
+                  style={{
+                    width: '100%',
+                    padding: '10px',
+                    border: '1px solid #ddd',
+                    borderRadius: '6px',
+                    fontSize: '14px'
+                  }}
+                >
+                  <option value="Staff">Staff</option>
+                  <option value="Admin">Admin</option>
+                </select>
+              </div>
+
+              <div style={{ display: 'flex', gap: '12px', marginTop: '24px' }}>
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  style={{ flex: 1 }}
+                >
+                  <Plus size={16} style={{ marginRight: '5px' }} />
+                  Add User
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowAddUserModal(false);
+                    setNewUserData({
+                      username: '',
+                      email: '',
+                      password: '',
+                      firstName: '',
+                      lastName: '',
+                      department: '',
+                      role: 'Staff'
+                    });
+                  }}
+                  style={{
+                    flex: 1,
+                    padding: '10px 20px',
+                    border: '1px solid #ddd',
+                    borderRadius: '6px',
+                    background: 'white',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    fontWeight: '500'
+                  }}
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

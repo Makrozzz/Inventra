@@ -74,6 +74,19 @@ body {
 
 .sidebar-nav {
   padding: 20px 0;
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 120px); /* Adjust based on header height */
+}
+
+.sidebar-main-nav {
+  flex: 1;
+}
+
+.sidebar-bottom-nav {
+  margin-top: auto;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  padding-top: 10px;
 }
 
 .nav-item {
@@ -90,6 +103,25 @@ body {
   cursor: pointer;
   gap: 12px;
   white-space: nowrap;
+}
+
+.nav-item.user-item {
+  cursor: default;
+  background-color: rgba(255, 255, 255, 0.05);
+  border-left: 4px solid rgba(52, 152, 219, 0.5);
+  padding-left: 21px;
+}
+
+.nav-item.user-item:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+  border-left: 4px solid rgba(52, 152, 219, 0.5);
+  padding-left: 21px;
+}
+
+.nav-item.logout-item:hover {
+  background-color: rgba(231, 76, 60, 0.2);
+  border-left: 4px solid #e74c3c;
+  padding-left: 21px;
 }
 
 .nav-item:hover {
@@ -693,7 +725,8 @@ body {
 .settings-container {
   display: flex;
   gap: 30px;
-  max-width: 1200px;
+  max-width: 100%;
+  width: 100%;
 }
 
 .settings-sidebar {
@@ -734,6 +767,8 @@ body {
 
 .settings-content {
   flex: 1;
+  min-width: 0; /* Allow flex item to shrink below content size */
+  width: 100%;
 }
 
 .form-grid {

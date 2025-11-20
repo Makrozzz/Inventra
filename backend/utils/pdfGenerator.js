@@ -9,12 +9,15 @@ class PDFGenerator {
     constructor() {
         this.templatePath = path.join(__dirname, '../templates/pm-report-template.html');
         this.outputDir = path.join(__dirname, '../uploads/pm-reports');
+        this.bulkOutputDir = path.join(__dirname, '../uploads/bulkpm-reports');
         this.ensureDirectories();
     }
 
     async ensureDirectories() {
         try {
             await fs.mkdir(this.outputDir, { recursive: true });
+            await fs.mkdir(this.bulkOutputDir, { recursive: true });
+            console.log('📁 PM reports directories ready');
         } catch (error) {
             console.error('Error creating directories:', error);
         }
@@ -66,11 +69,10 @@ class PDFGenerator {
             const template = handlebars.compile(templateHtml);
             const html = template(templateData);
 
-            // 5. Generate filename
-            const timestamp = new Date().getTime();
+            // 5. Generate filename with PM_ID (deterministic, no timestamp)
             // Use Customer_Name if available, otherwise use 'UNKNOWN'
             const customerName = pmData.Customer_Name ? this.sanitizeForFilename(pmData.Customer_Name) : 'UNKNOWN';
-            const filename = `PM_Report_${customerName}_${pmData.Asset_Serial_Number}_${timestamp}.pdf`;
+            const filename = `PM_Report_PM${pmData.PM_ID}_${customerName}_${pmData.Asset_Serial_Number}.pdf`;
             const filepath = path.join(this.outputDir, filename);
             
             console.log('Customer_Name from DB:', pmData.Customer_Name);
@@ -122,6 +124,45 @@ class PDFGenerator {
             if (browser) {
                 await browser.close();
             }
+        }
+    }
+
+    /**
+     * Check if PDF file exists at the given path
+     * @param {string} filePath - Relative or absolute file path
+     * @returns {Promise<boolean>} - True if file exists
+     */
+    async checkFileExists(filePath) {
+        try {
+            // If relative path, make it absolute
+            const absolutePath = path.isAbsolute(filePath) 
+                ? filePath 
+                : path.join(__dirname, '..', filePath);
+            
+            await fs.access(absolutePath);
+            return true;
+        } catch (error) {
+            return false;
+        }
+    }
+
+    /**
+     * Update PMAINTENANCE.file_path in database
+     * @param {number} pmId - PM_ID
+     * @param {string} filePath - Relative file path to store
+     * @returns {Promise<boolean>} - True if updated successfully
+     */
+    async updateFilePath(pmId, filePath) {
+        try {
+            await pool.execute(
+                'UPDATE PMAINTENANCE SET file_path = ? WHERE PM_ID = ?',
+                [filePath, pmId]
+            );
+            console.log(`✅ Updated file_path for PM_ID ${pmId}`);
+            return true;
+        } catch (error) {
+            console.error('❌ Error updating file_path:', error);
+            return false;
         }
     }
 
@@ -285,6 +326,160 @@ class PDFGenerator {
         } catch (error) {
             console.error('Error checking PDF existence:', error);
             return { exists: false, filepath: null };
+        }
+    }
+
+    /**
+     * Generate bulk PDF report for multiple PM records
+     * Uses caching strategy: checks file_path, reuses existing PDFs, compiles them together
+     * @param {Array} pmRecords - Array of PM records with full details
+     * @returns {Promise<Object>} - { success, filepath, filename, absolutePath, error }
+     */
+    async generateBulkPM(pmRecords) {
+        let browser;
+        try {
+            console.log(`📦 Generating bulk PDF for ${pmRecords.length} PM records with caching`);
+
+            // Step 1: Ensure all individual PDFs exist (check cache, regenerate if needed)
+            const individualPDFs = [];
+            
+            for (let i = 0; i < pmRecords.length; i++) {
+                const pmData = pmRecords[i];
+                console.log(`  Processing PM ${i + 1}/${pmRecords.length}: PM_ID ${pmData.PM_ID}`);
+
+                let pdfPath = null;
+
+                // Check if file_path exists in database
+                if (pmData.file_path) {
+                    console.log(`    🔍 Checking cached PDF: ${pmData.file_path}`);
+                    const fileExists = await this.checkFileExists(pmData.file_path);
+                    
+                    if (fileExists) {
+                        console.log(`    ✅ Using existing cached PDF`);
+                        pdfPath = pmData.file_path;
+                    } else {
+                        console.log(`    ⚠️  Cached file missing, regenerating...`);
+                    }
+                }
+
+                // If no cached PDF or file missing, generate new one
+                if (!pdfPath) {
+                    console.log(`    🔨 Generating new PDF...`);
+                    const result = await this.generatePMReport(pmData.PM_ID);
+                    
+                    if (result.success) {
+                        pdfPath = result.filepath;
+                        // Update database with new file path
+                        await this.updateFilePath(pmData.PM_ID, pdfPath);
+                        console.log(`    ✅ New PDF generated and cached`);
+                    } else {
+                        console.error(`    ❌ Failed to generate PDF for PM_ID ${pmData.PM_ID}`);
+                        continue; // Skip this PM if generation failed
+                    }
+                }
+
+                // Add to individual PDFs list
+                individualPDFs.push({
+                    pmId: pmData.PM_ID,
+                    path: pdfPath,
+                    customer: pmData.Customer_Name,
+                    branch: pmData.Branch
+                });
+            }
+
+            if (individualPDFs.length === 0) {
+                throw new Error('No valid PDFs generated');
+            }
+
+            console.log(`  ✅ All individual PDFs ready (${individualPDFs.length}/${pmRecords.length})`);
+
+            // Step 2: Compile individual PDFs into bulk PDF
+            // Load template and generate combined HTML from all PM records
+            const templateHtml = await fs.readFile(this.templatePath, 'utf8');
+            const template = handlebars.compile(templateHtml);
+            const htmlPages = [];
+
+            for (let i = 0; i < individualPDFs.length; i++) {
+                const pdfInfo = individualPDFs[i];
+                const pmData = pmRecords.find(pm => pm.PM_ID === pdfInfo.pmId);
+                
+                if (pmData) {
+                    const pmSequenceNumber = await this.getPMSequenceNumber(pmData.PM_ID, pmData.Asset_ID);
+                    const checklistResults = await this.getChecklistResults(pmData.PM_ID);
+                    const templateData = this.formatDataForTemplate(pmData, checklistResults, pmSequenceNumber);
+                    const html = template(templateData);
+                    
+                    // Add page break after each PM (except the last one)
+                    if (i < individualPDFs.length - 1) {
+                        htmlPages.push(html + '<div style="page-break-after: always;"></div>');
+                    } else {
+                        htmlPages.push(html);
+                    }
+                }
+            }
+
+            // Combine all HTML
+            const combinedHtml = htmlPages.join('');
+
+            // Step 3: Generate bulk PDF filename (with timestamp for uniqueness)
+            const now = new Date();
+            const timestamp = now.getTime();
+            
+            // Use first customer and branch for bulk filename
+            const firstPDF = individualPDFs[0];
+            const customerName = this.sanitizeForFilename(firstPDF.customer || 'UNKNOWN');
+            const branchName = this.sanitizeForFilename(firstPDF.branch || 'UNKNOWN');
+            const filename = `${customerName}_${branchName}_${timestamp}.pdf`;
+            const filepath = path.join(this.bulkOutputDir, filename);
+
+            // Step 4: Generate bulk PDF with Puppeteer
+            console.log('  🖨️  Compiling bulk PDF...');
+            browser = await puppeteer.launch({
+                headless: 'new',
+                args: ['--no-sandbox', '--disable-setuid-sandbox']
+            });
+
+            const page = await browser.newPage();
+            await page.setContent(combinedHtml, { waitUntil: 'networkidle0' });
+
+            await page.pdf({
+                path: filepath,
+                format: 'A4',
+                printBackground: true,
+                margin: {
+                    top: '10mm',
+                    right: '10mm',
+                    bottom: '10mm',
+                    left: '10mm'
+                }
+            });
+
+            await browser.close();
+            console.log(`✅ Bulk PDF compiled: ${filename}`);
+
+            // Return relative path and absolute path
+            const relativePath = path.relative(path.join(__dirname, '../'), filepath).replace(/\\\\/g, '/');
+
+            return {
+                success: true,
+                filepath: relativePath,
+                filename: filename,
+                absolutePath: filepath, // Include absolute path for immediate download
+                error: null
+            };
+
+        } catch (error) {
+            console.error('❌ Error generating bulk PDF:', error);
+            if (browser) {
+                await browser.close();
+            }
+            return {
+                success: false,
+                filepath: null,
+                filename: null,
+                absolutePath: null,
+                error: error.message
+            };
         }
     }
 }

@@ -251,7 +251,8 @@ class PMaintenance {
           m.Model_Name as Model,
           r.Recipient_Name,
           r.Department,
-          cust.Customer_Name
+          cust.Customer_Name,
+          cust.Branch
         FROM PMAINTENANCE pm
         LEFT JOIN ASSET a ON pm.Asset_ID = a.Asset_ID
         LEFT JOIN CATEGORY c ON a.Category_ID = c.Category_ID

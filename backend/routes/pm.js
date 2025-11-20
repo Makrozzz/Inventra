@@ -16,7 +16,8 @@ const {
   updateChecklistItem,
   deleteChecklistItem,
   createCategory,
-  getPMReport
+  getPMReport,
+  bulkDownloadPM
 } = require('../controllers/pmController');
 
 const router = express.Router();
@@ -35,6 +36,9 @@ router.get('/asset/:assetId', getPMByAssetId);
 
 // PDF Report route
 router.get('/:pmId/report', getPMReport);
+
+// Bulk download route
+router.post('/bulk-download', bulkDownloadPM);
 
 router.post('/', createPM);
 

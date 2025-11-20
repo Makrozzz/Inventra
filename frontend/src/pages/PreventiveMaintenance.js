@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Calendar, Clock, CheckCircle, AlertTriangle, Wrench, Filter, Building2, MapPin, Package, FileText, X, ClipboardCheck, Edit, Trash2, Plus, Save } from 'lucide-react';
+import { Calendar, Clock, CheckCircle, AlertTriangle, Wrench, Filter, Building2, MapPin, Package, FileText, X, ClipboardCheck, Edit, Trash2, Plus, Save, Search, Download, ChevronRight, ChevronLeft } from 'lucide-react';
 
 const PreventiveMaintenance = () => {
   const navigate = useNavigate();
@@ -9,6 +9,7 @@ const PreventiveMaintenance = () => {
   const savedBranch = useRef(null);
   const [selectedCustomer, setSelectedCustomer] = useState('');
   const [selectedBranch, setSelectedBranch] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
   const [customers, setCustomers] = useState([]);
   const [branches, setBranches] = useState([]);
   const [pmRecords, setPmRecords] = useState([]);
@@ -40,6 +41,13 @@ const PreventiveMaintenance = () => {
   const [pendingEdit, setPendingEdit] = useState(null);
   const [showAddConfirm, setShowAddConfirm] = useState(false);
   const [loadingChecklist, setLoadingChecklist] = useState(false);
+
+  // Bulk Download Modal States
+  const [showBulkDownloadModal, setShowBulkDownloadModal] = useState(false);
+  const [bulkDownloadSearch, setBulkDownloadSearch] = useState('');
+  const [selectedAssets, setSelectedAssets] = useState([]); // Assets selected (left box)
+  const [selectedPMRecords, setSelectedPMRecords] = useState({}); // PM records selected per asset {assetId: [pmId1, pmId2]}
+  const [downloadingPDF, setDownloadingPDF] = useState(false);
 
   // Initialize from URL parameters on mount
   useEffect(() => {
@@ -144,8 +152,22 @@ const PreventiveMaintenance = () => {
     }
   };
 
+  // Filter PM records based on search query
+  const filteredPmRecords = searchQuery 
+    ? pmRecords.filter(record => {
+        const query = searchQuery.toLowerCase().trim();
+        return (
+          record.Asset_Tag_ID?.toLowerCase().includes(query) ||
+          record.Item_Name?.toLowerCase().includes(query) ||
+          record.Asset_Serial_Number?.toLowerCase().includes(query) ||
+          record.Recipient_Name?.toLowerCase().includes(query) ||
+          record.Department?.toLowerCase().includes(query)
+        );
+      })
+    : pmRecords;
+
   // Group PM records by category and asset, keeping only latest PM per asset
-  const groupedByCategory = pmRecords.reduce((acc, record) => {
+  const groupedByCategory = filteredPmRecords.reduce((acc, record) => {
     const category = record.Category || 'Uncategorized';
     if (!acc[category]) {
       acc[category] = {
@@ -536,30 +558,60 @@ const PreventiveMaintenance = () => {
   };
 
   return (
-    <div className="page-container">
-      <div className="page-header">
+    <div style={{ padding: '0' }}>
+      {/* Header Section with Gradient */}
+      <div style={{
+        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        padding: '30px 20px',
+        marginBottom: '30px',
+        borderRadius: '0 0 20px 20px',
+        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)',
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        flexWrap: 'wrap',
+        gap: '20px'
+      }}>
         <div>
-          <h1 className="page-title">Preventive Maintenance</h1>
-          <p style={{ color: '#7f8c8d', fontSize: '0.9rem', margin: '5px 0 0 0' }}>
+          <h1 style={{ 
+            color: 'white', 
+            margin: '0 0 10px 0',
+            fontSize: '32px',
+            fontWeight: '700'
+          }}>
+            Preventive Maintenance
+          </h1>
+          <p style={{ 
+            color: 'rgba(255, 255, 255, 0.9)', 
+            margin: 0,
+            fontSize: '16px'
+          }}>
             Monitor and manage preventive maintenance schedules with detailed checklists
           </p>
         </div>
-        <button
-          onClick={handleOpenChecklistManager}
-          className="btn btn-primary"
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            padding: '12px 20px',
-            fontSize: '1rem',
-            fontWeight: '600'
-          }}
-        >
-          <Edit size={18} />
-          Edit Checklist Items
-        </button>
+        <div className="actions">
+          <button
+            onClick={handleOpenChecklistManager}
+            className="btn btn-primary"
+            style={{
+              backgroundColor: 'rgba(255, 255, 255, 0.9)',
+              color: '#667eea',
+              border: 'none',
+              fontWeight: '600',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '12px 20px',
+              fontSize: '1rem'
+            }}
+          >
+            <Edit size={18} />
+            Edit Checklist Items
+          </button>
+        </div>
       </div>
+
+      <div style={{ padding: '0 20px' }}>
 
       {/* Statistics Cards */}
       {statistics && (
@@ -665,6 +717,121 @@ const PreventiveMaintenance = () => {
         )}
       </div>
 
+      {/* Search Bar and Download Button */}
+      {selectedCustomer && selectedBranch && pmRecords.length > 0 && (
+        <div className="card" style={{ marginBottom: '20px' }}>
+          <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+            <div style={{ position: 'relative', flex: 1 }}>
+              <Search 
+                size={20} 
+                style={{ 
+                  position: 'absolute', 
+                  left: '16px', 
+                  top: '50%', 
+                  transform: 'translateY(-50%)',
+                  color: '#7f8c8d'
+                }} 
+              />
+              <input
+                type="text"
+                placeholder="Search by Asset Tag ID, Serial Number, Item Name, Recipient, or Department..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '14px 16px 14px 48px',
+                  border: '2px solid #ddd',
+                  borderRadius: '8px',
+                  fontSize: '1rem',
+                  transition: 'border-color 0.2s, box-shadow 0.2s',
+                  outline: 'none'
+                }}
+                onFocus={(e) => {
+                  e.target.style.borderColor = '#3498db';
+                  e.target.style.boxShadow = '0 0 0 3px rgba(52, 152, 219, 0.1)';
+                }}
+                onBlur={(e) => {
+                  e.target.style.borderColor = '#ddd';
+                  e.target.style.boxShadow = 'none';
+                }}
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  style={{
+                    position: 'absolute',
+                    right: '16px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    background: '#e0e0e0',
+                    border: 'none',
+                    borderRadius: '50%',
+                    width: '24px',
+                    height: '24px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer',
+                    transition: 'background 0.2s'
+                  }}
+                  onMouseOver={(e) => e.target.style.background = '#bdbdbd'}
+                  onMouseOut={(e) => e.target.style.background = '#e0e0e0'}
+                >
+                  <X size={14} />
+                </button>
+              )}
+            </div>
+            
+            {/* Download Form Button */}
+            <button
+              onClick={() => setShowBulkDownloadModal(true)}
+              style={{
+                padding: '14px 24px',
+                background: '#27ae60',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                fontSize: '1rem',
+                fontWeight: '600',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                transition: 'all 0.2s',
+                whiteSpace: 'nowrap',
+                boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+              }}
+              onMouseOver={(e) => {
+                e.currentTarget.style.background = '#229954';
+                e.currentTarget.style.transform = 'translateY(-1px)';
+                e.currentTarget.style.boxShadow = '0 4px 8px rgba(0,0,0,0.15)';
+              }}
+              onMouseOut={(e) => {
+                e.currentTarget.style.background = '#27ae60';
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
+              }}
+            >
+              <Download size={18} />
+              Download Form
+            </button>
+          </div>
+          {searchQuery && (
+            <p style={{ 
+              margin: '12px 0 0 0', 
+              color: '#666', 
+              fontSize: '0.9rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px'
+            }}>
+              <Search size={16} />
+              Searching for: <strong>"{searchQuery}"</strong>
+            </p>
+          )}
+        </div>
+      )}
+
       {/* PM Records by Category with Checklist */}
       {loading ? (
         <div className="card" style={{ textAlign: 'center', padding: '60px' }}>
@@ -717,7 +884,21 @@ const PreventiveMaintenance = () => {
                 <table className="table" style={{ minWidth: '1200px' }}>
                   <thead>
                     <tr>
-                      <th style={{ position: 'sticky', left: 0, background: 'white', zIndex: 10, minWidth: '120px', textAlign: 'center' }}>Asset Tag ID</th>
+                      <th style={{ 
+                        position: 'sticky', 
+                        left: 0, 
+                        top: 0,
+                        background: 'linear-gradient(135deg, #2c3e50, #34495e)', 
+                        zIndex: 20, 
+                        minWidth: '140px', 
+                        textAlign: 'center', 
+                        padding: '16px 12px',
+                        color: 'white',
+                        fontWeight: '600',
+                        boxShadow: '2px 2px 4px rgba(0, 0, 0, 0.2)'
+                      }}>
+                        Tag ID
+                      </th>
                       <th style={{ minWidth: '150px', textAlign: 'center' }}>Item Name</th>
                       <th style={{ minWidth: '150px', textAlign: 'center' }}>Serial Number</th>
                       <th style={{ minWidth: '120px', textAlign: 'center' }}>Latest PM Date</th>
@@ -915,6 +1096,7 @@ const PreventiveMaintenance = () => {
           );
         })
       )}
+      </div> {/* End of padding wrapper (0 20px) */}
 
       {/* PM Form Modal */}
       {showPMForm && selectedAsset && (
@@ -1820,6 +2002,538 @@ const PreventiveMaintenance = () => {
                 }}
               >
                 Yes, Add Item
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bulk Download Modal */}
+      {showBulkDownloadModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0,0,0,0.6)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1003,
+          padding: '20px'
+        }}>
+          <div style={{
+            background: 'white',
+            borderRadius: '12px',
+            width: '95%',
+            maxWidth: '1400px',
+            maxHeight: '90vh',
+            display: 'flex',
+            flexDirection: 'column',
+            boxShadow: '0 10px 40px rgba(0,0,0,0.3)'
+          }}>
+            {/* Header */}
+            <div style={{
+              padding: '24px 28px',
+              borderBottom: '2px solid #e0e0e0',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <Download size={28} color="#27ae60" />
+                <h2 style={{ margin: 0, fontSize: '1.5rem', color: '#2c3e50' }}>
+                  Download Bulk PM Forms
+                </h2>
+              </div>
+              <button
+                onClick={() => {
+                  setShowBulkDownloadModal(false);
+                  setSelectedAssets([]);
+                  setSelectedPMRecords({});
+                  setBulkDownloadSearch('');
+                }}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  padding: '8px',
+                  borderRadius: '6px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  transition: 'background 0.2s'
+                }}
+                onMouseOver={(e) => e.currentTarget.style.background = '#f5f5f5'}
+                onMouseOut={(e) => e.currentTarget.style.background = 'none'}
+              >
+                <X size={24} color="#666" />
+              </button>
+            </div>
+
+            {/* Search Bar */}
+            <div style={{ padding: '20px 28px', borderBottom: '1px solid #e0e0e0' }}>
+              <div style={{ position: 'relative' }}>
+                <Search 
+                  size={18} 
+                  style={{ 
+                    position: 'absolute', 
+                    left: '14px', 
+                    top: '50%', 
+                    transform: 'translateY(-50%)',
+                    color: '#7f8c8d'
+                  }} 
+                />
+                <input
+                  type="text"
+                  placeholder="Search assets by Tag ID, Item Name, Serial Number..."
+                  value={bulkDownloadSearch}
+                  onChange={(e) => setBulkDownloadSearch(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '12px 14px 12px 44px',
+                    border: '2px solid #ddd',
+                    borderRadius: '8px',
+                    fontSize: '0.95rem',
+                    outline: 'none',
+                    transition: 'border-color 0.2s'
+                  }}
+                  onFocus={(e) => e.target.style.borderColor = '#3498db'}
+                  onBlur={(e) => e.target.style.borderColor = '#ddd'}
+                />
+              </div>
+            </div>
+
+            {/* Two Boxes Container */}
+            <div style={{
+              flex: 1,
+              display: 'flex',
+              gap: '20px',
+              padding: '20px 28px',
+              overflow: 'hidden'
+            }}>
+              {/* Left Box - Available Assets */}
+              <div style={{
+                flex: 1,
+                display: 'flex',
+                flexDirection: 'column',
+                border: '2px solid #3498db',
+                borderRadius: '8px',
+                overflow: 'hidden'
+              }}>
+                <div style={{
+                  padding: '16px',
+                  background: 'linear-gradient(135deg, #3498db, #2980b9)',
+                  color: 'white',
+                  fontWeight: '600',
+                  fontSize: '1rem'
+                }}>
+                  Available Assets ({(() => {
+                    const allAssets = Object.values(groupedByCategory).flatMap(cat => 
+                      Object.values(cat.assets)
+                    );
+                    const filtered = allAssets.filter(asset => {
+                      if (!bulkDownloadSearch) return true;
+                      const query = bulkDownloadSearch.toLowerCase();
+                      return (
+                        asset.Asset_Tag_ID?.toLowerCase().includes(query) ||
+                        asset.Item_Name?.toLowerCase().includes(query) ||
+                        asset.Asset_Serial_Number?.toLowerCase().includes(query)
+                      );
+                    });
+                    return filtered.length;
+                  })()})
+                </div>
+                <div style={{ flex: 1, overflow: 'auto', padding: '12px' }}>
+                  {(() => {
+                    const allAssets = Object.values(groupedByCategory).flatMap(cat => 
+                      Object.values(cat.assets)
+                    );
+                    const filteredAssets = allAssets.filter(asset => {
+                      if (!bulkDownloadSearch) return true;
+                      const query = bulkDownloadSearch.toLowerCase();
+                      return (
+                        asset.Asset_Tag_ID?.toLowerCase().includes(query) ||
+                        asset.Item_Name?.toLowerCase().includes(query) ||
+                        asset.Asset_Serial_Number?.toLowerCase().includes(query)
+                      );
+                    });
+
+                    if (filteredAssets.length === 0) {
+                      return (
+                        <div style={{
+                          padding: '40px 20px',
+                          textAlign: 'center',
+                          color: '#999'
+                        }}>
+                          <Package size={48} color="#ddd" style={{ marginBottom: '12px' }} />
+                          <p>No assets found</p>
+                        </div>
+                      );
+                    }
+
+                    return filteredAssets.map(asset => {
+                      const isSelected = selectedAssets.some(a => a.Asset_ID === asset.Asset_ID);
+                      return (
+                        <div
+                          key={asset.Asset_ID}
+                          style={{
+                            padding: '14px 16px',
+                            marginBottom: '8px',
+                            border: '1px solid #e0e0e0',
+                            borderRadius: '6px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '12px',
+                            cursor: 'pointer',
+                            background: isSelected ? '#e8f5e9' : 'white',
+                            transition: 'all 0.2s',
+                            minHeight: '70px'
+                          }}
+                          onClick={() => {
+                            if (isSelected) {
+                              setSelectedAssets(selectedAssets.filter(a => a.Asset_ID !== asset.Asset_ID));
+                              // Remove PM selections for this asset
+                              const newPMRecords = { ...selectedPMRecords };
+                              delete newPMRecords[asset.Asset_ID];
+                              setSelectedPMRecords(newPMRecords);
+                            } else {
+                              setSelectedAssets([...selectedAssets, asset]);
+                            }
+                          }}
+                          onMouseOver={(e) => {
+                            if (!isSelected) e.currentTarget.style.background = '#f5f5f5';
+                          }}
+                          onMouseOut={(e) => {
+                            if (!isSelected) e.currentTarget.style.background = 'white';
+                          }}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            readOnly
+                            style={{
+                              width: '18px',
+                              height: '18px',
+                              cursor: 'pointer',
+                              flexShrink: 0
+                            }}
+                          />
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px' }}>
+                              <div style={{ fontWeight: '600', color: '#2c3e50', fontSize: '0.95rem' }}>
+                                {asset.Asset_Tag_ID}
+                              </div>
+                              <div style={{ fontSize: '0.75rem', color: '#999', fontFamily: 'monospace' }}>
+                                {asset.Asset_Serial_Number || 'N/A'}
+                              </div>
+                            </div>
+                            <div style={{ fontSize: '0.85rem', color: '#666', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                              {asset.Item_Name}
+                            </div>
+                          </div>
+                          {isSelected && <ChevronRight size={20} color="#27ae60" style={{ flexShrink: 0 }} />}
+                        </div>
+                      );
+                    });
+                  })()}
+                </div>
+              </div>
+
+              {/* Right Box - Selected Assets with PM Records */}
+              <div style={{
+                flex: 1,
+                display: 'flex',
+                flexDirection: 'column',
+                border: '2px solid #27ae60',
+                borderRadius: '8px',
+                overflow: 'hidden'
+              }}>
+                <div style={{
+                  padding: '16px',
+                  background: 'linear-gradient(135deg, #27ae60, #229954)',
+                  color: 'white',
+                  fontWeight: '600',
+                  fontSize: '1rem'
+                }}>
+                  Selected Assets ({selectedAssets.length})
+                </div>
+                <div style={{ flex: 1, overflow: 'auto', padding: '12px' }}>
+                  {selectedAssets.length === 0 ? (
+                    <div style={{
+                      padding: '40px 20px',
+                      textAlign: 'center',
+                      color: '#999'
+                    }}>
+                      <ChevronLeft size={48} color="#ddd" style={{ marginBottom: '12px' }} />
+                      <p>Select assets from the left to add PM records</p>
+                    </div>
+                  ) : (
+                    selectedAssets.map(asset => {
+                      const assetPMRecords = asset.allPMRecords || [];
+                      const selectedPMs = selectedPMRecords[asset.Asset_ID] || [];
+                      
+                      return (
+                        <div
+                          key={asset.Asset_ID}
+                          style={{
+                            marginBottom: '8px',
+                            border: '1px solid #e0e0e0',
+                            borderRadius: '6px',
+                            overflow: 'hidden'
+                          }}
+                        >
+                          {/* Asset Row with PM Selection Inline */}
+                          <div style={{
+                            padding: '14px 16px',
+                            background: '#f8f9fa',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '16px',
+                            justifyContent: 'space-between',
+                            minHeight: '70px'
+                          }}>
+                            {/* Asset Info */}
+                            <div style={{ flex: '0 0 auto', minWidth: '180px', maxWidth: '180px' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px' }}>
+                                <div style={{ fontWeight: '600', color: '#2c3e50', fontSize: '0.95rem' }}>
+                                  {asset.Asset_Tag_ID}
+                                </div>
+                                <div style={{ fontSize: '0.75rem', color: '#999', fontFamily: 'monospace' }}>
+                                  {asset.Asset_Serial_Number || 'N/A'}
+                                </div>
+                              </div>
+                              <div style={{ fontSize: '0.85rem', color: '#666', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                {asset.Item_Name}
+                              </div>
+                            </div>
+
+                            {/* PM Records Selection - Horizontal in same row */}
+                            {assetPMRecords.length === 0 ? (
+                              <div style={{ 
+                                fontSize: '0.85rem', 
+                                color: '#999',
+                                fontStyle: 'italic',
+                                flex: 1
+                              }}>
+                                No PM records available
+                              </div>
+                            ) : (
+                              <div style={{
+                                flex: 1,
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px',
+                                flexWrap: 'wrap'
+                              }}>
+                                <span style={{
+                                  fontSize: '0.85rem',
+                                  color: '#666',
+                                  fontWeight: '600',
+                                  marginRight: '4px'
+                                }}>
+                                  PM:
+                                </span>
+                                {assetPMRecords.map((pm, index) => {
+                                  const isPMSelected = selectedPMs.includes(pm.PM_ID);
+                                  return (
+                                    <div
+                                      key={pm.PM_ID}
+                                      style={{
+                                        padding: '6px 12px',
+                                        border: isPMSelected ? '2px solid #3498db' : '1px solid #ddd',
+                                        borderRadius: '6px',
+                                        cursor: 'pointer',
+                                        background: isPMSelected ? '#e3f2fd' : 'white',
+                                        transition: 'all 0.2s',
+                                        fontSize: '0.85rem',
+                                        fontWeight: isPMSelected ? '600' : '500',
+                                        color: isPMSelected ? '#2c3e50' : '#666',
+                                        whiteSpace: 'nowrap',
+                                        boxShadow: isPMSelected ? '0 2px 4px rgba(52, 152, 219, 0.2)' : 'none'
+                                      }}
+                                      onClick={() => {
+                                        const currentPMs = selectedPMRecords[asset.Asset_ID] || [];
+                                        if (isPMSelected) {
+                                          setSelectedPMRecords({
+                                            ...selectedPMRecords,
+                                            [asset.Asset_ID]: currentPMs.filter(id => id !== pm.PM_ID)
+                                          });
+                                        } else {
+                                          setSelectedPMRecords({
+                                            ...selectedPMRecords,
+                                            [asset.Asset_ID]: [...currentPMs, pm.PM_ID]
+                                          });
+                                        }
+                                      }}
+                                      onMouseOver={(e) => {
+                                        if (!isPMSelected) {
+                                          e.currentTarget.style.background = '#f0f0f0';
+                                          e.currentTarget.style.borderColor = '#3498db';
+                                        }
+                                      }}
+                                      onMouseOut={(e) => {
+                                        if (!isPMSelected) {
+                                          e.currentTarget.style.background = 'white';
+                                          e.currentTarget.style.borderColor = '#ddd';
+                                        }
+                                      }}
+                                      title={`PM Date: ${formatDate(pm.PM_Date)}`}
+                                    >
+                                      {isPMSelected && <span style={{ marginRight: '4px', color: '#27ae60' }}>✓</span>}
+                                      {index + 1}
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            )}
+
+                            {/* Remove Button */}
+                            <button
+                              onClick={() => {
+                                setSelectedAssets(selectedAssets.filter(a => a.Asset_ID !== asset.Asset_ID));
+                                const newPMRecords = { ...selectedPMRecords };
+                                delete newPMRecords[asset.Asset_ID];
+                                setSelectedPMRecords(newPMRecords);
+                              }}
+                              style={{
+                                background: '#e74c3c',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '4px',
+                                padding: '6px 12px',
+                                cursor: 'pointer',
+                                fontSize: '0.85rem',
+                                fontWeight: '600',
+                                transition: 'background 0.2s',
+                                whiteSpace: 'nowrap'
+                              }}
+                              onMouseOver={(e) => e.currentTarget.style.background = '#c0392b'}
+                              onMouseOut={(e) => e.currentTarget.style.background = '#e74c3c'}
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Footer with Download Button */}
+            <div style={{
+              padding: '20px 28px',
+              borderTop: '2px solid #e0e0e0',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between'
+            }}>
+              <div style={{ color: '#666', fontSize: '0.95rem' }}>
+                {(() => {
+                  const totalSelected = Object.values(selectedPMRecords).reduce((sum, pms) => sum + pms.length, 0);
+                  return (
+                    <>
+                      <strong>{selectedAssets.length}</strong> asset{selectedAssets.length !== 1 ? 's' : ''} selected, 
+                      <strong> {totalSelected}</strong> PM record{totalSelected !== 1 ? 's' : ''} to download
+                    </>
+                  );
+                })()}
+              </div>
+              <button
+                onClick={async () => {
+                  // TODO: Implement PDF download
+                  const totalSelected = Object.values(selectedPMRecords).reduce((sum, pms) => sum + pms.length, 0);
+                  if (totalSelected === 0) {
+                    alert('Please select at least one PM record to download');
+                    return;
+                  }
+                  
+                  setDownloadingPDF(true);
+                  try {
+                    // Get customer and branch names
+                    const customerName = customers.find(c => c.Customer_ID == selectedCustomer)?.Customer_Name || 'Customer';
+                    const branchName = selectedBranch;
+                    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+                    const filename = `${customerName}_${branchName}_${timestamp}.pdf`;
+                    
+                    // Prepare data for backend
+                    const pmIds = Object.values(selectedPMRecords).flat();
+                    
+                    // Call backend API to generate PDF
+                    const token = localStorage.getItem('authToken');
+                    const response = await fetch('http://localhost:5000/api/v1/pm/bulk-download', {
+                      method: 'POST',
+                      headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                      },
+                      body: JSON.stringify({ pmIds })
+                    });
+
+                    if (!response.ok) {
+                      const errorData = await response.json().catch(() => ({}));
+                      const errorMessage = errorData.message || errorData.error || 'Failed to generate PDF';
+                      throw new Error(errorMessage);
+                    }
+
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = filename;
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    document.body.removeChild(a);
+                    
+                    // Close modal and reset
+                    setShowBulkDownloadModal(false);
+                    setSelectedAssets([]);
+                    setSelectedPMRecords({});
+                    setBulkDownloadSearch('');
+                  } catch (error) {
+                    console.error('Error downloading PDF:', error);
+                    alert(`Failed to download PDF: ${error.message}`);
+                  } finally {
+                    setDownloadingPDF(false);
+                  }
+                }}
+                disabled={downloadingPDF || Object.values(selectedPMRecords).reduce((sum, pms) => sum + pms.length, 0) === 0}
+                style={{
+                  padding: '14px 32px',
+                  background: downloadingPDF ? '#95a5a6' : '#27ae60',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: downloadingPDF ? 'not-allowed' : 'pointer',
+                  fontSize: '1rem',
+                  fontWeight: '600',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '10px',
+                  transition: 'all 0.2s',
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                }}
+                onMouseOver={(e) => {
+                  if (!downloadingPDF && Object.values(selectedPMRecords).reduce((sum, pms) => sum + pms.length, 0) > 0) {
+                    e.currentTarget.style.background = '#229954';
+                    e.currentTarget.style.transform = 'translateY(-1px)';
+                    e.currentTarget.style.boxShadow = '0 4px 8px rgba(0,0,0,0.15)';
+                  }
+                }}
+                onMouseOut={(e) => {
+                  if (!downloadingPDF) {
+                    e.currentTarget.style.background = '#27ae60';
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
+                  }
+                }}
+              >
+                <Download size={18} />
+                {downloadingPDF ? 'Generating PDF...' : 'Download PDF'}
               </button>
             </div>
           </div>
