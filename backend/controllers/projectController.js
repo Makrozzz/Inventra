@@ -113,7 +113,8 @@ exports.getProjectByReference = async (req, res) => {
         customer_name: projectData.Customer_Name,
         customer_reference_number: projectData.Customer_Ref_Number,
         project_title: projectData.Project_Title,
-        project_id: projectData.Project_ID
+        project_id: projectData.Project_ID,
+        antivirus: projectData.Antivirus
       }
     });
   } catch (error) {

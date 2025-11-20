@@ -11,8 +11,7 @@ const getAllPeripheralTypes = async (req, res, next) => {
         Peripheral_Type_ID as id,
         Peripheral_Type_Name as name,
         Peripheral_Type_ID,
-        Peripheral_Type_Name,
-        created_at
+        Peripheral_Type_Name
       FROM PERIPHERAL_TYPE 
       ORDER BY Peripheral_Type_Name ASC
     `);

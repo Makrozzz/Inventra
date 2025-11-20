@@ -12,6 +12,7 @@ class Asset {
     this.Status = data.Status;
     this.Windows = data.Windows;
     this.Microsoft_Office = data.Microsoft_Office;
+    this.Software = data.Software;
     this.Monthly_Prices = data.Monthly_Prices;
     
     // Related data from JOINs
@@ -81,7 +82,7 @@ class Asset {
           GROUP_CONCAT(DISTINCT s.Software_Name SEPARATOR ', ') AS Software,
           GROUP_CONCAT(DISTINCT s.Price SEPARATOR ', ') AS Software_Prices,
           GROUP_CONCAT(DISTINCT CONCAT(pt.Peripheral_Type_Name, '|', per.Serial_Code, '|', per.Condition, '|', COALESCE(per.Remarks, '')) SEPARATOR '||') AS Peripheral_Data,
-          GROUP_CONCAT(DISTINCT specs.Attributes_Value SEPARATOR ', ') AS Specs_Attributes
+          GROUP_CONCAT(DISTINCT CONCAT(spec_names.Attributes_Value, ': ', model_specs.Attributes_Value) SEPARATOR '; ') AS Specs_Attributes
         FROM INVENTORY i
         INNER JOIN ASSET a ON i.Asset_ID = a.Asset_ID
         LEFT JOIN CATEGORY c ON a.Category_ID = c.Category_ID
@@ -93,7 +94,8 @@ class Asset {
         LEFT JOIN SOFTWARE s ON asb.Software_ID = s.Software_ID
         LEFT JOIN PERIPHERAL per ON a.Asset_ID = per.Asset_ID
         LEFT JOIN PERIPHERAL_TYPE pt ON per.Peripheral_Type_ID = pt.Peripheral_Type_ID
-        LEFT JOIN SPECS specs ON a.Category_ID = specs.Category_ID
+        LEFT JOIN MODEL_SPECS_BRIDGE model_specs ON a.Model_ID = model_specs.Model_ID
+        LEFT JOIN SPECS spec_names ON model_specs.Attributes_ID = spec_names.Attributes_ID
         GROUP BY i.Inventory_ID, a.Asset_ID
         ORDER BY i.Inventory_ID DESC
       `);
@@ -270,8 +272,8 @@ class Asset {
   static async create(assetData) {
     try {
       const [result] = await pool.execute(
-        `INSERT INTO ASSET (Asset_Serial_Number, Asset_Tag_ID, Item_Name, Recipients_ID, Category_ID, Model_ID, Status) 
-         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO ASSET (Asset_Serial_Number, Asset_Tag_ID, Item_Name, Recipients_ID, Category_ID, Model_ID, Status, Windows, Microsoft_Office, Monthly_Prices) 
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           assetData.Asset_Serial_Number,
           assetData.Asset_Tag_ID,
@@ -279,7 +281,10 @@ class Asset {
           assetData.Recipients_ID,
           assetData.Category_ID,
           assetData.Model_ID,
-          assetData.Status || 'Active'
+          assetData.Status || 'Active',
+          assetData.Windows || null,
+          assetData.Microsoft_Office || null,
+          assetData.Monthly_Prices || null
         ]
       );
       
@@ -316,6 +321,7 @@ class Asset {
           this.Status,
           this.Windows,
           this.Microsoft_Office,
+          this.Monthly_Prices,
           this.Monthly_Prices,
           this.Asset_ID
         ]
@@ -593,7 +599,7 @@ class Asset {
           cust.Branch,
           GROUP_CONCAT(DISTINCT s.Software_Name SEPARATOR ', ') AS Software,
           GROUP_CONCAT(DISTINCT s.Price SEPARATOR ', ') AS Software_Prices,
-          GROUP_CONCAT(DISTINCT specs.Attributes_Name SEPARATOR ', ') AS Specs_Attributes
+          GROUP_CONCAT(DISTINCT CONCAT(spec_names.Attributes_Value, ': ', model_specs.Attributes_Value) SEPARATOR '; ') AS Specs_Attributes
         FROM ASSET a
         LEFT JOIN CATEGORY c ON a.Category_ID = c.Category_ID
         LEFT JOIN MODEL m ON a.Model_ID = m.Model_ID
@@ -603,7 +609,8 @@ class Asset {
         LEFT JOIN CUSTOMER cust ON i.Customer_ID = cust.Customer_ID
         LEFT JOIN ASSET_SOFTWARE_BRIDGE asb ON a.Asset_ID = asb.Asset_ID
         LEFT JOIN SOFTWARE s ON asb.Software_ID = s.Software_ID
-        LEFT JOIN SPECS specs ON a.Category_ID = specs.Category_ID
+        LEFT JOIN MODEL_SPECS_BRIDGE model_specs ON a.Model_ID = model_specs.Model_ID
+        LEFT JOIN SPECS spec_names ON model_specs.Attributes_ID = spec_names.Attributes_ID
         WHERE a.Asset_ID = ?
         GROUP BY a.Asset_ID
         LIMIT 1
@@ -1017,6 +1024,50 @@ class Asset {
       }
     } catch (error) {
       console.error('Error in linkToProject:', error);
+      throw error;
+    }
+  }
+
+  // Link software to asset via ASSET_SOFTWARE_BRIDGE table
+  static async linkSoftwareToAsset(assetId, softwareName) {
+    try {
+      // First, get or create the software ID
+      let softwareId;
+      
+      // Check if software exists
+      const [existingSoftware] = await pool.execute(
+        'SELECT Software_ID FROM SOFTWARE WHERE Software_Name = ?',
+        [softwareName]
+      );
+      
+      if (existingSoftware.length > 0) {
+        softwareId = existingSoftware[0].Software_ID;
+      } else {
+        // Create new software
+        const [result] = await pool.execute(
+          'INSERT INTO SOFTWARE (Software_Name) VALUES (?)',
+          [softwareName]
+        );
+        softwareId = result.insertId;
+      }
+      
+      // Check if link already exists
+      const [existingLink] = await pool.execute(
+        'SELECT * FROM ASSET_SOFTWARE_BRIDGE WHERE Asset_ID = ? AND Software_ID = ?',
+        [assetId, softwareId]
+      );
+      
+      if (existingLink.length === 0) {
+        // Create the link
+        await pool.execute(
+          'INSERT INTO ASSET_SOFTWARE_BRIDGE (Asset_ID, Software_ID) VALUES (?, ?)',
+          [assetId, softwareId]
+        );
+      }
+      
+      return softwareId;
+    } catch (error) {
+      console.error('Error in linkSoftwareToAsset:', error);
       throw error;
     }
   }

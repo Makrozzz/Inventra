@@ -215,7 +215,10 @@ const createAssetWithDetails = async (req, res, next) => {
       Status: completeData.status || 'Active',
       Recipients_ID: recipientId,
       Category_ID: categoryId,
-      Model_ID: modelId
+      Model_ID: modelId,
+      Windows: completeData.windows || null,
+      Microsoft_Office: completeData.microsoft_office || null,
+      Monthly_Prices: completeData.monthly_prices || null
     };
 
     const newAsset = await Asset.create(assetData);
@@ -248,6 +251,18 @@ const createAssetWithDetails = async (req, res, next) => {
       console.log(`✅ Created ${peripheralIds.length} peripherals`);
     } else {
       console.log('No peripherals to create');
+    }
+
+    console.log('Linking software...');
+    // Step 5.5: Link software to asset if provided
+    if (completeData.software && completeData.software.trim()) {
+      try {
+        await Asset.linkSoftwareToAsset(newAsset.Asset_ID, completeData.software.trim());
+        console.log(`✅ Linked software: ${completeData.software}`);
+      } catch (softwareError) {
+        console.log('Failed to link software:', softwareError.message);
+        // Continue anyway
+      }
     }
 
     console.log('Linking to project...');

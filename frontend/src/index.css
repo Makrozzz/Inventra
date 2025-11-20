@@ -601,12 +601,19 @@ body {
 
 .action-buttons {
   display: flex;
-  gap: 10px;
-  min-width: 120px;
+  gap: 6px;
   justify-content: center;
   align-items: center;
-  flex-wrap: wrap;
-  flex-direction: row;
+  flex-wrap: nowrap;
+}
+
+.action-buttons .btn {
+  transition: all 0.2s ease;
+}
+
+.action-buttons .btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
 }
 
 .empty-state {
@@ -897,8 +904,8 @@ input[type="checkbox"] {
   overflow-x: auto;
   width: 100%;
   border-radius: 8px;
-  border: 1px solid #e9ecef;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border: 1px solid #dee2e6;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
   background: white;
 }
 
@@ -914,15 +921,16 @@ input[type="checkbox"] {
 .table th {
   position: sticky;
   top: 0;
-  background: linear-gradient(135deg, #2c3e50, #34495e);
-  color: white;
+  background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
+  color: #ffffff;
   font-weight: 600;
-  padding: 16px 12px;
+  padding: 12px 10px;
   border: none;
-  min-width: 120px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  min-width: 100px;
   text-align: left;
-  font-size: 0.9rem;
-  letter-spacing: 0.5px;
+  font-size: 0.8rem;
+  letter-spacing: 0.3px;
   text-transform: uppercase;
   z-index: 10;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
@@ -946,43 +954,45 @@ input[type="checkbox"] {
 }
 
 .table tbody tr:hover {
-  background: linear-gradient(135deg, rgba(52, 152, 219, 0.08), rgba(52, 152, 219, 0.12));
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.06), rgba(118, 75, 162, 0.08));
+  transform: scale(1.001);
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.15);
+  cursor: pointer;
 }
 
 .table td {
-  padding: 14px 12px;
+  padding: 10px;
   vertical-align: middle;
-  border-bottom: 1px solid #e9ecef;
-  max-width: 200px;
+  border-bottom: 1px solid #f0f0f0;
+  max-width: 180px;
   overflow: hidden;
   text-overflow: ellipsis;
   color: #2c3e50;
-  font-size: 0.9rem;
-  font-weight: 500;
+  font-size: 0.85rem;
+  font-weight: 400;
+  line-height: 1.4;
 }
 
 /* Special styling for Actions column */
 .table td:last-child {
-  min-width: 320px;
-  width: 320px;
-  max-width: 320px;
+  min-width: 200px;
+  width: 200px;
+  max-width: 200px;
   overflow: visible;
   white-space: nowrap;
-  padding: 12px 8px;
+  padding: 8px 6px;
   text-align: center;
   vertical-align: middle;
 }
 
 .table th:last-child {
-  min-width: 320px;
-  width: 320px;
-  max-width: 320px;
+  min-width: 200px;
+  width: 200px;
+  max-width: 200px;
   text-align: center;
-  padding: 16px 8px;
+  padding: 12px 6px;
   font-weight: 700;
-  letter-spacing: 1px;
+  letter-spacing: 0.5px;
 }
 
 .table td span {
@@ -994,19 +1004,19 @@ input[type="checkbox"] {
 
 /* Enhanced status badge styles with better contrast */
 .status-badge {
-  padding: 6px 12px;
-  border-radius: 20px;
-  font-size: 0.75rem;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 0.7rem;
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.8px;
+  letter-spacing: 0.5px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 80px;
+  min-width: 70px;
   text-align: center;
-  border: 2px solid transparent;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  border: 1.5px solid transparent;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   transition: all 0.2s ease;
 }
 

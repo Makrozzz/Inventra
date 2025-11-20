@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Search, Filter, Edit, Trash2, Upload, Plus, Download, FileText, RefreshCw, Columns, AlertTriangle, X } from 'lucide-react';
+import { Search, Filter, Edit, Trash2, Download, Plus, Upload, FileText, Columns, AlertTriangle, X, Settings2, Eye, Trash, Edit2 } from 'lucide-react';
 import Pagination from '../components/Pagination';
 import apiService from '../services/apiService';
 import ColumnFilterPopup from '../components/ColumnFilterPopup';
@@ -42,6 +42,10 @@ const Assets = ({ onDelete }) => {
     asset: null,
     deleting: false
   });
+
+  // Selection state
+  const [selectedAssets, setSelectedAssets] = useState([]);
+  const [selectAll, setSelectAll] = useState(false);
 
   // Load column configuration on mount
   useEffect(() => {
@@ -141,6 +145,17 @@ const Assets = ({ onDelete }) => {
   // Get currently visible columns
   const visibleColumns = ColumnConfigService.getVisibleColumns(columnConfig);
 
+  // Handle checkbox selection
+  const handleSelectAsset = (assetId) => {
+    setSelectedAssets(prev => {
+      if (prev.includes(assetId)) {
+        return prev.filter(id => id !== assetId);
+      } else {
+        return [...prev, assetId];
+      }
+    });
+  };
+
   // Handle delete button click - show confirmation dialog
   const handleDeleteClick = (asset) => {
     setDeleteDialog({
@@ -234,6 +249,61 @@ const Assets = ({ onDelete }) => {
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
   const paginatedAssets = filteredAssets.slice(startIndex, endIndex);
+
+  // Debug logging
+  console.log('📊 Asset Data Debug:', {
+    totalAssets: allAssets.length,
+    filteredAssets: filteredAssets.length,
+    paginatedAssets: paginatedAssets.length,
+    firstAsset: paginatedAssets[0],
+    hasAssetID: paginatedAssets[0]?.Asset_ID,
+    selectedAssets: selectedAssets
+  });
+
+  // Handle select all checkbox (must be after paginatedAssets is defined)
+  const handleSelectAll = () => {
+    if (selectAll) {
+      setSelectedAssets([]);
+      setSelectAll(false);
+    } else {
+      const allAssetIds = paginatedAssets.map(asset => asset.Asset_ID);
+      setSelectedAssets(allAssetIds);
+      setSelectAll(true);
+    }
+  };
+
+  // Check if all current page assets are selected (for checkbox state)
+  const isAllSelected = paginatedAssets.length > 0 && 
+    paginatedAssets.every(asset => selectedAssets.includes(asset.Asset_ID));
+
+  // Bulk action handlers (must be after paginatedAssets is defined)
+  const handleBulkView = () => {
+    if (selectedAssets.length === 1) {
+      navigate(`/asset-detail/${selectedAssets[0]}`);
+    } else {
+      alert('Please select exactly one asset to view');
+    }
+  };
+
+  const handleBulkEdit = () => {
+    if (selectedAssets.length === 1) {
+      navigate(`/edit-asset/${selectedAssets[0]}`);
+    } else {
+      alert('Please select exactly one asset to edit');
+    }
+  };
+
+  const handleBulkDelete = () => {
+    if (selectedAssets.length === 0) {
+      alert('Please select at least one asset to delete');
+      return;
+    }
+    if (window.confirm(`Are you sure you want to delete ${selectedAssets.length} asset(s)?`)) {
+      // Handle bulk delete logic here
+      console.log('Deleting assets:', selectedAssets);
+      // You can implement actual bulk delete API call here
+    }
+  };
 
   // Reset to first page when filters change
   React.useEffect(() => {
@@ -417,21 +487,6 @@ const Assets = ({ onDelete }) => {
           </div>
           <div className="actions">
             <button 
-              onClick={refreshAssets}
-              className="btn btn-secondary" 
-              style={{
-                backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                color: 'white',
-                border: '1px solid rgba(255, 255, 255, 0.3)',
-                backdropFilter: 'blur(10px)',
-                marginRight: '10px'
-              }}
-              disabled={loading}
-            >
-              <RefreshCw size={16} style={{ marginRight: '5px' }} className={loading ? 'animate-spin' : ''} />
-              Refresh
-            </button>
-            <button 
               onClick={() => navigate('/assets/import')}
               className="btn btn-secondary" 
               style={{
@@ -442,7 +497,7 @@ const Assets = ({ onDelete }) => {
                 marginRight: '10px'
               }}
             >
-              <Upload size={16} style={{ marginRight: '5px' }} />
+              <Download size={16} style={{ marginRight: '5px' }} />
               Import CSV
             </button>
             <button onClick={handleExportCSV} className="btn btn-secondary" style={{
@@ -452,23 +507,8 @@ const Assets = ({ onDelete }) => {
               backdropFilter: 'blur(10px)',
               marginRight: '10px'
             }}>
-              <Download size={16} style={{ marginRight: '5px' }} />
+              <Upload size={16} style={{ marginRight: '5px' }} />
               Export CSV
-            </button>
-            <button 
-              onClick={() => setShowColumnFilter(true)} 
-              className="btn btn-secondary" 
-              style={{
-                backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                color: 'white',
-                border: '1px solid rgba(255, 255, 255, 0.3)',
-                backdropFilter: 'blur(10px)',
-                marginRight: '10px'
-              }}
-              title="Customize columns"
-            >
-              <Columns size={16} style={{ marginRight: '5px' }} />
-              Columns
             </button>
             <Link to="/add-asset" className="btn btn-primary" style={{
               backgroundColor: 'rgba(255, 255, 255, 0.9)',
@@ -501,7 +541,7 @@ const Assets = ({ onDelete }) => {
       {/* Full Width Asset Table Section */}
       <div style={{ padding: '0 20px', width: '100%', boxSizing: 'border-box' }}>
         <div className="card" style={{ width: '100%' }}>
-        <div className="search-bar">
+        <div className="search-bar" style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
           <div style={{ position: 'relative', flex: 1 }}>
             <Search size={16} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#666' }} />
             <input
@@ -512,39 +552,116 @@ const Assets = ({ onDelete }) => {
               style={{ paddingLeft: '35px' }}
             />
           </div>
-        </div>
-
-        <div className="table-info" style={{ 
-          padding: '12px 16px', 
-          background: 'linear-gradient(135deg, #ecf0f1, #d5dbdb)', 
-          borderRadius: '6px 6px 0 0',
-          border: '1px solid #bdc3c7',
-          borderBottom: 'none',
-          color: '#2c3e50',
-          fontWeight: '600',
-          fontSize: '0.9rem'
-        }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
-            <p style={{ margin: 0 }}>
-              📊 Page <strong>{currentPage}</strong> of <strong>{calculatedTotalPages}</strong> - 
-              Showing <strong>{paginatedAssets.length}</strong> of <strong>{totalItems}</strong> total inventory records
-            </p>
-            {Object.keys(columnFilters).filter(key => columnFilters[key]).length > 0 && (
-              <div style={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                gap: '8px',
-                fontSize: '0.85rem',
-                padding: '4px 12px',
-                backgroundColor: '#3498db',
-                color: 'white',
-                borderRadius: '4px'
-              }}>
-                <Filter size={14} />
-                <span>{Object.keys(columnFilters).filter(key => columnFilters[key]).length} column filter(s) active</span>
-              </div>
-            )}
-          </div>
+          
+          {/* Bulk Action Buttons */}
+          {selectedAssets.length > 0 && (
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              <button 
+                onClick={handleBulkView}
+                disabled={selectedAssets.length !== 1}
+                style={{
+                  background: selectedAssets.length === 1 ? 'linear-gradient(135deg, #3498db 0%, #2980b9 100%)' : '#95a5a6',
+                  color: 'white',
+                  border: 'none',
+                  padding: '8px 14px',
+                  borderRadius: '6px',
+                  cursor: selectedAssets.length === 1 ? 'pointer' : 'not-allowed',
+                  fontSize: '13px',
+                  fontWeight: '600',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  transition: 'all 0.2s ease',
+                  boxShadow: selectedAssets.length === 1 ? '0 2px 6px rgba(52, 152, 219, 0.3)' : 'none',
+                  opacity: selectedAssets.length === 1 ? 1 : 0.6
+                }}
+                title="View selected asset"
+              >
+                <Eye size={14} />
+                View
+              </button>
+              
+              <button 
+                onClick={handleBulkEdit}
+                disabled={selectedAssets.length !== 1}
+                style={{
+                  background: selectedAssets.length === 1 ? 'linear-gradient(135deg, #f39c12 0%, #e67e22 100%)' : '#95a5a6',
+                  color: 'white',
+                  border: 'none',
+                  padding: '8px 14px',
+                  borderRadius: '6px',
+                  cursor: selectedAssets.length === 1 ? 'pointer' : 'not-allowed',
+                  fontSize: '13px',
+                  fontWeight: '600',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  transition: 'all 0.2s ease',
+                  boxShadow: selectedAssets.length === 1 ? '0 2px 6px rgba(243, 156, 18, 0.3)' : 'none',
+                  opacity: selectedAssets.length === 1 ? 1 : 0.6
+                }}
+                title="Edit selected asset"
+              >
+                <Edit2 size={14} />
+                Edit
+              </button>
+              
+              <button 
+                onClick={handleBulkDelete}
+                style={{
+                  background: 'linear-gradient(135deg, #e74c3c 0%, #c0392b 100%)',
+                  color: 'white',
+                  border: 'none',
+                  padding: '8px 14px',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: '13px',
+                  fontWeight: '600',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  transition: 'all 0.2s ease',
+                  boxShadow: '0 2px 6px rgba(231, 76, 60, 0.3)'
+                }}
+                title={`Delete ${selectedAssets.length} selected asset(s)`}
+              >
+                <Trash size={14} />
+                Delete ({selectedAssets.length})
+              </button>
+            </div>
+          )}
+          
+          <button 
+            onClick={() => setShowColumnFilter(true)} 
+            style={{
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              color: 'white',
+              border: 'none',
+              padding: '10px 18px',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              fontSize: '14px',
+              fontWeight: '600',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '8px',
+              transition: 'all 0.2s ease',
+              boxShadow: '0 2px 8px rgba(102, 126, 234, 0.3)',
+              whiteSpace: 'nowrap'
+            }}
+            onMouseOver={(e) => {
+              e.currentTarget.style.transform = 'translateY(-2px)';
+              e.currentTarget.style.boxShadow = '0 4px 12px rgba(102, 126, 234, 0.4)';
+            }}
+            onMouseOut={(e) => {
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.boxShadow = '0 2px 8px rgba(102, 126, 234, 0.3)';
+            }}
+            title="Manage table columns"
+          >
+            <Settings2 size={16} />
+            Manage Columns
+          </button>
         </div>
 
         {loading ? (
@@ -563,6 +680,43 @@ const Assets = ({ onDelete }) => {
             <table className="table">
               <thead>
                 <tr>
+                  <th style={{ 
+                    width: '60px', 
+                    minWidth: '60px',
+                    textAlign: 'center',
+                    padding: '14px 10px',
+                    background: 'linear-gradient(180deg, #5a67d8 0%, #6b46c1 100%)',
+                    position: 'relative'
+                  }}>
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}>
+                      <input
+                        type="checkbox"
+                        checked={isAllSelected}
+                        onChange={() => {
+                          console.log('Select All clicked, current state:', isAllSelected);
+                          handleSelectAll();
+                        }}
+                        className="custom-checkbox"
+                        style={{
+                          display: 'block',
+                          cursor: 'pointer',
+                          width: '17px',
+                          height: '17px',
+                          accentColor: '#667eea',
+                          borderRadius: '3px',
+                          border: '2px solid rgba(255, 255, 255, 0.6)',
+                          backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                          transition: 'all 0.2s ease',
+                          flexShrink: 0
+                        }}
+                        title="Select all on this page"
+                      />
+                    </div>
+                  </th>
                   {displayColumns.map(column => (
                     <th key={column.Field} style={{ position: 'relative' }}>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
@@ -688,13 +842,86 @@ const Assets = ({ onDelete }) => {
                       )}
                     </th>
                   ))}
-                  <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {paginatedAssets.map((asset, index) => (
+                {paginatedAssets.length > 0 ? paginatedAssets.map((asset, index) => {
+                  // Debug log for each asset
+                  if (index === 0) {
+                    console.log('🔍 First asset in render:', asset, 'Asset_ID:', asset.Asset_ID);
+                  }
+                  
+                  return (
                   <React.Fragment key={asset.Inventory_ID || asset.Asset_ID || index}>
                     <tr>
+                      <td style={{ 
+                        textAlign: 'center', 
+                        padding: '14px 10px',
+                        width: '60px',
+                        minWidth: '60px',
+                        backgroundColor: index % 2 === 0 ? '#fafbfc' : '#ffffff',
+                        verticalAlign: 'middle',
+                        borderLeft: selectedAssets.includes(asset.Asset_ID) ? '3px solid #667eea' : '3px solid transparent',
+                        transition: 'all 0.2s ease'
+                      }}>
+                        <div style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          position: 'relative'
+                        }}>
+                          <input
+                            type="checkbox"
+                            checked={selectedAssets.includes(asset.Asset_ID)}
+                            onChange={() => {
+                              console.log('Checkbox clicked for Asset_ID:', asset.Asset_ID);
+                              handleSelectAsset(asset.Asset_ID);
+                            }}
+                            className="custom-checkbox"
+                            style={{
+                              display: 'block',
+                              cursor: 'pointer',
+                              width: '16px',
+                              height: '16px',
+                              accentColor: '#667eea',
+                              borderRadius: '3px',
+                              border: '1.5px solid #cbd5e0',
+                              backgroundColor: selectedAssets.includes(asset.Asset_ID) ? '#667eea' : 'white',
+                              transition: 'all 0.2s ease',
+                              position: 'relative',
+                              outline: 'none',
+                              flexShrink: 0
+                            }}
+                            onClick={(e) => e.stopPropagation()}
+                            onMouseOver={(e) => {
+                              if (!selectedAssets.includes(asset.Asset_ID)) {
+                                e.currentTarget.style.borderColor = '#667eea';
+                                e.currentTarget.style.backgroundColor = '#f0f4ff';
+                              }
+                            }}
+                            onMouseOut={(e) => {
+                              if (!selectedAssets.includes(asset.Asset_ID)) {
+                                e.currentTarget.style.borderColor = '#cbd5e0';
+                                e.currentTarget.style.backgroundColor = 'white';
+                              }
+                            }}
+                          />
+                          {selectedAssets.includes(asset.Asset_ID) && (
+                            <svg 
+                              style={{
+                                position: 'absolute',
+                                width: '10px',
+                                height: '10px',
+                                pointerEvents: 'none',
+                                fill: 'white'
+                              }}
+                              viewBox="0 0 16 16"
+                            >
+                              <path d="M13.854 3.646a.5.5 0 0 1 0 .708l-7 7a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L6.5 10.293l6.646-6.647a.5.5 0 0 1 .708 0z"/>
+                            </svg>
+                          )}
+                        </div>
+                      </td>
                       {displayColumns.map(column => (
                         <td key={column.Field}>
                           {(column.Field === 'Status' || column.Field === 'assetStatus' || column.Field === 'Asset_Status') ? (
@@ -721,62 +948,16 @@ const Assets = ({ onDelete }) => {
                           )}
                         </td>
                       ))}
-                      <td>
-                        <div className="action-buttons">
-                          <Link 
-                            to={`/asset-detail/${asset.Asset_ID}`} 
-                            className="btn btn-primary"
-                            title="View Full Details"
-                            style={{ 
-                              display: 'inline-flex', 
-                              alignItems: 'center', 
-                              gap: '8px',
-                              padding: '12px 16px',
-                              fontSize: '1rem',
-                              fontWeight: '600',
-                              minHeight: '44px'
-                            }}
-                          >
-                            <FileText size={18} />
-                            <span>Details</span>
-                          </Link>
-                          <Link 
-                            to={`/edit-asset/${asset.Asset_ID}`} 
-                            className="btn btn-secondary"
-                            title="Edit Asset"
-                            style={{
-                              padding: '12px 16px',
-                              fontSize: '1rem',
-                              minWidth: '50px',
-                              minHeight: '44px',
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              justifyContent: 'center'
-                            }}
-                          >
-                            <Edit size={18} />
-                          </Link>
-                          <button 
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDeleteClick(asset);
-                            }} 
-                            className="btn btn-danger"
-                            title="Delete Asset"
-                            style={{
-                              padding: '12px 16px',
-                              fontSize: '1rem',
-                              minWidth: '50px',
-                              minHeight: '44px'
-                            }}
-                          >
-                            <Trash2 size={18} />
-                          </button>
-                        </div>
-                      </td>
                     </tr>
                   </React.Fragment>
-                ))}
+                );
+                }) : (
+                  <tr>
+                    <td colSpan="100%" style={{ textAlign: 'center', padding: '20px' }}>
+                      No assets to display
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
