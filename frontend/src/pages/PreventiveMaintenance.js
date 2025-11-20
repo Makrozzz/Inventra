@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Calendar, Clock, CheckCircle, AlertTriangle, Wrench, Filter, Building2, MapPin, Package, FileText, X, ClipboardCheck, Edit, Trash2, Plus, Save } from 'lucide-react';
+import { Calendar, Clock, CheckCircle, AlertTriangle, Wrench, Filter, Building2, MapPin, Package, FileText, X, ClipboardCheck, Edit, Trash2, Plus, Save, Search } from 'lucide-react';
 
 const PreventiveMaintenance = () => {
   const navigate = useNavigate();
@@ -9,6 +9,7 @@ const PreventiveMaintenance = () => {
   const savedBranch = useRef(null);
   const [selectedCustomer, setSelectedCustomer] = useState('');
   const [selectedBranch, setSelectedBranch] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
   const [customers, setCustomers] = useState([]);
   const [branches, setBranches] = useState([]);
   const [pmRecords, setPmRecords] = useState([]);
@@ -144,8 +145,22 @@ const PreventiveMaintenance = () => {
     }
   };
 
+  // Filter PM records based on search query
+  const filteredPmRecords = searchQuery 
+    ? pmRecords.filter(record => {
+        const query = searchQuery.toLowerCase().trim();
+        return (
+          record.Asset_Tag_ID?.toLowerCase().includes(query) ||
+          record.Item_Name?.toLowerCase().includes(query) ||
+          record.Asset_Serial_Number?.toLowerCase().includes(query) ||
+          record.Recipient_Name?.toLowerCase().includes(query) ||
+          record.Department?.toLowerCase().includes(query)
+        );
+      })
+    : pmRecords;
+
   // Group PM records by category and asset, keeping only latest PM per asset
-  const groupedByCategory = pmRecords.reduce((acc, record) => {
+  const groupedByCategory = filteredPmRecords.reduce((acc, record) => {
     const category = record.Category || 'Uncategorized';
     if (!acc[category]) {
       acc[category] = {
@@ -694,6 +709,85 @@ const PreventiveMaintenance = () => {
           </div>
         )}
       </div>
+
+      {/* Search Bar */}
+      {selectedCustomer && selectedBranch && pmRecords.length > 0 && (
+        <div className="card" style={{ marginBottom: '20px' }}>
+          <div style={{ position: 'relative' }}>
+            <Search 
+              size={20} 
+              style={{ 
+                position: 'absolute', 
+                left: '16px', 
+                top: '50%', 
+                transform: 'translateY(-50%)',
+                color: '#7f8c8d'
+              }} 
+            />
+            <input
+              type="text"
+              placeholder="Search by Asset Tag ID, Serial Number, Item Name, Recipient, or Department..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '14px 16px 14px 48px',
+                border: '2px solid #ddd',
+                borderRadius: '8px',
+                fontSize: '1rem',
+                transition: 'border-color 0.2s, box-shadow 0.2s',
+                outline: 'none'
+              }}
+              onFocus={(e) => {
+                e.target.style.borderColor = '#3498db';
+                e.target.style.boxShadow = '0 0 0 3px rgba(52, 152, 219, 0.1)';
+              }}
+              onBlur={(e) => {
+                e.target.style.borderColor = '#ddd';
+                e.target.style.boxShadow = 'none';
+              }}
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                style={{
+                  position: 'absolute',
+                  right: '16px',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  background: '#e0e0e0',
+                  border: 'none',
+                  borderRadius: '50%',
+                  width: '24px',
+                  height: '24px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  transition: 'background 0.2s'
+                }}
+                onMouseOver={(e) => e.target.style.background = '#bdbdbd'}
+                onMouseOut={(e) => e.target.style.background = '#e0e0e0'}
+              >
+                <X size={14} />
+              </button>
+            )}
+          </div>
+          {searchQuery && (
+            <p style={{ 
+              margin: '12px 0 0 0', 
+              color: '#666', 
+              fontSize: '0.9rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px'
+            }}>
+              <Search size={16} />
+              Searching for: <strong>"{searchQuery}"</strong>
+            </p>
+          )}
+        </div>
+      )}
 
       {/* PM Records by Category with Checklist */}
       {loading ? (
