@@ -287,6 +287,108 @@ class PDFGenerator {
             return { exists: false, filepath: null };
         }
     }
+
+    /**
+     * Generate bulk PDF report for multiple PM records
+     * @param {Array} pmRecords - Array of PM records with full details
+     * @returns {Promise<Object>} - { success, filepath, filename, error }
+     */
+    async generateBulkPM(pmRecords) {
+        let browser;
+        try {
+            console.log(`📦 Generating bulk PDF for ${pmRecords.length} PM records`);
+
+            // Load and compile the template
+            const templateHtml = await fs.readFile(this.templatePath, 'utf8');
+            const template = handlebars.compile(templateHtml);
+
+            // Array to hold all generated HTML pages
+            const htmlPages = [];
+
+            // Generate HTML for each PM record
+            for (let i = 0; i < pmRecords.length; i++) {
+                const pmData = pmRecords[i];
+                console.log(`Processing PM #${i + 1}: PM_ID ${pmData.PM_ID}`);
+
+                // Get PM sequence number
+                const pmSequenceNumber = await this.getPMSequenceNumber(pmData.PM_ID, pmData.Asset_ID);
+
+                // Get checklist results
+                const checklistResults = await this.getChecklistResults(pmData.PM_ID);
+
+                // Format data for template
+                const templateData = this.formatDataForTemplate(pmData, checklistResults, pmSequenceNumber);
+
+                // Generate HTML for this PM
+                const html = template(templateData);
+                
+                // Add page break after each PM (except the last one)
+                const htmlWithPageBreak = i < pmRecords.length - 1 
+                    ? html + '<div style="page-break-after: always;"></div>' 
+                    : html;
+                
+                htmlPages.push(htmlWithPageBreak);
+            }
+
+            // Combine all HTML pages
+            const combinedHtml = htmlPages.join('');
+
+            // Generate filename with timestamp
+            const timestamp = new Date().getTime();
+            const dateStr = new Date().toISOString().split('T')[0];
+            const filename = `Bulk_PM_Report_${pmRecords.length}_Records_${dateStr}_${timestamp}.pdf`;
+            const filepath = path.join(this.outputDir, filename);
+
+            console.log('Generated bulk filename:', filename);
+
+            // Launch Puppeteer and generate PDF
+            console.log('Launching Puppeteer to generate bulk PDF...');
+            browser = await puppeteer.launch({
+                headless: 'new',
+                args: ['--no-sandbox', '--disable-setuid-sandbox']
+            });
+
+            const page = await browser.newPage();
+            await page.setContent(combinedHtml, { waitUntil: 'networkidle0' });
+
+            await page.pdf({
+                path: filepath,
+                format: 'A4',
+                printBackground: true,
+                margin: {
+                    top: '10mm',
+                    right: '10mm',
+                    bottom: '10mm',
+                    left: '10mm'
+                }
+            });
+
+            await browser.close();
+            console.log(`✅ Bulk PDF generated successfully: ${filepath}`);
+
+            // Return relative path for consistency with single PM generation
+            const relativePath = path.relative(path.join(__dirname, '../'), filepath);
+
+            return {
+                success: true,
+                filepath: relativePath,
+                filename: filename,
+                error: null
+            };
+
+        } catch (error) {
+            console.error('❌ Error generating bulk PDF:', error);
+            if (browser) {
+                await browser.close();
+            }
+            return {
+                success: false,
+                filepath: null,
+                filename: null,
+                error: error.message
+            };
+        }
+    }
 }
 
 module.exports = new PDFGenerator();
