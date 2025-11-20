@@ -1,13 +1,43 @@
 import React, { useState } from 'react';
-import { User, Lock } from 'lucide-react';
+import { User, Lock, AlertCircle } from 'lucide-react';
 
 const Login = ({ onLogin }) => {
   const [credentials, setCredentials] = useState({ username: '', password: '' });
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (credentials.username && credentials.password) {
-      onLogin();
+    setError('');
+    setLoading(true);
+
+    try {
+      const response = await fetch('http://localhost:5000/api/v1/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          username: credentials.username,
+          password: credentials.password
+        })
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        // Store token and user info in localStorage
+        localStorage.setItem('authToken', data.data.token);
+        localStorage.setItem('userInfo', JSON.stringify(data.data.user));
+        onLogin();
+      } else {
+        setError(data.message || 'Invalid email or password');
+      }
+    } catch (err) {
+      console.error('Login error:', err);
+      setError('Failed to connect to server. Please try again.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -15,6 +45,22 @@ const Login = ({ onLogin }) => {
     <div className="login-container">
       <div className="login-card">
         <h2 className="login-title">Inventory Management System</h2>
+        {error && (
+          <div style={{
+            padding: '12px',
+            background: '#fee',
+            border: '1px solid #fcc',
+            borderRadius: '6px',
+            color: '#c33',
+            marginBottom: '20px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px'
+          }}>
+            <AlertCircle size={18} />
+            {error}
+          </div>
+        )}
         <form onSubmit={handleSubmit}>
           <div className="form-group">
             <label>
@@ -25,8 +71,9 @@ const Login = ({ onLogin }) => {
               type="text"
               value={credentials.username}
               onChange={(e) => setCredentials({...credentials, username: e.target.value})}
-              placeholder="Enter username"
+              placeholder="Enter your username"
               required
+              disabled={loading}
             />
           </div>
           <div className="form-group">
@@ -38,12 +85,18 @@ const Login = ({ onLogin }) => {
               type="password"
               value={credentials.password}
               onChange={(e) => setCredentials({...credentials, password: e.target.value})}
-              placeholder="Enter password"
+              placeholder="Enter your password"
               required
+              disabled={loading}
             />
           </div>
-          <button type="submit" className="btn btn-primary" style={{ width: '100%' }}>
-            Login
+          <button 
+            type="submit" 
+            className="btn btn-primary" 
+            style={{ width: '100%' }}
+            disabled={loading}
+          >
+            {loading ? 'Logging in...' : 'Login'}
           </button>
         </form>
       </div>

@@ -1,19 +1,20 @@
-import React, { useState } from 'react';
-import { User, Mail, Lock, Bell, Shield, Palette, Save, Eye, EyeOff } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { User, Mail, Lock, Bell, Shield, Palette, Save, Eye, EyeOff, CheckCircle } from 'lucide-react';
 
 const AccountSettings = () => {
   const [activeTab, setActiveTab] = useState('profile');
   const [showPassword, setShowPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [updateMessage, setUpdateMessage] = useState({ type: '', text: '' });
 
   const [profileData, setProfileData] = useState({
-    firstName: 'John',
-    lastName: 'Doe',
-    email: 'john.doe@company.com',
-    phone: '+1 (555) 123-4567',
-    position: 'Asset Manager',
-    department: 'IT Operations',
-    company: 'AssetPro Management'
+    firstName: '',
+    lastName: '',
+    email: '',
+    username: '',
+    department: '',
+    role: ''
   });
 
   const [securityData, setSecurityData] = useState({
@@ -38,19 +39,118 @@ const AccountSettings = () => {
     sidebarCollapsed: false
   });
 
-  const handleProfileUpdate = (e) => {
-    e.preventDefault();
-    alert('Profile updated successfully!');
+  // Fetch user profile on component mount
+  useEffect(() => {
+    fetchUserProfile();
+  }, []);
+
+  const fetchUserProfile = async () => {
+    try {
+      const token = localStorage.getItem('authToken');
+      const response = await fetch('http://localhost:5000/api/v1/auth/profile', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        setProfileData({
+          firstName: data.data.firstName || '',
+          lastName: data.data.lastName || '',
+          email: data.data.email || '',
+          username: data.data.username || '',
+          department: data.data.department || '',
+          role: data.data.role || ''
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching profile:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handlePasswordChange = (e) => {
+  const handleProfileUpdate = async (e) => {
     e.preventDefault();
+    setUpdateMessage({ type: '', text: '' });
+
+    try {
+      const token = localStorage.getItem('authToken');
+      const response = await fetch('http://localhost:5000/api/v1/auth/profile', {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          firstName: profileData.firstName,
+          lastName: profileData.lastName,
+          email: profileData.email,
+          department: profileData.department
+        })
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        setUpdateMessage({ type: 'success', text: 'Profile updated successfully!' });
+        // Update localStorage with new user info
+        const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
+        localStorage.setItem('userInfo', JSON.stringify({ ...userInfo, ...data.data }));
+      } else {
+        setUpdateMessage({ type: 'error', text: data.message || 'Failed to update profile' });
+      }
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      setUpdateMessage({ type: 'error', text: 'Failed to update profile. Please try again.' });
+    }
+  };
+
+  const handlePasswordChange = async (e) => {
+    e.preventDefault();
+    setUpdateMessage({ type: '', text: '' });
+
     if (securityData.newPassword !== securityData.confirmPassword) {
-      alert('New passwords do not match!');
+      setUpdateMessage({ type: 'error', text: 'New passwords do not match!' });
       return;
     }
-    alert('Password changed successfully!');
-    setSecurityData({ ...securityData, currentPassword: '', newPassword: '', confirmPassword: '' });
+
+    if (securityData.newPassword.length < 6) {
+      setUpdateMessage({ type: 'error', text: 'Password must be at least 6 characters long' });
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('authToken');
+      const response = await fetch('http://localhost:5000/api/v1/auth/change-password', {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          currentPassword: securityData.currentPassword,
+          newPassword: securityData.newPassword
+        })
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        setUpdateMessage({ type: 'success', text: 'Password changed successfully!' });
+        setSecurityData({ 
+          ...securityData, 
+          currentPassword: '', 
+          newPassword: '', 
+          confirmPassword: '' 
+        });
+      } else {
+        setUpdateMessage({ type: 'error', text: data.message || 'Failed to change password' });
+      }
+    } catch (error) {
+      console.error('Error changing password:', error);
+      setUpdateMessage({ type: 'error', text: 'Failed to change password. Please try again.' });
+    }
   };
 
   const handleNotificationUpdate = () => {
@@ -66,6 +166,23 @@ const AccountSettings = () => {
       <div className="page-header">
         <h1 className="page-title">Account Settings</h1>
       </div>
+
+      {updateMessage.text && (
+        <div style={{
+          padding: '12px 20px',
+          margin: '0 20px 20px',
+          borderRadius: '6px',
+          background: updateMessage.type === 'success' ? '#d4edda' : '#f8d7da',
+          color: updateMessage.type === 'success' ? '#155724' : '#721c24',
+          border: `1px solid ${updateMessage.type === 'success' ? '#c3e6cb' : '#f5c6cb'}`,
+          display: 'flex',
+          alignItems: 'center',
+          gap: '10px'
+        }}>
+          {updateMessage.type === 'success' && <CheckCircle size={18} />}
+          {updateMessage.text}
+        </div>
+      )}
 
       <div className="settings-container">
         <div className="settings-sidebar">
@@ -104,78 +221,89 @@ const AccountSettings = () => {
         <div className="settings-content">
           {activeTab === 'profile' && (
             <div className="card">
-              <h2>Profile Information</h2>
-              <form onSubmit={handleProfileUpdate}>
-                <div className="form-grid">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                <h2 style={{ margin: 0 }}>Profile Information</h2>
+                {profileData.role && (
+                  <span style={{
+                    padding: '6px 16px',
+                    borderRadius: '20px',
+                    fontSize: '0.85rem',
+                    fontWeight: '600',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.5px',
+                    background: profileData.role.toLowerCase() === 'admin' ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+                    color: 'white',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.15)'
+                  }}>
+                    {profileData.role}
+                  </span>
+                )}
+              </div>
+              {loading ? (
+                <p>Loading profile...</p>
+              ) : (
+                <form onSubmit={handleProfileUpdate}>
                   <div className="form-group">
-                    <label>First Name</label>
+                    <label>Username (Read-only)</label>
                     <input
                       type="text"
-                      value={profileData.firstName}
-                      onChange={(e) => setProfileData({ ...profileData, firstName: e.target.value })}
+                      value={profileData.username}
+                      placeholder={profileData.username || 'Username'}
+                      disabled
+                      style={{ background: '#f5f5f5', cursor: 'not-allowed' }}
                     />
                   </div>
+
+                  <div className="form-grid">
+                    <div className="form-group">
+                      <label>First Name</label>
+                      <input
+                        type="text"
+                        value={profileData.firstName}
+                        onChange={(e) => setProfileData({ ...profileData, firstName: e.target.value })}
+                        placeholder={profileData.firstName || 'First Name'}
+                        required
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>Last Name</label>
+                      <input
+                        type="text"
+                        value={profileData.lastName}
+                        onChange={(e) => setProfileData({ ...profileData, lastName: e.target.value })}
+                        placeholder={profileData.lastName || 'Last Name'}
+                        required
+                      />
+                    </div>
+                  </div>
+
                   <div className="form-group">
-                    <label>Last Name</label>
+                    <label>Email Address</label>
                     <input
-                      type="text"
-                      value={profileData.lastName}
-                      onChange={(e) => setProfileData({ ...profileData, lastName: e.target.value })}
+                      type="email"
+                      value={profileData.email}
+                      onChange={(e) => setProfileData({ ...profileData, email: e.target.value })}
+                      placeholder={profileData.email || 'Email Address'}
+                      required
                     />
                   </div>
-                </div>
 
-                <div className="form-group">
-                  <label>Email Address</label>
-                  <input
-                    type="email"
-                    value={profileData.email}
-                    onChange={(e) => setProfileData({ ...profileData, email: e.target.value })}
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label>Phone Number</label>
-                  <input
-                    type="tel"
-                    value={profileData.phone}
-                    onChange={(e) => setProfileData({ ...profileData, phone: e.target.value })}
-                  />
-                </div>
-
-                <div className="form-grid">
-                  <div className="form-group">
-                    <label>Position</label>
-                    <input
-                      type="text"
-                      value={profileData.position}
-                      onChange={(e) => setProfileData({ ...profileData, position: e.target.value })}
-                    />
-                  </div>
                   <div className="form-group">
                     <label>Department</label>
                     <input
                       type="text"
                       value={profileData.department}
                       onChange={(e) => setProfileData({ ...profileData, department: e.target.value })}
+                      placeholder={profileData.department || 'Department'}
                     />
                   </div>
-                </div>
 
-                <div className="form-group">
-                  <label>Company</label>
-                  <input
-                    type="text"
-                    value={profileData.company}
-                    onChange={(e) => setProfileData({ ...profileData, company: e.target.value })}
-                  />
-                </div>
-
-                <button type="submit" className="btn btn-primary">
-                  <Save size={16} style={{ marginRight: '5px' }} />
-                  Update Profile
-                </button>
-              </form>
+                  <button type="submit" className="btn btn-primary">
+                    <Save size={16} style={{ marginRight: '5px' }} />
+                    Update Profile
+                  </button>
+                </form>
+              )}
             </div>
           )}
 

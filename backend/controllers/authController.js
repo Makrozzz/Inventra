@@ -7,7 +7,7 @@ const logger = require('../utils/logger');
  */
 const register = async (req, res, next) => {
   try {
-    const { username, email, password, firstName, lastName, role } = req.body;
+    const { username, email, password, firstName, lastName, department, role } = req.body;
 
     // Check if user already exists
     const existingUser = await User.findByEmail(email);
@@ -31,6 +31,7 @@ const register = async (req, res, next) => {
       password,
       firstName,
       lastName,
+      department: department || '',
       role: role || 'user'
     });
 
@@ -63,13 +64,13 @@ const register = async (req, res, next) => {
  */
 const login = async (req, res, next) => {
   try {
-    const { email, password } = req.body;
+    const { username, password } = req.body;
 
     // Verify user credentials
-    const user = await User.verifyPassword(email, password);
+    const user = await User.verifyPasswordByUsername(username, password);
     if (!user) {
       return res.status(401).json(
-        formatResponse(false, null, 'Invalid email or password')
+        formatResponse(false, null, 'Invalid username or password')
       );
     }
 
@@ -81,7 +82,7 @@ const login = async (req, res, next) => {
       role: user.role
     });
 
-    logger.info(`User logged in: ${email}`);
+    logger.info(`User logged in: ${username}`);
 
     res.status(200).json(
       formatResponse(true, {
@@ -122,7 +123,7 @@ const getProfile = async (req, res, next) => {
  */
 const updateProfile = async (req, res, next) => {
   try {
-    const { firstName, lastName, email } = req.body;
+    const { firstName, lastName, email, department } = req.body;
     const userId = req.user.userId;
 
     // Check if email is being changed and if it's already taken
@@ -138,7 +139,8 @@ const updateProfile = async (req, res, next) => {
     const success = await User.update(userId, {
       firstName,
       lastName,
-      email
+      email,
+      department
     });
 
     if (!success) {

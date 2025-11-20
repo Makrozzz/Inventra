@@ -32,7 +32,7 @@ const authenticateToken = async (req, res, next) => {
     // Optional: Verify user still exists in database
     console.log('Checking user in database with ID:', decoded.userId);
     const user = await executeQuery(
-      'SELECT user_id, username, email, role FROM users WHERE user_id = ? AND is_active = 1',
+      'SELECT User_ID, username, User_Email, User_Role FROM USER WHERE User_ID = ?',
       [decoded.userId]
     );
     console.log('Database user query result:', user);

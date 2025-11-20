@@ -43,6 +43,10 @@ const registerValidationRules = [
     .withMessage('Last name is required')
     .isLength({ max: 100 })
     .withMessage('Last name must be less than 100 characters'),
+  body('department')
+    .optional()
+    .isLength({ max: 100 })
+    .withMessage('Department must be less than 100 characters'),
   body('role')
     .optional()
     .isIn(['admin', 'manager', 'user'])
@@ -50,10 +54,11 @@ const registerValidationRules = [
 ];
 
 const loginValidationRules = [
-  body('email')
-    .isEmail()
-    .withMessage('Valid email is required')
-    .normalizeEmail(),
+  body('username')
+    .notEmpty()
+    .withMessage('Username is required')
+    .isLength({ min: 3, max: 50 })
+    .withMessage('Username must be between 3 and 50 characters'),
   body('password')
     .notEmpty()
     .withMessage('Password is required')
@@ -72,7 +77,11 @@ const updateProfileValidationRules = [
     .optional()
     .isEmail()
     .withMessage('Valid email is required')
-    .normalizeEmail()
+    .normalizeEmail(),
+  body('department')
+    .optional()
+    .isLength({ max: 100 })
+    .withMessage('Department must be less than 100 characters')
 ];
 
 const changePasswordValidationRules = [
