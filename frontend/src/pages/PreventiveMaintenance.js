@@ -536,30 +536,60 @@ const PreventiveMaintenance = () => {
   };
 
   return (
-    <div className="page-container">
-      <div className="page-header">
+    <div style={{ padding: '0' }}>
+      {/* Header Section with Gradient */}
+      <div style={{
+        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        padding: '30px 20px',
+        marginBottom: '30px',
+        borderRadius: '0 0 20px 20px',
+        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)',
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        flexWrap: 'wrap',
+        gap: '20px'
+      }}>
         <div>
-          <h1 className="page-title">Preventive Maintenance</h1>
-          <p style={{ color: '#7f8c8d', fontSize: '0.9rem', margin: '5px 0 0 0' }}>
+          <h1 style={{ 
+            color: 'white', 
+            margin: '0 0 10px 0',
+            fontSize: '32px',
+            fontWeight: '700'
+          }}>
+            Preventive Maintenance
+          </h1>
+          <p style={{ 
+            color: 'rgba(255, 255, 255, 0.9)', 
+            margin: 0,
+            fontSize: '16px'
+          }}>
             Monitor and manage preventive maintenance schedules with detailed checklists
           </p>
         </div>
-        <button
-          onClick={handleOpenChecklistManager}
-          className="btn btn-primary"
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            padding: '12px 20px',
-            fontSize: '1rem',
-            fontWeight: '600'
-          }}
-        >
-          <Edit size={18} />
-          Edit Checklist Items
-        </button>
+        <div className="actions">
+          <button
+            onClick={handleOpenChecklistManager}
+            className="btn btn-primary"
+            style={{
+              backgroundColor: 'rgba(255, 255, 255, 0.9)',
+              color: '#667eea',
+              border: 'none',
+              fontWeight: '600',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '12px 20px',
+              fontSize: '1rem'
+            }}
+          >
+            <Edit size={18} />
+            Edit Checklist Items
+          </button>
+        </div>
       </div>
+
+      <div style={{ padding: '0 20px' }}>
 
       {/* Statistics Cards */}
       {statistics && (
@@ -915,6 +945,7 @@ const PreventiveMaintenance = () => {
           );
         })
       )}
+      </div> {/* End of padding wrapper (0 20px) */}
 
       {/* PM Form Modal */}
       {showPMForm && selectedAsset && (
