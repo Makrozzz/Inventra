@@ -408,6 +408,10 @@ const getPMReport = async (req, res, next) => {
 
       filepath = result.filepath;
       filename = result.filename;
+      
+      // Update database with new file path
+      await pdfGenerator.updateFilePath(pmId, filepath);
+      
       logger.info(`✅ PDF generated successfully: ${filename}`);
     }
 
@@ -476,17 +480,17 @@ const bulkDownloadPM = async (req, res, next) => {
     logger.info('Starting bulk PDF generation...');
     const result = await pdfGenerator.generateBulkPM(validPMRecords);
     
-    if (!result || !result.success || !result.filepath) {
+    if (!result || !result.success || !result.absolutePath) {
       logger.error('PDF generation failed:', result?.error);
       throw new Error(result?.error || 'Failed to generate bulk PDF');
     }
 
-    const absolutePath = path.join(__dirname, '../', result.filepath);
+    const absolutePath = result.absolutePath; // Use absolutePath directly from generator
     const filename = result.filename;
 
     logger.info(`✅ Bulk PDF generated successfully: ${filename}`);
 
-    // Send file for download
+    // Send file for download and delete after sending
     res.download(absolutePath, filename, (err) => {
       if (err) {
         logger.error('❌ Error sending bulk PDF file:', err);
@@ -498,6 +502,12 @@ const bulkDownloadPM = async (req, res, next) => {
         }
       } else {
         logger.info(`📥 Bulk PDF downloaded successfully: ${filename}`);
+        
+        // Delete bulk PDF file after successful download
+        const fs = require('fs').promises;
+        fs.unlink(absolutePath)
+          .then(() => logger.info(`🗑️  Cleaned up bulk PDF: ${filename}`))
+          .catch(unlinkErr => logger.error('Error deleting bulk PDF:', unlinkErr));
       }
     });
 
