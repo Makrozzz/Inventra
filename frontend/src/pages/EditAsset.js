@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Save, ArrowLeft, AlertCircle, CheckCircle, X, Plus } from 'lucide-react';
+import { Save, ArrowLeft, AlertCircle, CheckCircle, X, Plus, Package, Building2, ClipboardList, Edit3 } from 'lucide-react';
 
 const EditAsset = () => {
   const navigate = useNavigate();
@@ -14,11 +14,12 @@ const EditAsset = () => {
   // Dropdown options state
   const [windowsOptions, setWindowsOptions] = useState([]);
   const [officeOptions, setOfficeOptions] = useState([]);
+  const [antivirusOptions, setAntivirusOptions] = useState([]);
   const [softwareOptions, setSoftwareOptions] = useState([]);
   
   // Modal states for adding new options
   const [showAddModal, setShowAddModal] = useState(false);
-  const [modalType, setModalType] = useState(''); // 'windows', 'office', or 'software'
+  const [modalType, setModalType] = useState(''); // 'windows', 'office', 'antivirus', or 'software'
   const [newOptionValue, setNewOptionValue] = useState('');
   const [addingOption, setAddingOption] = useState(false);
   
@@ -31,6 +32,7 @@ const EditAsset = () => {
     Status: 'Active',
     Windows: '',
     Microsoft_Office: '',
+    Antivirus: '',
     Software: '',
     Monthly_Prices: '',
     
@@ -82,6 +84,7 @@ const EditAsset = () => {
         Status: data.Status || 'Active',
         Windows: data.Windows || '',
         Microsoft_Office: data.Microsoft_Office || '',
+        Antivirus: data.Antivirus || '',
         Software: data.Software || '',
         Monthly_Prices: data.Monthly_Prices || '',
         Customer_Name: data.Customer_Name || '',
@@ -126,6 +129,13 @@ const EditAsset = () => {
       if (officeRes.ok) {
         const officeData = await officeRes.json();
         setOfficeOptions(officeData.data || []);
+      }
+
+      // Fetch Antivirus options
+      const antivirusRes = await fetch('http://localhost:5000/api/v1/options/antivirus');
+      if (antivirusRes.ok) {
+        const antivirusData = await antivirusRes.json();
+        setAntivirusOptions(antivirusData.data || []);
       }
 
       // Fetch Software options
@@ -183,6 +193,9 @@ const EditAsset = () => {
       } else if (modalType === 'office') {
         setOfficeOptions(prev => [...prev, newOptionValue.trim()]);
         setFormData(prev => ({ ...prev, Microsoft_Office: newOptionValue.trim() }));
+      } else if (modalType === 'antivirus') {
+        setAntivirusOptions(prev => [...prev, newOptionValue.trim()]);
+        setFormData(prev => ({ ...prev, Antivirus: newOptionValue.trim() }));
       } else if (modalType === 'software') {
         setSoftwareOptions(prev => [...prev, newOptionValue.trim()]);
         setFormData(prev => ({ ...prev, Software: newOptionValue.trim() }));
@@ -277,17 +290,58 @@ const EditAsset = () => {
   return (
     <div className="page-container">
       {/* Header */}
-      <div className="page-header" style={{ marginBottom: '20px' }}>
-        <div>
-          <button onClick={handleCancel} className="btn btn-secondary" style={{ marginBottom: '10px' }}>
-            <ArrowLeft size={16} style={{ marginRight: '5px' }} />
-            Back
-          </button>
-          <h1 className="page-title">Edit Asset</h1>
-          <p style={{ color: '#7f8c8d', fontSize: '0.9rem' }}>
-            Update asset information • ID: {id}
-          </p>
-        </div>
+      <div style={{
+        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        borderRadius: '12px',
+        padding: '24px 28px',
+        marginBottom: '24px',
+        boxShadow: '0 4px 12px rgba(102, 126, 234, 0.3)',
+        color: 'white'
+      }}>
+        <button 
+          onClick={handleCancel} 
+          style={{
+            background: 'rgba(255, 255, 255, 0.2)',
+            backdropFilter: 'blur(10px)',
+            color: 'white',
+            border: '1px solid rgba(255, 255, 255, 0.3)',
+            padding: '8px 16px',
+            borderRadius: '8px',
+            cursor: 'pointer',
+            fontSize: '14px',
+            fontWeight: '500',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '6px',
+            marginBottom: '12px',
+            transition: 'all 0.2s ease'
+          }}
+          onMouseOver={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.3)'}
+          onMouseOut={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)'}
+        >
+          <ArrowLeft size={16} />
+          Back to Assets
+        </button>
+        <h1 style={{ 
+          fontSize: '1.9rem', 
+          fontWeight: '700', 
+          margin: '0 0 8px 0',
+          textShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px'
+        }}>
+          <Edit3 size={28} strokeWidth={2.5} />
+          Edit Asset
+        </h1>
+        <p style={{ 
+          margin: 0, 
+          opacity: 0.95, 
+          fontSize: '0.95rem',
+          fontWeight: '400'
+        }}>
+          Update asset information • Asset ID: {id}
+        </p>
       </div>
 
       {/* Success Message */}
@@ -339,76 +393,145 @@ const EditAsset = () => {
       )}
 
       {/* Tab Navigation */}
-      <div className="card" style={{ marginBottom: '20px', padding: 0 }}>
+      <div style={{
+        background: 'white',
+        borderRadius: '12px',
+        marginBottom: '20px',
+        boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+        overflow: 'hidden'
+      }}>
         <div style={{
           display: 'flex',
-          borderBottom: '2px solid #e9ecef',
-          background: '#f8f9fa'
+          background: 'linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)'
         }}>
           <button
             onClick={() => setActiveTab('asset')}
             style={{
               flex: 1,
-              padding: '16px 24px',
+              padding: '18px 24px',
               border: 'none',
-              background: activeTab === 'asset' ? 'white' : 'transparent',
-              borderBottom: activeTab === 'asset' ? '3px solid #667eea' : '3px solid transparent',
-              color: activeTab === 'asset' ? '#667eea' : '#6c757d',
+              background: activeTab === 'asset' ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : 'transparent',
+              color: activeTab === 'asset' ? 'white' : '#6c757d',
               fontWeight: activeTab === 'asset' ? '600' : '500',
               fontSize: '1rem',
               cursor: 'pointer',
-              transition: 'all 0.2s',
-              marginBottom: '-2px'
+              transition: 'all 0.3s ease',
+              position: 'relative',
+              boxShadow: activeTab === 'asset' ? '0 4px 12px rgba(102, 126, 234, 0.3)' : 'none',
+              transform: activeTab === 'asset' ? 'translateY(-2px)' : 'none'
+            }}
+            onMouseOver={(e) => {
+              if (activeTab !== 'asset') {
+                e.currentTarget.style.background = 'rgba(102, 126, 234, 0.08)';
+              }
+            }}
+            onMouseOut={(e) => {
+              if (activeTab !== 'asset') {
+                e.currentTarget.style.background = 'transparent';
+              }
             }}
           >
-            📦 Asset Info
+            <Package size={18} style={{ marginRight: '6px' }} />
+            Asset Info
           </button>
           <button
             onClick={() => setActiveTab('customer')}
             style={{
               flex: 1,
-              padding: '16px 24px',
+              padding: '18px 24px',
               border: 'none',
-              background: activeTab === 'customer' ? 'white' : 'transparent',
-              borderBottom: activeTab === 'customer' ? '3px solid #667eea' : '3px solid transparent',
-              color: activeTab === 'customer' ? '#667eea' : '#6c757d',
+              background: activeTab === 'customer' ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : 'transparent',
+              color: activeTab === 'customer' ? 'white' : '#6c757d',
               fontWeight: activeTab === 'customer' ? '600' : '500',
               fontSize: '1rem',
               cursor: 'pointer',
-              transition: 'all 0.2s',
-              marginBottom: '-2px'
+              transition: 'all 0.3s ease',
+              position: 'relative',
+              boxShadow: activeTab === 'customer' ? '0 4px 12px rgba(102, 126, 234, 0.3)' : 'none',
+              transform: activeTab === 'customer' ? 'translateY(-2px)' : 'none'
+            }}
+            onMouseOver={(e) => {
+              if (activeTab !== 'customer') {
+                e.currentTarget.style.background = 'rgba(102, 126, 234, 0.08)';
+              }
+            }}
+            onMouseOut={(e) => {
+              if (activeTab !== 'customer') {
+                e.currentTarget.style.background = 'transparent';
+              }
             }}
           >
-            🏢 Customer Info
+            <Building2 size={18} style={{ marginRight: '6px' }} />
+            Customer Info
           </button>
           <button
             onClick={() => setActiveTab('project')}
             style={{
               flex: 1,
-              padding: '16px 24px',
+              padding: '18px 24px',
               border: 'none',
-              background: activeTab === 'project' ? 'white' : 'transparent',
-              borderBottom: activeTab === 'project' ? '3px solid #667eea' : '3px solid transparent',
-              color: activeTab === 'project' ? '#667eea' : '#6c757d',
+              background: activeTab === 'project' ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : 'transparent',
+              color: activeTab === 'project' ? 'white' : '#6c757d',
               fontWeight: activeTab === 'project' ? '600' : '500',
               fontSize: '1rem',
               cursor: 'pointer',
-              transition: 'all 0.2s',
-              marginBottom: '-2px'
+              transition: 'all 0.3s ease',
+              position: 'relative',
+              boxShadow: activeTab === 'project' ? '0 4px 12px rgba(102, 126, 234, 0.3)' : 'none',
+              transform: activeTab === 'project' ? 'translateY(-2px)' : 'none'
+            }}
+            onMouseOver={(e) => {
+              if (activeTab !== 'project') {
+                e.currentTarget.style.background = 'rgba(102, 126, 234, 0.08)';
+              }
+            }}
+            onMouseOut={(e) => {
+              if (activeTab !== 'project') {
+                e.currentTarget.style.background = 'transparent';
+              }
             }}
           >
-            📋 Project Info
+            <ClipboardList size={18} style={{ marginRight: '6px' }} />
+            Project Info
           </button>
         </div>
       </div>
 
       {/* Form */}
       <form onSubmit={handleSubmit}>
-        <div className="card">
+        <div style={{
+          background: 'white',
+          borderRadius: '12px',
+          padding: '28px',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.08)'
+        }}>
           {/* Tab 1: Asset Info */}
           {activeTab === 'asset' && (
             <div>
-              <h3 style={{ marginTop: 0, marginBottom: '20px', color: '#2c3e50' }}>Asset Information</h3>
+              <h3 style={{ 
+                marginTop: 0, 
+                marginBottom: '24px', 
+                color: '#2c3e50',
+                fontSize: '1.3rem',
+                fontWeight: '600',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+                paddingBottom: '12px',
+                borderBottom: '2px solid #f0f0f0'
+              }}>
+                <span style={{
+                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  color: 'white',
+                  padding: '8px 12px',
+                  borderRadius: '8px',
+                  display: 'flex',
+                  alignItems: 'center'
+                }}>
+                  <Package size={18} strokeWidth={2.5} />
+                </span>
+                Asset Information
+              </h3>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px' }}>
                 <div className="form-group">
                   <label>Serial Number <span style={{ color: '#e74c3c' }}>*</span></label>
@@ -464,18 +587,29 @@ const EditAsset = () => {
                       type="button"
                       onClick={() => handleOpenAddModal('windows')}
                       style={{
-                        background: '#4CAF50',
+                        background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
                         color: 'white',
                         border: 'none',
-                        borderRadius: '4px',
-                        padding: '4px 8px',
+                        borderRadius: '6px',
+                        padding: '5px 10px',
                         cursor: 'pointer',
                         display: 'flex',
                         alignItems: 'center',
                         gap: '4px',
-                        fontSize: '12px'
+                        fontSize: '12px',
+                        fontWeight: '600',
+                        transition: 'all 0.2s ease',
+                        boxShadow: '0 2px 4px rgba(16, 185, 129, 0.3)'
                       }}
                       title="Add new Windows version"
+                      onMouseOver={(e) => {
+                        e.currentTarget.style.transform = 'translateY(-1px)';
+                        e.currentTarget.style.boxShadow = '0 3px 6px rgba(16, 185, 129, 0.4)';
+                      }}
+                      onMouseOut={(e) => {
+                        e.currentTarget.style.transform = 'translateY(0)';
+                        e.currentTarget.style.boxShadow = '0 2px 4px rgba(16, 185, 129, 0.3)';
+                      }}
                     >
                       <Plus size={14} /> 
                     </button>
@@ -503,18 +637,29 @@ const EditAsset = () => {
                       type="button"
                       onClick={() => handleOpenAddModal('office')}
                       style={{
-                        background: '#4CAF50',
+                        background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
                         color: 'white',
                         border: 'none',
-                        borderRadius: '4px',
-                        padding: '4px 8px',
+                        borderRadius: '6px',
+                        padding: '5px 10px',
                         cursor: 'pointer',
                         display: 'flex',
                         alignItems: 'center',
                         gap: '4px',
-                        fontSize: '12px'
+                        fontSize: '12px',
+                        fontWeight: '600',
+                        transition: 'all 0.2s ease',
+                        boxShadow: '0 2px 4px rgba(16, 185, 129, 0.3)'
                       }}
                       title="Add new Office version"
+                      onMouseOver={(e) => {
+                        e.currentTarget.style.transform = 'translateY(-1px)';
+                        e.currentTarget.style.boxShadow = '0 3px 6px rgba(16, 185, 129, 0.4)';
+                      }}
+                      onMouseOut={(e) => {
+                        e.currentTarget.style.transform = 'translateY(0)';
+                        e.currentTarget.style.boxShadow = '0 2px 4px rgba(16, 185, 129, 0.3)';
+                      }}
                     >
                       <Plus size={14} /> 
                     </button>
@@ -537,23 +682,84 @@ const EditAsset = () => {
 
                 <div className="form-group">
                   <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span>Antivirus</span>
+                    <button
+                      type="button"
+                      onClick={() => handleOpenAddModal('antivirus')}
+                      style={{
+                        background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '6px',
+                        padding: '5px 10px',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        fontSize: '12px',
+                        fontWeight: '600',
+                        transition: 'all 0.2s ease',
+                        boxShadow: '0 2px 4px rgba(16, 185, 129, 0.3)'
+                      }}
+                      title="Add new Antivirus"
+                      onMouseOver={(e) => {
+                        e.currentTarget.style.transform = 'translateY(-1px)';
+                        e.currentTarget.style.boxShadow = '0 3px 6px rgba(16, 185, 129, 0.4)';
+                      }}
+                      onMouseOut={(e) => {
+                        e.currentTarget.style.transform = 'translateY(0)';
+                        e.currentTarget.style.boxShadow = '0 2px 4px rgba(16, 185, 129, 0.3)';
+                      }}
+                    >
+                      <Plus size={14} /> 
+                    </button>
+                  </label>
+                  <select
+                    name="Antivirus"
+                    value={formData.Antivirus}
+                    onChange={handleInputChange}
+                  >
+                    <option value="">
+                      {originalData?.Antivirus ? `Current: ${originalData.Antivirus}` : 'Select Antivirus'}
+                    </option>
+                    {antivirusOptions.map((option, index) => (
+                      <option key={`av-${option}-${index}`} value={option}>
+                        {option}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="form-group">
+                  <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <span>Software</span>
                     <button
                       type="button"
                       onClick={() => handleOpenAddModal('software')}
                       style={{
-                        background: '#4CAF50',
+                        background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
                         color: 'white',
                         border: 'none',
-                        borderRadius: '4px',
-                        padding: '4px 8px',
+                        borderRadius: '6px',
+                        padding: '5px 10px',
                         cursor: 'pointer',
                         display: 'flex',
                         alignItems: 'center',
                         gap: '4px',
-                        fontSize: '12px'
+                        fontSize: '12px',
+                        fontWeight: '600',
+                        transition: 'all 0.2s ease',
+                        boxShadow: '0 2px 4px rgba(16, 185, 129, 0.3)'
                       }}
                       title="Add new Software"
+                      onMouseOver={(e) => {
+                        e.currentTarget.style.transform = 'translateY(-1px)';
+                        e.currentTarget.style.boxShadow = '0 3px 6px rgba(16, 185, 129, 0.4)';
+                      }}
+                      onMouseOut={(e) => {
+                        e.currentTarget.style.transform = 'translateY(0)';
+                        e.currentTarget.style.boxShadow = '0 2px 4px rgba(16, 185, 129, 0.3)';
+                      }}
                     >
                       <Plus size={14} /> 
                     </button>
@@ -590,7 +796,30 @@ const EditAsset = () => {
           {/* Tab 2: Customer Info */}
           {activeTab === 'customer' && (
             <div>
-              <h3 style={{ marginTop: 0, marginBottom: '20px', color: '#2c3e50' }}>Customer & Recipient Information</h3>
+              <h3 style={{ 
+                marginTop: 0, 
+                marginBottom: '24px', 
+                color: '#2c3e50',
+                fontSize: '1.3rem',
+                fontWeight: '600',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+                paddingBottom: '12px',
+                borderBottom: '2px solid #f0f0f0'
+              }}>
+                <span style={{
+                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  color: 'white',
+                  padding: '8px 12px',
+                  borderRadius: '8px',
+                  display: 'flex',
+                  alignItems: 'center'
+                }}>
+                  <Building2 size={18} strokeWidth={2.5} />
+                </span>
+                Customer & Recipient Information
+              </h3>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px' }}>
                 <div className="form-group">
                   <label>Customer Name</label>
@@ -658,7 +887,30 @@ const EditAsset = () => {
           {/* Tab 3: Project Info */}
           {activeTab === 'project' && (
             <div>
-              <h3 style={{ marginTop: 0, marginBottom: '20px', color: '#2c3e50' }}>Project Information</h3>
+              <h3 style={{ 
+                marginTop: 0, 
+                marginBottom: '24px', 
+                color: '#2c3e50',
+                fontSize: '1.3rem',
+                fontWeight: '600',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+                paddingBottom: '12px',
+                borderBottom: '2px solid #f0f0f0'
+              }}>
+                <span style={{
+                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  color: 'white',
+                  padding: '8px 12px',
+                  borderRadius: '8px',
+                  display: 'flex',
+                  alignItems: 'center'
+                }}>
+                  <ClipboardList size={18} strokeWidth={2.5} />
+                </span>
+                Project Information
+              </h3>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px' }}>
                 <div className="form-group" style={{ gridColumn: '1 / -1' }}>
                   <label>Project Reference Number</label>
@@ -707,26 +959,79 @@ const EditAsset = () => {
 
         {/* Action Buttons */}
         <div style={{ 
-          marginTop: '20px', 
+          marginTop: '24px', 
           display: 'flex', 
-          gap: '15px', 
+          gap: '12px', 
           justifyContent: 'flex-end' 
         }}>
           <button
             type="button"
             onClick={handleCancel}
-            className="btn btn-secondary"
             disabled={saving}
+            style={{
+              background: 'linear-gradient(135deg, #e9ecef 0%, #dee2e6 100%)',
+              color: '#495057',
+              border: 'none',
+              padding: '12px 24px',
+              borderRadius: '8px',
+              cursor: saving ? 'not-allowed' : 'pointer',
+              fontSize: '14px',
+              fontWeight: '600',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '8px',
+              transition: 'all 0.2s ease',
+              opacity: saving ? 0.6 : 1,
+              boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+            }}
+            onMouseOver={(e) => {
+              if (!saving) {
+                e.currentTarget.style.transform = 'translateY(-2px)';
+                e.currentTarget.style.boxShadow = '0 4px 8px rgba(0,0,0,0.15)';
+              }
+            }}
+            onMouseOut={(e) => {
+              if (!saving) {
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
+              }
+            }}
           >
-            <X size={16} style={{ marginRight: '5px' }} />
+            <X size={16} />
             Cancel
           </button>
           <button
             type="submit"
-            className="btn btn-primary"
             disabled={saving}
+            style={{
+              background: saving ? '#95a5a6' : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              color: 'white',
+              border: 'none',
+              padding: '12px 28px',
+              borderRadius: '8px',
+              cursor: saving ? 'not-allowed' : 'pointer',
+              fontSize: '14px',
+              fontWeight: '600',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '8px',
+              transition: 'all 0.2s ease',
+              boxShadow: saving ? 'none' : '0 4px 12px rgba(102, 126, 234, 0.3)'
+            }}
+            onMouseOver={(e) => {
+              if (!saving) {
+                e.currentTarget.style.transform = 'translateY(-2px)';
+                e.currentTarget.style.boxShadow = '0 6px 16px rgba(102, 126, 234, 0.4)';
+              }
+            }}
+            onMouseOut={(e) => {
+              if (!saving) {
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = '0 4px 12px rgba(102, 126, 234, 0.3)';
+              }
+            }}
           >
-            <Save size={16} style={{ marginRight: '5px' }} />
+            <Save size={16} />
             {saving ? 'Saving...' : 'Save Changes'}
           </button>
         </div>
@@ -748,15 +1053,24 @@ const EditAsset = () => {
         }}>
           <div style={{
             background: 'white',
-            borderRadius: '8px',
-            padding: '24px',
-            minWidth: '400px',
-            maxWidth: '500px',
-            boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)'
+            borderRadius: '12px',
+            padding: '28px',
+            minWidth: '450px',
+            maxWidth: '550px',
+            boxShadow: '0 10px 40px rgba(0, 0, 0, 0.2)'
           }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h3 style={{ margin: 0, color: '#2c3e50' }}>
-                Add New {modalType === 'windows' ? 'Windows Version' : modalType === 'office' ? 'Office Version' : 'Software'}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+              <h3 style={{ 
+                margin: 0, 
+                color: '#2c3e50',
+                fontSize: '1.4rem',
+                fontWeight: '600',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px'
+              }}>
+                <Plus size={24} strokeWidth={2.5} style={{ color: '#10b981' }} />
+                Add New {modalType === 'windows' ? 'Windows Version' : modalType === 'office' ? 'Office Version' : modalType === 'antivirus' ? 'Antivirus' : 'Software'}
               </h3>
               <button
                 onClick={handleCloseAddModal}
@@ -776,13 +1090,13 @@ const EditAsset = () => {
 
             <div style={{ marginBottom: '20px' }}>
               <label style={{ display: 'block', marginBottom: '8px', color: '#34495e', fontWeight: '500' }}>
-                {modalType === 'windows' ? 'Windows Version Name' : modalType === 'office' ? 'Office Version Name' : 'Software Name'}
+                {modalType === 'windows' ? 'Windows Version Name' : modalType === 'office' ? 'Office Version Name' : modalType === 'antivirus' ? 'Antivirus Name' : 'Software Name'}
               </label>
               <input
                 type="text"
                 value={newOptionValue}
                 onChange={(e) => setNewOptionValue(e.target.value)}
-                placeholder={modalType === 'office' ? 'e.g., Office LTSC 2024' : modalType === 'windows' ? 'e.g., Windows 12' : 'e.g., Adobe Acrobat'}
+                placeholder={modalType === 'office' ? 'e.g., Office LTSC 2024' : modalType === 'windows' ? 'e.g., Windows 12' : modalType === 'antivirus' ? 'e.g., Kaspersky Endpoint Security' : 'e.g., Adobe Acrobat'}
                 style={{
                   width: '100%',
                   padding: '10px',
@@ -800,20 +1114,65 @@ const EditAsset = () => {
               />
             </div>
 
-            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
               <button
                 onClick={handleCloseAddModal}
-                className="btn btn-secondary"
                 disabled={addingOption}
-                style={{ padding: '8px 16px' }}
+                style={{
+                  background: 'linear-gradient(135deg, #e9ecef 0%, #dee2e6 100%)',
+                  color: '#495057',
+                  border: 'none',
+                  padding: '10px 20px',
+                  borderRadius: '8px',
+                  cursor: addingOption ? 'not-allowed' : 'pointer',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  opacity: addingOption ? 0.6 : 1,
+                  transition: 'all 0.2s ease',
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                }}
+                onMouseOver={(e) => {
+                  if (!addingOption) {
+                    e.currentTarget.style.transform = 'translateY(-1px)';
+                    e.currentTarget.style.boxShadow = '0 3px 6px rgba(0,0,0,0.15)';
+                  }
+                }}
+                onMouseOut={(e) => {
+                  if (!addingOption) {
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
+                  }
+                }}
               >
                 Cancel
               </button>
               <button
                 onClick={handleAddNewOption}
-                className="btn btn-primary"
                 disabled={addingOption || !newOptionValue.trim()}
-                style={{ padding: '8px 16px' }}
+                style={{
+                  background: (addingOption || !newOptionValue.trim()) ? '#95a5a6' : 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                  color: 'white',
+                  border: 'none',
+                  padding: '10px 24px',
+                  borderRadius: '8px',
+                  cursor: (addingOption || !newOptionValue.trim()) ? 'not-allowed' : 'pointer',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  transition: 'all 0.2s ease',
+                  boxShadow: (addingOption || !newOptionValue.trim()) ? 'none' : '0 4px 12px rgba(16, 185, 129, 0.3)'
+                }}
+                onMouseOver={(e) => {
+                  if (!addingOption && newOptionValue.trim()) {
+                    e.currentTarget.style.transform = 'translateY(-1px)';
+                    e.currentTarget.style.boxShadow = '0 6px 16px rgba(16, 185, 129, 0.4)';
+                  }
+                }}
+                onMouseOut={(e) => {
+                  if (!addingOption && newOptionValue.trim()) {
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(16, 185, 129, 0.3)';
+                  }
+                }}
               >
                 {addingOption ? 'Adding...' : 'Add Option'}
               </button>

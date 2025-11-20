@@ -6,16 +6,19 @@ const logger = require('../utils/logger');
  */
 const getAllCategories = async (req, res, next) => {
   try {
+    console.log('📋 Fetching all categories from database...');
     const [categories] = await pool.execute(`
       SELECT 
         Category_ID as id,
         Category as name,
         Category_ID,
-        Category,
-        created_at
+        Category
       FROM CATEGORY 
       ORDER BY Category ASC
     `);
+
+    console.log(`✅ Successfully fetched ${categories.length} categories from database`);
+    console.log('Categories:', categories.map(c => c.Category).join(', '));
 
     res.status(200).json({
       success: true,
@@ -23,7 +26,9 @@ const getAllCategories = async (req, res, next) => {
     });
   } catch (error) {
     logger.error('Error in getAllCategories:', error);
-    console.error('Error fetching categories:', error);
+    console.error('❌ ERROR fetching categories from database:', error.message);
+    console.error('Error code:', error.code);
+    console.error('Error stack:', error.stack);
     
     // Return fallback categories if database query fails
     const fallbackCategories = [
@@ -32,6 +37,8 @@ const getAllCategories = async (req, res, next) => {
       { id: 3, name: 'Laptop', Category_ID: 3, Category: 'Laptop' },
       { id: 4, name: 'Server', Category_ID: 4, Category: 'Server' }
     ];
+    
+    console.log('⚠️ Returning fallback categories due to database error');
     
     res.status(200).json({
       success: true,
@@ -190,6 +197,8 @@ const createCategory = async (req, res, next) => {
   try {
     const { name } = req.body;
     
+    console.log('🆕 createCategory called with:', { name });
+    
     if (!name || typeof name !== 'string' || name.trim() === '') {
       return res.status(400).json({
         success: false,
@@ -198,20 +207,25 @@ const createCategory = async (req, res, next) => {
     }
 
     const categoryName = name.trim();
+    console.log(`Checking if category "${categoryName}" already exists...`);
 
     // Check if category already exists
     const [existing] = await pool.execute(
-      'SELECT Category_ID FROM CATEGORY WHERE LOWER(Category) = LOWER(?)',
+      'SELECT Category_ID, Category FROM CATEGORY WHERE LOWER(Category) = LOWER(?)',
       [categoryName]
     );
     
     if (existing.length > 0) {
+      console.log(`❌ Category "${categoryName}" already exists with ID: ${existing[0].Category_ID}`);
       return res.status(409).json({
         success: false,
         error: `Category "${categoryName}" already exists`,
-        existingId: existing[0].Category_ID
+        existingId: existing[0].Category_ID,
+        existingName: existing[0].Category
       });
     }
+
+    console.log(`✅ Category "${categoryName}" doesn't exist, creating...`);
 
     // Create new category
     const [result] = await pool.execute(
@@ -220,6 +234,7 @@ const createCategory = async (req, res, next) => {
     );
 
     const newCategoryId = result.insertId;
+    console.log(`✅ Created new category: ID=${newCategoryId}, Name="${categoryName}"`);
     logger.info(`New category created: ${categoryName} (ID: ${newCategoryId}) by user ${req.user?.userId || 'system'}`);
 
     res.status(201).json({
@@ -234,7 +249,7 @@ const createCategory = async (req, res, next) => {
     });
   } catch (error) {
     logger.error('Error in createCategory:', error);
-    console.error('Error creating category:', error);
+    console.error('❌ ERROR in createCategory:', error);
     
     res.status(500).json({
       success: false,

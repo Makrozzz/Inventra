@@ -11,8 +11,7 @@ const getAllModels = async (req, res, next) => {
         Model_ID as id,
         Model_Name as name,
         Model_ID,
-        Model_Name,
-        created_at
+        Model_Name
       FROM MODEL 
       ORDER BY Model_Name ASC
     `);

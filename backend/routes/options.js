@@ -144,4 +144,49 @@ router.post('/software', async (req, res) => {
   }
 });
 
+// Get all Antivirus options
+router.get('/antivirus', async (req, res) => {
+  try {
+    const [rows] = await pool.execute(
+      'SELECT DISTINCT Antivirus FROM PROJECT WHERE Antivirus IS NOT NULL AND Antivirus != "" ORDER BY Antivirus'
+    );
+    const antivirusList = rows.map(row => row.Antivirus);
+    
+    // Add default options if none exist
+    const defaultAntivirus = ['Kaspersky', 'Norton', 'McAfee', 'Bitdefender', 'Avast', 'AVG', 'Trend Micro', 'None'];
+    const allAntivirus = [...new Set([...defaultAntivirus, ...antivirusList])];
+    
+    res.json({ success: true, data: allAntivirus });
+  } catch (error) {
+    console.error('Error fetching antivirus:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch antivirus' });
+  }
+});
+
+// Add new Antivirus
+router.post('/antivirus', async (req, res) => {
+  try {
+    const { value } = req.body;
+    
+    if (!value || !value.trim()) {
+      return res.status(400).json({ success: false, error: 'Value is required' });
+    }
+
+    // Check if it already exists
+    const [existing] = await pool.execute(
+      'SELECT Antivirus FROM PROJECT WHERE Antivirus = ? LIMIT 1',
+      [value.trim()]
+    );
+
+    if (existing.length > 0) {
+      return res.json({ success: true, message: 'Antivirus already exists', data: value.trim() });
+    }
+
+    res.json({ success: true, message: 'Antivirus can now be used', data: value.trim() });
+  } catch (error) {
+    console.error('Error adding antivirus:', error);
+    res.status(500).json({ success: false, error: 'Failed to add antivirus' });
+  }
+});
+
 module.exports = router;

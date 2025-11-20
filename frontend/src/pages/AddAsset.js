@@ -40,9 +40,15 @@ const AddAsset = () => {
 
   // Modal states for adding new options dynamically
   const [showAddModal, setShowAddModal] = useState(false);
-  const [modalType, setModalType] = useState(''); // 'category', 'model', 'peripheral'
+  const [modalType, setModalType] = useState(''); // 'category', 'model', 'peripheral', 'windows', 'office', 'antivirus', 'software'
   const [newOptionValue, setNewOptionValue] = useState('');
   const [addingOption, setAddingOption] = useState(false);
+
+  // Dropdown options for new fields
+  const [windowsOptions, setWindowsOptions] = useState([]);
+  const [officeOptions, setOfficeOptions] = useState([]);
+  const [antivirusOptions, setAntivirusOptions] = useState([]);
+  const [softwareOptions, setSoftwareOptions] = useState([]);
   
   // Form data
   const [selectedBranch, setSelectedBranch] = useState('');
@@ -57,7 +63,12 @@ const AddAsset = () => {
     status: 'Active',
     recipient_name: '',
     department_name: '',
-    position: ''
+    position: '',
+    windows: '',
+    microsoft_office: '',
+    antivirus: '',
+    software: '',
+    monthly_prices: ''
   });
 
   // Peripheral data
@@ -82,6 +93,10 @@ const AddAsset = () => {
     fetchCategories();
     fetchModels();
     fetchPeripheralTypes();
+    fetchWindowsOptions();
+    fetchOfficeOptions();
+    fetchAntivirusOptions();
+    fetchSoftwareOptions();
   }, []);
 
   // Filter projects based on search term
@@ -194,6 +209,18 @@ const AddAsset = () => {
           customer_reference_number: response.data.customer_reference_number,
           project_title: response.data.project_title
         }));
+        
+        // Auto-populate antivirus from project
+        if (response.data.antivirus) {
+          console.log('🦠 Auto-populating antivirus from project:', response.data.antivirus);
+          setAsset(prev => ({
+            ...prev,
+            antivirus: response.data.antivirus
+          }));
+        } else {
+          console.log('⚠️ No antivirus data in project response');
+        }
+        
         console.log('✅ Project data populated:', response.data);
         setError(null);
         
@@ -316,30 +343,101 @@ const AddAsset = () => {
   const fetchCategories = async () => {
     try {
       const response = await apiService.getCategories();
-      setCategories(response.data || []);
+      const categoriesData = response.data || [];
+      
+      // Check if backend is returning fallback data
+      if (response.fallback) {
+        console.warn('⚠️ Backend returned FALLBACK categories (database error)');
+      }
+      
+      setCategories(categoriesData);
+      return categoriesData;
     } catch (err) {
       console.error('Error fetching categories:', err);
       setCategories([]);
+      return [];
     }
   };
 
   const fetchModels = async () => {
     try {
       const response = await apiService.getModels();
-      setModels(response.data || []);
+      const modelsData = response.data || [];
+      setModels(modelsData);
+      return modelsData;
     } catch (err) {
       console.error('Error fetching models:', err);
       setModels([]);
+      return [];
     }
   };
 
   const fetchPeripheralTypes = async () => {
     try {
       const response = await apiService.getPeripheralTypes();
-      setPeripheralTypes(response.data || []);
+      const typesData = response.data || [];
+      setPeripheralTypes(typesData);
+      return typesData;
     } catch (err) {
       console.error('Error fetching peripheral types:', err);
       setPeripheralTypes([]);
+      return [];
+    }
+  };
+
+  const fetchWindowsOptions = async () => {
+    try {
+      const response = await fetch('http://localhost:5000/api/v1/options/windows');
+      const result = await response.json();
+      const optionsData = result.data || [];
+      setWindowsOptions(optionsData);
+      return optionsData;
+    } catch (err) {
+      console.error('Error fetching Windows options:', err);
+      setWindowsOptions([]);
+      return [];
+    }
+  };
+
+  const fetchOfficeOptions = async () => {
+    try {
+      const response = await fetch('http://localhost:5000/api/v1/options/office');
+      const result = await response.json();
+      const optionsData = result.data || [];
+      setOfficeOptions(optionsData);
+      return optionsData;
+    } catch (err) {
+      console.error('Error fetching Office options:', err);
+      setOfficeOptions([]);
+      return [];
+    }
+  };
+
+  const fetchAntivirusOptions = async () => {
+    try {
+      const response = await fetch('http://localhost:5000/api/v1/options/antivirus');
+      const result = await response.json();
+      const optionsData = result.data || [];
+      setAntivirusOptions(optionsData);
+      return optionsData;
+    } catch (err) {
+      console.error('Error fetching Antivirus options:', err);
+      setAntivirusOptions([]);
+      return [];
+    }
+  };
+
+  const fetchSoftwareOptions = async () => {
+    try {
+      const response = await fetch('http://localhost:5000/api/v1/options/software');
+      const result = await response.json();
+      const optionsData = result.data || [];
+      setSoftwareOptions(optionsData);
+      return optionsData;
+    } catch (err) {
+      console.error('Error fetching Software options:', err);
+      setSoftwareOptions([]);
+      return [];
     }
   };
 
@@ -368,20 +466,44 @@ const AddAsset = () => {
       let endpoint = '';
       let updateStateFunction = null;
       let autoSelectField = '';
+      let requestBody = {};
 
       // Determine endpoint and state update function based on modalType
       if (modalType === 'category') {
         endpoint = '/categories';
         updateStateFunction = setCategories;
         autoSelectField = 'category';
+        requestBody = { name: newOptionValue.trim() };
       } else if (modalType === 'model') {
         endpoint = '/models';
         updateStateFunction = setModels;
         autoSelectField = 'model';
+        requestBody = { name: newOptionValue.trim() };
       } else if (modalType === 'peripheral') {
         endpoint = '/peripherals/types';
         updateStateFunction = setPeripheralTypes;
         autoSelectField = 'peripheral_name';
+        requestBody = { name: newOptionValue.trim() };
+      } else if (modalType === 'windows') {
+        endpoint = '/options/windows';
+        updateStateFunction = setWindowsOptions;
+        autoSelectField = 'windows';
+        requestBody = { value: newOptionValue.trim() };
+      } else if (modalType === 'office') {
+        endpoint = '/options/office';
+        updateStateFunction = setOfficeOptions;
+        autoSelectField = 'microsoft_office';
+        requestBody = { value: newOptionValue.trim() };
+      } else if (modalType === 'antivirus') {
+        endpoint = '/options/antivirus';
+        updateStateFunction = setAntivirusOptions;
+        autoSelectField = 'antivirus';
+        requestBody = { value: newOptionValue.trim() };
+      } else if (modalType === 'software') {
+        endpoint = '/options/software';
+        updateStateFunction = setSoftwareOptions;
+        autoSelectField = 'software';
+        requestBody = { value: newOptionValue.trim() };
       }
 
       const response = await fetch(`http://localhost:5000/api/v1${endpoint}`, {
@@ -389,39 +511,92 @@ const AddAsset = () => {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ name: newOptionValue.trim() }),
+        body: JSON.stringify(requestBody),
       });
 
       const result = await response.json();
 
-      if (response.ok && result.success) {
-        // Update the appropriate state array with the new option
-        const newOption = result.data;
-        updateStateFunction(prev => [...prev, newOption]);
+      // Handle both success (201) and conflict (409 - already exists)
+      if ((response.ok && result.success) || response.status === 409) {
+        let selectedValue = newOptionValue.trim();
+        
+        // If 409 conflict, refresh dropdown to get the existing item from database
+        if (response.status === 409) {
+          console.log(`✅ ${modalType} "${selectedValue}" already exists, refreshing dropdown...`);
+          
+          // Refresh the appropriate dropdown list and get the returned data
+          let refreshedData = [];
+          if (modalType === 'category') {
+            refreshedData = await fetchCategories();
+            console.log('📋 Categories state after fetch:', refreshedData);
+          } else if (modalType === 'model') {
+            refreshedData = await fetchModels();
+            console.log('📋 Models state after fetch:', refreshedData);
+          } else if (modalType === 'peripheral') {
+            refreshedData = await fetchPeripheralTypes();
+            console.log('📋 Peripheral types state after fetch:', refreshedData);
+          } else if (modalType === 'windows') {
+            refreshedData = await fetchWindowsOptions();
+            console.log('📋 Windows options state after fetch:', refreshedData);
+          } else if (modalType === 'office') {
+            refreshedData = await fetchOfficeOptions();
+            console.log('📋 Office options state after fetch:', refreshedData);
+          } else if (modalType === 'antivirus') {
+            refreshedData = await fetchAntivirusOptions();
+            console.log('📋 Antivirus options state after fetch:', refreshedData);
+          } else if (modalType === 'software') {
+            refreshedData = await fetchSoftwareOptions();
+            console.log('📋 Software options state after fetch:', refreshedData);
+          }
+          
+          console.log(`✅ Refreshed ${modalType} dropdown with ${refreshedData.length} items`);
+          
+          // Wait a bit for state to fully update
+          await new Promise(resolve => setTimeout(resolve, 100));
+          
+          // For object arrays, find the exact matching item
+          if (['category', 'model', 'peripheral'].includes(modalType)) {
+            const matchingItem = refreshedData.find(item => {
+              const itemName = item.Category || item.Model_Name || item.Model || item.Peripheral_Type_Name || item.name || '';
+              return itemName.toLowerCase() === selectedValue.toLowerCase();
+            });
+            
+            if (matchingItem) {
+              selectedValue = matchingItem.Category || matchingItem.Model_Name || matchingItem.Model || matchingItem.Peripheral_Type_Name || matchingItem.name;
+              console.log(`✅ Found matching ${modalType}:`, selectedValue);
+            }
+          }
+        } else {
+          // Success case - add new option to dropdown
+          const newOption = result.data;
+          
+          // For simple string arrays (windows, office, antivirus, software)
+          if (['windows', 'office', 'antivirus', 'software'].includes(modalType)) {
+            updateStateFunction(prev => [...prev, newOption]);
+            selectedValue = newOption;
+          } else {
+            // For object arrays (category, model, peripheral)
+            updateStateFunction(prev => [...prev, newOption]);
+            
+            if (modalType === 'category') {
+              selectedValue = newOption.Category || newOption.name;
+            } else if (modalType === 'model') {
+              selectedValue = newOption.Model_Name || newOption.Model || newOption.name;
+            } else if (modalType === 'peripheral') {
+              selectedValue = newOption.Peripheral_Type_Name || newOption.name;
+            }
+          }
+          
+          console.log(`✅ Added new ${modalType}:`, selectedValue);
+        }
 
-        // Auto-select the new value in the form
-        // The value should match what's displayed in the dropdown options
-        let selectedValue = '';
+        // Auto-select the value in the form
+        setAsset(prevAsset => ({
+          ...prevAsset,
+          [autoSelectField]: selectedValue
+        }));
         
-        if (modalType === 'category') {
-          // Category dropdown uses: cat.Category || cat
-          selectedValue = newOption.Category || newOption.name;
-        } else if (modalType === 'model') {
-          // Model dropdown uses: mod.Model_Name || mod.Model || mod
-          selectedValue = newOption.Model_Name || newOption.Model || newOption.name;
-        } else if (modalType === 'peripheral') {
-          // Peripheral dropdown uses: type.Peripheral_Type_Name || type
-          selectedValue = newOption.Peripheral_Type_Name || newOption.name;
-        }
-        
-        if (autoSelectField === 'category' || autoSelectField === 'model') {
-          setAsset(prevAsset => ({
-            ...prevAsset,
-            [autoSelectField]: selectedValue
-          }));
-        }
-        // Note: For peripheral, we can't auto-select since it's in a dynamic array
-        // The user will need to manually select it from the dropdown
+        console.log(`✅ Auto-selected ${autoSelectField}:`, selectedValue);
 
         handleCloseAddModal();
       } else {
@@ -489,6 +664,12 @@ const AddAsset = () => {
         recipient_name: asset.recipient_name,
         department_name: asset.department_name,
         position: asset.position,
+        
+        // New fields
+        windows: asset.windows || null,
+        microsoft_office: asset.microsoft_office || null,
+        software: asset.software || null,
+        monthly_prices: asset.monthly_prices || null,
         
         // Include only valid peripherals (those with both name and serial code)
         peripherals: peripherals.filter(p => p.peripheral_name.trim() && p.serial_code_name.trim())
@@ -1031,11 +1212,14 @@ const AddAsset = () => {
                     required
                   >
                     <option value="">Select category</option>
-                    {categories.map((cat, index) => (
-                      <option key={index} value={cat.Category || cat}>
-                        {cat.Category || cat}
-                      </option>
-                    ))}
+                    {categories.map((cat, index) => {
+                      const catValue = cat.Category || cat;
+                      return (
+                        <option key={`cat-${catValue}-${index}`} value={catValue}>
+                          {catValue}
+                        </option>
+                      );
+                    })}
                   </select>
                 </div>
 
@@ -1069,12 +1253,171 @@ const AddAsset = () => {
                     required
                   >
                     <option value="">Select model</option>
-                    {models.map((mod, index) => (
-                      <option key={index} value={mod.Model_Name || mod.Model || mod}>
-                        {mod.Model_Name || mod.Model || mod}
+                    {models.map((mod, index) => {
+                      const modValue = mod.Model_Name || mod.Model || mod;
+                      return (
+                        <option key={`mod-${modValue}-${index}`} value={modValue}>
+                          {modValue}
+                        </option>
+                      );
+                    })}
+                  </select>
+                </div>
+
+                <div className="form-group">
+                  <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span>Windows</span>
+                    <button
+                      type="button"
+                      onClick={() => handleOpenAddModal('windows')}
+                      style={{
+                        background: '#4caf50',
+                        color: 'white',
+                        border: 'none',
+                        padding: '4px 8px',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        fontSize: '12px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px'
+                      }}
+                    >
+                      <Plus size={14} /> 
+                    </button>
+                  </label>
+                  <select
+                    value={asset.windows}
+                    onChange={(e) => setAsset({ ...asset, windows: e.target.value })}
+                  >
+                    <option value="">Select Windows version</option>
+                    {windowsOptions.map((win, index) => (
+                      <option key={`win-${win}-${index}`} value={win}>
+                        {win}
                       </option>
                     ))}
                   </select>
+                </div>
+
+                <div className="form-group">
+                  <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span>Microsoft Office</span>
+                    <button
+                      type="button"
+                      onClick={() => handleOpenAddModal('office')}
+                      style={{
+                        background: '#4caf50',
+                        color: 'white',
+                        border: 'none',
+                        padding: '4px 8px',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        fontSize: '12px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px'
+                      }}
+                    >
+                      <Plus size={14} /> 
+                    </button>
+                  </label>
+                  <select
+                    value={asset.microsoft_office}
+                    onChange={(e) => setAsset({ ...asset, microsoft_office: e.target.value })}
+                  >
+                    <option value="">Select Office version</option>
+                    {officeOptions.map((office, index) => (
+                      <option key={`office-${office}-${index}`} value={office}>
+                        {office}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="form-group">
+                  <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span>Antivirus</span>
+                    <button
+                      type="button"
+                      onClick={() => handleOpenAddModal('antivirus')}
+                      style={{
+                        background: '#4caf50',
+                        color: 'white',
+                        border: 'none',
+                        padding: '4px 8px',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        fontSize: '12px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px'
+                      }}
+                    >
+                      <Plus size={14} /> 
+                    </button>
+                  </label>
+                  <select
+                    value={asset.antivirus}
+                    onChange={(e) => setAsset({ ...asset, antivirus: e.target.value })}
+                  >
+                    <option value="">Select antivirus</option>
+                    {antivirusOptions.map((av, index) => (
+                      <option key={`av-${av}-${index}`} value={av}>
+                        {av}
+                      </option>
+                    ))}
+                  </select>
+                  {projectData.project_reference_num && asset.antivirus && (
+                    <small style={{ color: '#666', fontSize: '11px', marginTop: '4px', display: 'block' }}>
+                       Auto-populated 
+                    </small>
+                  )}
+                </div>
+
+                <div className="form-group">
+                  <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span>Software</span>
+                    <button
+                      type="button"
+                      onClick={() => handleOpenAddModal('software')}
+                      style={{
+                        background: '#4caf50',
+                        color: 'white',
+                        border: 'none',
+                        padding: '4px 8px',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        fontSize: '12px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px'
+                      }}
+                    >
+                      <Plus size={14} /> 
+                    </button>
+                  </label>
+                  <select
+                    value={asset.software}
+                    onChange={(e) => setAsset({ ...asset, software: e.target.value })}
+                  >
+                    <option value="">Select software</option>
+                    {softwareOptions.map((sw, index) => (
+                      <option key={`sw-${sw}-${index}`} value={sw}>
+                        {sw}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="form-group">
+                  <label>Monthly Price</label>
+                  <input
+                    type="text"
+                    name="monthly_prices"
+                    value={asset.monthly_prices}
+                    onChange={handleAssetChange}
+                    placeholder="e.g., 150.00"
+                  />
                 </div>
               </div>
             </div>
@@ -1250,11 +1593,14 @@ const AddAsset = () => {
                         className={peripheral.peripheral_name.trim() && !peripheral.serial_code_name.trim() ? 'peripheral-warning' : ''}
                       >
                         <option value="">Select peripheral type</option>
-                        {peripheralTypes.map((type, idx) => (
-                          <option key={idx} value={type.Peripheral_Type_Name || type}>
-                            {type.Peripheral_Type_Name || type}
-                          </option>
-                        ))}
+                        {peripheralTypes.map((type, idx) => {
+                          const typeValue = type.Peripheral_Type_Name || type;
+                          return (
+                            <option key={`ptype-${typeValue}-${idx}`} value={typeValue}>
+                              {typeValue}
+                            </option>
+                          );
+                        })}
                       </select>
                     </div>
 
@@ -1409,7 +1755,15 @@ const AddAsset = () => {
           >
             <div style={{ marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <h3 style={{ margin: 0, color: '#333' }}>
-                Add New {modalType === 'category' ? 'Category' : modalType === 'model' ? 'Model' : 'Peripheral Type'}
+                Add New {
+                  modalType === 'category' ? 'Category' : 
+                  modalType === 'model' ? 'Model' : 
+                  modalType === 'peripheral' ? 'Peripheral Type' :
+                  modalType === 'windows' ? 'Windows Version' :
+                  modalType === 'office' ? 'Office Version' :
+                  modalType === 'antivirus' ? 'Antivirus' :
+                  modalType === 'software' ? 'Software' : ''
+                }
               </h3>
               <button
                 onClick={handleCloseAddModal}
@@ -1429,7 +1783,15 @@ const AddAsset = () => {
 
             <div style={{ marginBottom: '20px' }}>
               <label style={{ display: 'block', marginBottom: '8px', color: '#555', fontWeight: '500' }}>
-                {modalType === 'category' ? 'Category' : modalType === 'model' ? 'Model' : 'Peripheral Type'} Name
+                {
+                  modalType === 'category' ? 'Category' : 
+                  modalType === 'model' ? 'Model' : 
+                  modalType === 'peripheral' ? 'Peripheral Type' :
+                  modalType === 'windows' ? 'Windows Version' :
+                  modalType === 'office' ? 'Office Version' :
+                  modalType === 'antivirus' ? 'Antivirus' :
+                  modalType === 'software' ? 'Software' : ''
+                } Name
               </label>
               <input
                 type="text"
@@ -1441,11 +1803,13 @@ const AddAsset = () => {
                   }
                 }}
                 placeholder={
-                  modalType === 'category' 
-                    ? 'e.g., Desktop, Laptop, Server' 
-                    : modalType === 'model' 
-                    ? 'e.g., Dell OptiPlex 7420, HP EliteBook' 
-                    : 'e.g., Monitor, Keyboard, Mouse'
+                  modalType === 'category' ? 'e.g., Desktop, Laptop, Server' : 
+                  modalType === 'model' ? 'e.g., Dell OptiPlex 7420, HP EliteBook' : 
+                  modalType === 'peripheral' ? 'e.g., Monitor, Keyboard, Mouse' :
+                  modalType === 'windows' ? 'e.g., Windows 10 Pro, Windows 11' :
+                  modalType === 'office' ? 'e.g., Office 2019, Microsoft 365' :
+                  modalType === 'antivirus' ? 'e.g., Kaspersky, Norton, McAfee' :
+                  modalType === 'software' ? 'e.g., Adobe Acrobat, AutoCAD' : ''
                 }
                 style={{
                   width: '100%',
