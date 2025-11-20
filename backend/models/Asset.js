@@ -49,6 +49,7 @@ class Asset {
         });
       }
 
+      console.log('Executing main assets query...');
       const [rows] = await pool.execute(`
         SELECT 
           i.Inventory_ID,
@@ -80,7 +81,7 @@ class Asset {
           GROUP_CONCAT(DISTINCT s.Software_Name SEPARATOR ', ') AS Software,
           GROUP_CONCAT(DISTINCT s.Price SEPARATOR ', ') AS Software_Prices,
           GROUP_CONCAT(DISTINCT CONCAT(pt.Peripheral_Type_Name, '|', per.Serial_Code, '|', per.Condition, '|', COALESCE(per.Remarks, '')) SEPARATOR '||') AS Peripheral_Data,
-          GROUP_CONCAT(DISTINCT specs.Attributes_Name SEPARATOR ', ') AS Specs_Attributes
+          GROUP_CONCAT(DISTINCT specs.Attributes_Value SEPARATOR ', ') AS Specs_Attributes
         FROM INVENTORY i
         INNER JOIN ASSET a ON i.Asset_ID = a.Asset_ID
         LEFT JOIN CATEGORY c ON a.Category_ID = c.Category_ID
@@ -97,7 +98,7 @@ class Asset {
         ORDER BY i.Inventory_ID DESC
       `);
       
-      console.log(`Query returned ${rows.length} assets with inventory links`);
+      console.log(`✅ Query returned ${rows.length} assets with inventory links`);
       
       if (rows.length > 0) {
         const inventoryIds = rows.map(row => row.Inventory_ID).sort((a, b) => a - b);
@@ -183,7 +184,11 @@ class Asset {
       
       return processedRows;
     } catch (error) {
-      console.error('Error in Asset.findAll:', error);
+      console.error('❌ Error in Asset.findAll:', error.message);
+      console.error('❌ Error stack:', error.stack);
+      console.error('❌ SQL Error code:', error.code);
+      console.error('❌ SQL Error errno:', error.errno);
+      console.error('❌ SQL Error sqlMessage:', error.sqlMessage);
       throw error;
     }
   }
