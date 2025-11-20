@@ -93,6 +93,11 @@ const AccountSettings = () => {
   };
 
   const fetchAllUsers = async () => {
+    // Only fetch if user is admin
+    if (profileData.role.toLowerCase() !== 'admin') {
+      return;
+    }
+    
     setLoadingUsers(true);
     try {
       const token = localStorage.getItem('authToken');
@@ -108,11 +113,9 @@ const AccountSettings = () => {
         setAllUsers(data.data);
       } else {
         console.error('Failed to fetch users:', data.message);
-        setUpdateMessage({ type: 'error', text: data.message || 'Failed to fetch users' });
       }
     } catch (error) {
       console.error('Error fetching users:', error);
-      setUpdateMessage({ type: 'error', text: 'Failed to fetch users. Please try again.' });
     } finally {
       setLoadingUsers(false);
     }
@@ -624,27 +627,50 @@ const AccountSettings = () => {
 
           {activeTab === 'users' && (
             <div className="card">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              {profileData.role.toLowerCase() !== 'admin' ? (
+                // Non-admin view - restricted access
                 <div>
-                  <h2 style={{ margin: 0 }}>User Management</h2>
-                  <p style={{ color: '#666', marginTop: '5px', marginBottom: 0 }}>
-                    View all registered users in the system
-                  </p>
+                  <h2 style={{ margin: 0, marginBottom: '20px' }}>User Management</h2>
+                  <div style={{
+                    padding: '60px 20px',
+                    textAlign: 'center',
+                    backgroundColor: '#f8f9fa',
+                    borderRadius: '8px',
+                    border: '2px dashed #dee2e6'
+                  }}>
+                    <Shield size={64} style={{ color: '#6c757d', marginBottom: '20px' }} />
+                    <h3 style={{ color: '#495057', marginBottom: '10px', fontSize: '1.25rem' }}>
+                      Access Restricted
+                    </h3>
+                    <p style={{ color: '#6c757d', fontSize: '1rem', margin: 0 }}>
+                      Only Admin can access this section
+                    </p>
+                  </div>
                 </div>
-                <button
-                  onClick={() => setShowAddUserModal(true)}
-                  className="btn btn-primary"
-                  style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
-                >
-                  <Plus size={18} />
-                  Add New User
-                </button>
-              </div>
-              
-              {loadingUsers ? (
-                <p>Loading users...</p>
               ) : (
-                <div style={{ overflowX: 'auto' }}>
+                // Admin view - full access
+                <>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                    <div>
+                      <h2 style={{ margin: 0 }}>User Management</h2>
+                      <p style={{ color: '#666', marginTop: '5px', marginBottom: 0 }}>
+                        View all registered users in the system
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => setShowAddUserModal(true)}
+                      className="btn btn-primary"
+                      style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+                    >
+                      <Plus size={18} />
+                      Add New User
+                    </button>
+                  </div>
+                  
+                  {loadingUsers ? (
+                    <p>Loading users...</p>
+                  ) : (
+                    <div style={{ overflowX: 'auto' }}>
                   <table style={{
                     width: '100%',
                     borderCollapse: 'collapse',
@@ -793,13 +819,15 @@ const AccountSettings = () => {
                   </table>
                 </div>
               )}
+                </>
+              )}
             </div>
           )}
         </div>
       </div>
 
       {/* Add New User Modal */}
-      {showAddUserModal && (
+      {showAddUserModal && profileData.role.toLowerCase() === 'admin' && (
         <div style={{
           position: 'fixed',
           top: 0,
