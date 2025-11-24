@@ -12,9 +12,10 @@ import AssetDetail from './pages/AssetDetail';
 import PreventiveMaintenance from './pages/PreventiveMaintenance';
 import PMDetail from './pages/PMDetail';
 import AccountSettings from './pages/AccountSettings';
+import AuditLog from './pages/AuditLog';
 import AddAsset from './pages/AddAsset';
 import EditAsset from './pages/EditAsset';
-import CSVImport from './pages/CSVImport';
+import DatabaseTest from './components/DatabaseTest';
 import apiService from './services/apiService';
 
 function App() {
@@ -35,6 +36,9 @@ function App() {
   };
 
   const handleLogout = () => {
+    // Clear authentication data
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('userInfo');
     setIsAuthenticated(false);
     setAssets([]);
     setLoading(true);
@@ -87,12 +91,13 @@ function App() {
             <Route path="/projects/:id" element={<ProjectDetail />} />
             <Route path="/assets" element={<Assets onDelete={deleteAsset} />} />
             <Route path="/asset-detail/:assetId" element={<AssetDetail />} />
-            <Route path="/assets/import" element={<CSVImport />} />
             <Route path="/maintenance" element={<PreventiveMaintenance assets={assets} />} />
             <Route path="/maintenance/detail/:pmId" element={<PMDetail />} />
             <Route path="/settings" element={<AccountSettings />} />
+            <Route path="/audit-log" element={<AuditLog />} />
             <Route path="/add-asset" element={<AddAsset onAdd={addAsset} />} />
             <Route path="/edit-asset/:id" element={<EditAsset assets={assets} onUpdate={updateAsset} />} />
+            <Route path="/db-test" element={<DatabaseTest />} />
             <Route path="*" element={<Navigate to="/" />} />
           </Routes>
         </main>

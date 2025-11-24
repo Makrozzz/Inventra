@@ -5,7 +5,8 @@ import {
   FolderOpen, 
   Package, 
   Wrench, 
-  Settings, 
+  Settings,
+  Activity,
   LogOut,
   User
 } from 'lucide-react';
@@ -32,7 +33,8 @@ const Sidebar = ({ onLogout }) => {
     { path: '/projects', icon: FolderOpen, label: 'Projects' },
     { path: '/assets', icon: Package, label: 'Assets' },
     { path: '/maintenance', icon: Wrench, label: 'Preventive Maintenance' },
-    { path: '/settings', icon: Settings, label: 'Account Settings' }
+    { path: '/settings', icon: Settings, label: 'Account Settings' },
+    { path: '/audit-log', icon: Activity, label: 'Audit Log' }
   ];
 
   return (
