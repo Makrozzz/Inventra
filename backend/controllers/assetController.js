@@ -1,6 +1,7 @@
 const Asset = require('../models/Asset');
 const { formatResponse } = require('../utils/helpers');
 const logger = require('../utils/logger');
+const { logAssetChange, detectChanges } = require('../utils/auditLogger');
 
 /**
  * Get all assets with pagination and filtering
@@ -296,6 +297,17 @@ const createAssetWithDetails = async (req, res, next) => {
 
     logger.info(`Asset created with details: ${completeData.serial_number} by user ${req.user?.userId || 'system'}`);
 
+    // Log the creation in audit log
+    const userId = req.user?.User_ID || req.user?.userId || 1;
+    const username = req.user?.Username || req.user?.username || 'System';
+    await logAssetChange(
+      userId,
+      newAsset.Asset_ID,
+      'INSERT',
+      `${username} created new Asset ${completeData.serial_number}`,
+      []
+    );
+
     console.log('Sending success response...');
     res.status(201).json({
       success: true,
@@ -414,9 +426,31 @@ const updateAssetById = async (req, res, next) => {
     // Update the asset properties
     Object.assign(existingAsset, finalUpdateData);
     
+    // Detect changes for audit log
+    const changes = detectChanges(existingAsset, finalUpdateData);
+    
     // Save the updated asset
     console.log('Executing update for Asset_ID:', existingAsset.Asset_ID);
     await existingAsset.update();
+    
+    // Log the update if there are changes
+    if (changes.length > 0) {
+      const userId = req.user?.User_ID || req.user?.userId || 1;
+      const username = req.user?.Username || req.user?.username || 'System';
+      const assetSerial = existingAsset.Asset_Serial_Number;
+      
+      // Create description for each change
+      for (const change of changes) {
+        const description = `${username} change ${change.fieldName} for ${assetSerial} from ${change.oldValue} to ${change.newValue}`;
+        await logAssetChange(
+          userId,
+          existingAsset.Asset_ID,
+          'UPDATE',
+          description,
+          [change]
+        );
+      }
+    }
     
     // Fetch the updated asset to return with joined data
     const updatedAsset = await Asset.findById(id);
@@ -504,6 +538,17 @@ const deleteAsset = async (req, res, next) => {
         formatResponse(false, null, 'Failed to delete asset')
       );
     }
+
+    // Log the deletion
+    const userId = req.user?.User_ID || req.user?.userId || 1;
+    const username = req.user?.Username || req.user?.username || 'System';
+    await logAssetChange(
+      userId,
+      existingAsset.Asset_ID,
+      'DELETE',
+      `${username} deleted Asset ${serialNumber}`,
+      []
+    );
 
     logger.info(`Asset deleted: ${serialNumber} by user ${req.user?.userId}`);
 

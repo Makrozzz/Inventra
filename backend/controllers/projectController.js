@@ -1,6 +1,7 @@
 const Project = require('../models/Project');
 const Customer = require('../models/Customer');
 const Inventory = require('../models/Inventory');
+const { logProjectChange, detectChanges } = require('../utils/auditLogger');
 
 // Get all projects
 exports.getAllProjects = async (req, res) => {
@@ -201,6 +202,17 @@ exports.createProject = async (req, res) => {
     );
     console.log('Inventory records created with IDs:', inventoryIds);
 
+    // Step 4: Log the creation in audit log
+    const userId = req.user?.User_ID || req.user?.userId || 1; // Get from auth token
+    const username = req.user?.Username || req.user?.username || 'System';
+    await logProjectChange(
+      userId,
+      newProject.Project_ID,
+      'INSERT',
+      `${username} created new Project for ${customer.Customer_Name}`,
+      []
+    );
+
     // Return success with project, customer, and inventory info
     res.status(201).json({
       success: true,
@@ -232,10 +244,19 @@ exports.updateProject = async (req, res) => {
     const { id } = req.params;
     const updates = req.body;
     
+    console.log('🔄 UPDATE PROJECT - ID:', id);
+    console.log('📝 Updates received:', updates);
+    
+    // Get current project data for comparison
     const project = await Project.findById(id);
     if (!project) {
       return res.status(404).json({ error: 'Project not found' });
     }
+    
+    console.log('📋 Current project data:', project);
+    
+    // Store old values for audit logging
+    const oldData = { ...project };
     
     // Update project properties
     Object.keys(updates).forEach(key => {
@@ -245,6 +266,51 @@ exports.updateProject = async (req, res) => {
     });
     
     await project.update();
+    
+    console.log('✅ Project updated in database');
+    
+    // Detect changes for audit log
+    const changes = detectChanges(oldData, project);
+    
+    console.log('🔍 Detected changes:', changes);
+    
+    // Log the update if there are changes
+    if (changes.length > 0) {
+      const userId = req.user?.User_ID || req.user?.userId || 1;
+      const username = req.user?.Username || req.user?.username || 'System';
+      
+      console.log('👤 User info - ID:', userId, 'Username:', username);
+      
+      // Get customer name for this project
+      const inventoryRecords = await Inventory.findByProject(id);
+      const customerName = inventoryRecords.length > 0 ? inventoryRecords[0].Customer_Name : 'Unknown';
+      
+      console.log('🏢 Customer name:', customerName);
+      
+      // Create description for each change
+      const descriptions = changes.map(change => 
+        `${username} change ${change.fieldName} for ${customerName} from ${change.oldValue} to ${change.newValue}`
+      );
+      
+      console.log('📄 Descriptions to log:', descriptions);
+      
+      // Log each change separately
+      for (let i = 0; i < changes.length; i++) {
+        console.log(`📝 Logging change ${i + 1}/${changes.length}:`, descriptions[i]);
+        await logProjectChange(
+          userId,
+          id,
+          'UPDATE',
+          descriptions[i],
+          [changes[i]]
+        );
+      }
+      
+      console.log('✅ All changes logged to audit log');
+    } else {
+      console.log('⚠️ No changes detected - skipping audit log');
+    }
+    
     res.json(project);
   } catch (error) {
     console.error('Error updating project:', error);
@@ -261,6 +327,12 @@ exports.deleteProject = async (req, res) => {
     const { id } = req.params;
     
     console.log(`Attempting to delete project with ID: ${id}`);
+    
+    // Get project data before deletion for audit log
+    const project = await Project.findById(id);
+    if (!project) {
+      return res.status(404).json({ error: 'Project not found' });
+    }
     
     // Step 1: Get all inventory records for this project to find related customers
     const inventoryRecords = await Inventory.findByProject(id);
@@ -284,11 +356,24 @@ exports.deleteProject = async (req, res) => {
       }
     }
     
-    // Step 4: Finally, delete the project
+    // Step 4: Delete the project
     const deleted = await Project.delete(id);
     if (!deleted) {
       return res.status(404).json({ error: 'Project not found' });
     }
+    
+    // Step 5: Log the deletion
+    const userId = req.user?.User_ID || req.user?.userId || 1;
+    const username = req.user?.Username || req.user?.username || 'System';
+    const customerName = inventoryRecords.length > 0 ? inventoryRecords[0].Customer_Name : 'Unknown';
+    
+    await logProjectChange(
+      userId,
+      id,
+      'DELETE',
+      `${username} deleted Project for ${customerName}`,
+      []
+    );
     
     console.log(`Successfully deleted project ${id} and all related records`);
     
