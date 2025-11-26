@@ -308,6 +308,105 @@ const createUser = async (req, res, next) => {
   }
 };
 
+/**
+ * Update user (admin only)
+ */
+const updateUser = async (req, res, next) => {
+  try {
+    const { userId } = req.params;
+    const { username, email, firstName, lastName, department, role, adminPassword } = req.body;
+
+    // Verify admin password
+    const admin = await User.verifyPassword(req.user.email, adminPassword);
+    if (!admin) {
+      return res.status(401).json(
+        formatResponse(false, null, 'Admin password is incorrect')
+      );
+    }
+
+    // Prevent self-modification of role
+    if (parseInt(userId) === req.user.userId && role && role.toLowerCase() !== req.user.role.toLowerCase()) {
+      return res.status(400).json(
+        formatResponse(false, null, 'Cannot modify your own role')
+      );
+    }
+
+    // Get current user data
+    const currentUser = await User.findById(userId);
+    if (!currentUser) {
+      return res.status(404).json(
+        formatResponse(false, null, 'User not found')
+      );
+    }
+
+    // Check if email is being changed and if it's already taken
+    if (email && email !== currentUser.email) {
+      const existingUser = await User.findByEmail(email);
+      if (existingUser && existingUser.userId !== parseInt(userId)) {
+        return res.status(400).json(
+          formatResponse(false, null, 'Email already in use')
+        );
+      }
+    }
+
+    // Check if username is being changed and if it's already taken
+    if (username && username !== currentUser.username) {
+      const existingUsername = await User.findByUsername(username);
+      if (existingUsername && existingUsername.userId !== parseInt(userId)) {
+        return res.status(400).json(
+          formatResponse(false, null, 'Username already taken')
+        );
+      }
+    }
+
+    // Validate role if provided
+    let normalizedRole = currentUser.role;
+    if (role) {
+      const validRoles = ['staff', 'admin'];
+      normalizedRole = role.toLowerCase();
+      if (!validRoles.includes(normalizedRole)) {
+        return res.status(400).json(
+          formatResponse(false, null, 'Role must be either Staff or Admin')
+        );
+      }
+      normalizedRole = normalizedRole.charAt(0).toUpperCase() + normalizedRole.slice(1);
+    }
+
+    // Update user
+    const updateData = {
+      firstName: firstName || currentUser.firstName,
+      lastName: lastName || currentUser.lastName,
+      email: email || currentUser.email,
+      department: department !== undefined ? department : currentUser.department,
+      role: normalizedRole
+    };
+
+    // Only update username if provided and different
+    if (username && username !== currentUser.username) {
+      updateData.username = username;
+    }
+
+    const success = await User.update(userId, updateData);
+
+    if (!success) {
+      return res.status(400).json(
+        formatResponse(false, null, 'Failed to update user')
+      );
+    }
+
+    const updatedUser = await User.findById(userId);
+
+    logger.info(`User ${userId} updated by admin ${req.user.userId}`);
+
+    res.status(200).json(
+      formatResponse(true, updatedUser, 'User updated successfully')
+    );
+  } catch (error) {
+    logger.error('Error in updateUser:', error);
+    next(error);
+  }
+};
+
 module.exports = {
   register,
   login,
@@ -316,5 +415,6 @@ module.exports = {
   changePassword,
   getAllUsers,
   deleteUser,
-  createUser
+  createUser,
+  updateUser
 };

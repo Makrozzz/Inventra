@@ -9,7 +9,8 @@ const {
   changePassword,
   getAllUsers,
   deleteUser,
-  createUser
+  createUser,
+  updateUser
 } = require('../controllers/authController');
 const { authenticateToken, authorize } = require('../middleware/auth');
 const { handleValidationErrors } = require('../middleware/validation');
@@ -174,6 +175,12 @@ router.post('/users',
   createUserValidationRules,
   handleValidationErrors,
   createUser
+);
+
+router.put('/users/:userId',
+  authenticateToken,
+  authorize('admin'),
+  updateUser
 );
 
 router.delete('/users/:userId', 
