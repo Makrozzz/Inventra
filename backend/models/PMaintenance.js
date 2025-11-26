@@ -259,7 +259,8 @@ class PMaintenance {
           r.Recipient_Name,
           r.Department,
           cust.Customer_Name,
-          cust.Branch
+          cust.Branch,
+          p.Project_Title
         FROM PMAINTENANCE pm
         LEFT JOIN ASSET a ON pm.Asset_ID = a.Asset_ID
         LEFT JOIN CATEGORY c ON a.Category_ID = c.Category_ID
@@ -267,6 +268,7 @@ class PMaintenance {
         LEFT JOIN RECIPIENTS r ON a.Recipients_ID = r.Recipients_ID
         LEFT JOIN INVENTORY inv ON a.Asset_ID = inv.Asset_ID
         LEFT JOIN CUSTOMER cust ON inv.Customer_ID = cust.Customer_ID
+        LEFT JOIN PROJECT p ON inv.Project_ID = p.Project_ID
         LEFT JOIN USER u ON pm.Created_By = u.User_ID
         WHERE pm.PM_ID = ?
       `, [pmId]);

@@ -291,6 +291,7 @@ class PDFGenerator {
             Model: pmData.Model || '-',
             Asset_Status: pmData.Asset_Status || 'Active',
             Customer_Name: pmData.Customer_Name || 'N/A',
+            Project_Title: pmData.Project_Title || '-',
 
             // Recipient Information
             Recipient_Name: pmData.Recipient_Name || '-',
