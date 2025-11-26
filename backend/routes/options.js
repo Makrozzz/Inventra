@@ -6,13 +6,13 @@ const { pool } = require('../config/database');
 router.get('/windows', async (req, res) => {
   try {
     const [rows] = await pool.execute(
-      'SELECT DISTINCT Windows FROM ASSET WHERE Windows IS NOT NULL AND Windows != "" ORDER BY Windows'
+      'SELECT DISTINCT Windows FROM ASSET WHERE Windows IS NOT NULL AND Windows != "" ORDER BY Windows DESC'
     );
     const versions = rows.map(row => row.Windows);
     
     // Add default options if none exist
     const defaultVersions = ['Windows 10', 'Windows 11', 'Windows Server', 'None'];
-    const allVersions = [...new Set([...defaultVersions, ...versions])];
+    const allVersions = [...new Set([...defaultVersions, ...versions])].sort((a, b) => b.localeCompare(a));
     
     res.json({ success: true, data: allVersions });
   } catch (error) {
@@ -51,13 +51,13 @@ router.post('/windows', async (req, res) => {
 router.get('/office', async (req, res) => {
   try {
     const [rows] = await pool.execute(
-      'SELECT DISTINCT Microsoft_Office FROM ASSET WHERE Microsoft_Office IS NOT NULL AND Microsoft_Office != "" ORDER BY Microsoft_Office'
+      'SELECT DISTINCT Microsoft_Office FROM ASSET WHERE Microsoft_Office IS NOT NULL AND Microsoft_Office != "" ORDER BY Microsoft_Office DESC'
     );
     const versions = rows.map(row => row.Microsoft_Office);
     
     // Add default options if none exist
     const defaultVersions = ['Office 2019', 'Office 2021', 'Microsoft 365', 'None'];
-    const allVersions = [...new Set([...defaultVersions, ...versions])];
+    const allVersions = [...new Set([...defaultVersions, ...versions])].sort((a, b) => b.localeCompare(a));
     
     res.json({ success: true, data: allVersions });
   } catch (error) {
@@ -98,7 +98,10 @@ router.get('/software', async (req, res) => {
     const [rows] = await pool.execute(
       'SELECT Software_ID, Software_Name FROM SOFTWARE ORDER BY Software_Name'
     );
-    const software = rows.map(row => row.Software_Name);
+    // Filter out 'None' entries - these shouldn't be in the dropdown
+    const software = rows
+      .filter(row => row.Software_Name.toLowerCase() !== 'none')
+      .map(row => row.Software_Name);
     
     res.json({ success: true, data: software });
   } catch (error) {
@@ -114,6 +117,11 @@ router.post('/software', async (req, res) => {
     
     if (!value || !value.trim()) {
       return res.status(400).json({ success: false, error: 'Value is required' });
+    }
+
+    // Prevent 'None' from being added as a software option
+    if (value.trim().toLowerCase() === 'none') {
+      return res.status(400).json({ success: false, error: 'Cannot add "None" as a software option' });
     }
 
     // Check if it already exists
@@ -152,11 +160,7 @@ router.get('/antivirus', async (req, res) => {
     );
     const antivirusList = rows.map(row => row.Antivirus);
     
-    // Add default options if none exist
-    const defaultAntivirus = ['Kaspersky', 'Norton', 'McAfee', 'Bitdefender', 'Avast', 'AVG', 'Trend Micro', 'None'];
-    const allAntivirus = [...new Set([...defaultAntivirus, ...antivirusList])];
-    
-    res.json({ success: true, data: allAntivirus });
+    res.json({ success: true, data: antivirusList });
   } catch (error) {
     console.error('Error fetching antivirus:', error);
     res.status(500).json({ success: false, error: 'Failed to fetch antivirus' });

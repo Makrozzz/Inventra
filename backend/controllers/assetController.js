@@ -254,14 +254,18 @@ const createAssetWithDetails = async (req, res, next) => {
     }
 
     console.log('Linking software...');
-    // Step 5.5: Link software to asset if provided
+    // Step 5.5: Link software to asset if provided (skip if 'None')
     if (completeData.software && completeData.software.trim()) {
-      try {
-        await Asset.linkSoftwareToAsset(newAsset.Asset_ID, completeData.software.trim());
-        console.log(`✅ Linked software: ${completeData.software}`);
-      } catch (softwareError) {
-        console.log('Failed to link software:', softwareError.message);
-        // Continue anyway
+      if (completeData.software.toLowerCase() !== 'none') {
+        try {
+          await Asset.linkSoftwareToAsset(newAsset.Asset_ID, completeData.software.trim());
+          console.log(`✅ Linked software: ${completeData.software}`);
+        } catch (softwareError) {
+          console.log('Failed to link software:', softwareError.message);
+          // Continue anyway
+        }
+      } else {
+        console.log('✅ Software set to None - asset has no software');
       }
     }
 
@@ -406,8 +410,12 @@ const updateAssetById = async (req, res, next) => {
     if (updateData.Software !== undefined) {
       try {
         if (updateData.Software && updateData.Software.trim()) {
-          await Asset.linkSoftwareToAsset(id, updateData.Software.trim());
-          console.log('Updated software link:', updateData.Software);
+          if (updateData.Software.toLowerCase() !== 'none') {
+            await Asset.linkSoftwareToAsset(id, updateData.Software.trim());
+            console.log('Updated software link:', updateData.Software);
+          } else {
+            console.log('Software set to None - asset has no software');
+          }
         }
       } catch (error) {
         console.warn('Could not update software link:', error.message);
@@ -682,10 +690,17 @@ const processNewAssets = async (assets) => {
       }
 
       // Link software to asset (auto-creates new if not exists)
+      // Special handling: 'None' means no software (don't link anything)
       let softwareToLink = null;
+      let hasNoSoftware = false;
       if (assetData.software) {
-        softwareToLink = assetData.software;
-        console.log(`   💿 Software to link: ${softwareToLink}`);
+        if (assetData.software.toLowerCase() === 'none') {
+          hasNoSoftware = true;
+          console.log(`   💿 Software set to None - asset has no software`);
+        } else {
+          softwareToLink = assetData.software;
+          console.log(`   💿 Software to link: ${softwareToLink}`);
+        }
       }
 
       // Create the asset
@@ -835,8 +850,8 @@ const validateImportData = async (req, res, next) => {
         }
       }
 
-      // Check software - only if value exists and is not empty
-      if (asset.software && typeof asset.software === 'string' && asset.software.trim() !== '') {
+      // Check software - only if value exists and is not empty and not 'None'
+      if (asset.software && typeof asset.software === 'string' && asset.software.trim() !== '' && asset.software.trim().toLowerCase() !== 'none') {
         const softwareName = asset.software.trim();
         if (!existingSoftwareNames.has(softwareName.toLowerCase())) {
           newOptions.software.add(softwareName);

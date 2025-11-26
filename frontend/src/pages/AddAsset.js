@@ -1418,6 +1418,7 @@ const AddAsset = () => {
                     onChange={(e) => setAsset({ ...asset, software: e.target.value })}
                   >
                     <option value="">Select software</option>
+                    <option value="None">None</option>
                     {softwareOptions.map((sw, index) => (
                       <option key={`sw-${sw}-${index}`} value={sw}>
                         {sw}

@@ -843,6 +843,7 @@ const EditAsset = () => {
                     onChange={handleInputChange}
                   >
                     <option value="">Select Software</option>
+                    <option value="None">None</option>
                     {softwareOptions.map((option, index) => (
                       <option key={index} value={option}>
                         {option}

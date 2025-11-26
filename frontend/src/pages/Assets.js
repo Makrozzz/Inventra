@@ -413,6 +413,14 @@ const Assets = ({ onDelete }) => {
   
   // Helper function to format cell values
   const formatCellValue = (value, columnName) => {
+    // Special handling for Software column - show 'None' for assets without software
+    if (columnName === 'Software') {
+      if (!value || value === '' || value === null || value === undefined) {
+        return 'None';
+      }
+      return value;
+    }
+    
     if (value === null || value === undefined) return 'N/A';
     
     // Format date columns to show only date (YYYY-MM-DD)
@@ -446,7 +454,14 @@ const Assets = ({ onDelete }) => {
     
     // Create rows with all asset data (not just filtered)
     const rows = allAssets.map(asset => 
-      displayColumns.map(col => asset[col.Field] || 'N/A')
+      displayColumns.map(col => {
+        const value = asset[col.Field];
+        // Special handling for Software: empty means no software, show 'None'
+        if (col.Field === 'Software') {
+          return value || 'None';
+        }
+        return value || 'N/A';
+      })
     );
     
     const csvContent = [headers, ...rows]
