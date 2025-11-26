@@ -258,9 +258,11 @@ class PMaintenance {
           m.Model_Name as Model,
           r.Recipient_Name,
           r.Department,
+          r.Position,
           cust.Customer_Name,
           cust.Branch,
-          p.Project_Title
+          p.Project_Title,
+          p.file_path_logo as Project_Logo_Path
         FROM PMAINTENANCE pm
         LEFT JOIN ASSET a ON pm.Asset_ID = a.Asset_ID
         LEFT JOIN CATEGORY c ON a.Category_ID = c.Category_ID
@@ -279,6 +281,9 @@ class PMaintenance {
 
       // Get checklist results
       pmData.checklist_results = await this.getResultsByPMId(pmId);
+      
+      // Get peripherals for the asset
+      pmData.peripherals = await this.getPeripheralsByAssetId(pmData.Asset_ID);
 
       return pmData;
     } catch (error) {
@@ -404,6 +409,26 @@ class PMaintenance {
       throw error;
     } finally {
       connection.release();
+    }
+  }
+
+  // Get peripherals for a specific asset
+  static async getPeripheralsByAssetId(assetId) {
+    try {
+      const [rows] = await pool.execute(`
+        SELECT 
+          per.Peripheral_ID,
+          per.Serial_Code,
+          pt.Peripheral_Type_Name
+        FROM PERIPHERAL per
+        LEFT JOIN PERIPHERAL_TYPE pt ON per.Peripheral_Type_ID = pt.Peripheral_Type_ID
+        WHERE per.Asset_ID = ?
+        ORDER BY pt.Peripheral_Type_Name
+      `, [assetId]);
+      return rows;
+    } catch (error) {
+      console.error('Error in PMaintenance.getPeripheralsByAssetId:', error);
+      throw error;
     }
   }
 

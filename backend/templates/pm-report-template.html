@@ -170,7 +170,7 @@
             text-align: center;
             font-weight: bold;
             border: 1px solid #000;
-            font-size: 7.5pt;
+            font-size: 8.5pt;
         }
 
         td {
@@ -182,12 +182,12 @@
         td.checklist-item {
             text-align: left;
             padding-left: 6px;
-            font-size: 6.5pt;
+            font-size: 7.5pt;
         }
 
         td.remarks-cell {
             text-align: left;
-            font-size: 6pt;
+            font-size: 7pt;
             max-width: 120px;
             word-wrap: break-word;
         }
@@ -236,7 +236,7 @@
         }
 
         .signature-box h3 {
-            font-size: 8pt;
+            font-size: 9pt;
             color: #000;
             margin-bottom: 6px;
             border-bottom: 2px solid #333;
@@ -252,7 +252,7 @@
 
         .signature-line {
             margin: 4px 0;
-            font-size: 6.5pt;
+            font-size: 7.5pt;
             display: flex;
             align-items: center;
         }
@@ -323,24 +323,41 @@
 
     <!-- Recipient & PM Details Section (Combined) -->
     <div class="section">
-        <div class="section-title">Maintenance & Recipient Details</div>
-        <div class="info-grid">
-            <div class="info-item" style="grid-column: 1 / -1;">
-                <span class="info-label">PM Date:</span>
-                <span class="info-value">{{PM_Date_Formatted}}</span>
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 10px;">
+            <div style="flex: 1;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; padding-bottom: 3px; border-bottom: 2px solid #333;">
+                    <div class="section-title" style="margin-bottom: 0; padding-bottom: 0; border-bottom: none;">
+                        Maintenance & Agency Details
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span style="font-weight: bold; color: #000; font-size: 7pt;">PM Date:</span>
+                        <span style="color: #333; font-size: 7pt; font-weight: 500;">{{PM_Date_Formatted}}</span>
+                    </div>
+                </div>
+                <div class="info-grid">
+                    <div class="info-item" style="grid-column: 1 / -1;">
+                        <span class="info-label">Recipient:</span>
+                        <span class="info-value">{{Recipient_Name}}</span>
+                    </div>
+                    <div class="info-item" style="grid-column: 1 / -1;">
+                        <span class="info-label">Department:</span>
+                        <span class="info-value">{{Department}}</span>
+                    </div>
+                    <div class="info-item" style="grid-column: 1 / -1;">
+                        <span class="info-label">Position:</span>
+                        <span class="info-value">{{#if Position}}{{Position}}{{else}}-{{/if}}</span>
+                    </div>
+                    <div class="info-item" style="grid-column: 1 / -1;">
+                        <span class="info-label">Contract:</span>
+                        <span class="info-value">{{#if Project_Title}}{{Project_Title}}{{else}}-{{/if}}</span>
+                    </div>
+                </div>
             </div>
-            <div class="info-item" style="grid-column: 1 / -1;">
-                <span class="info-label">Recipient:</span>
-                <span class="info-value">{{Recipient_Name}}</span>
+            {{#if Project_Logo_Base64}}
+            <div style="flex-shrink: 0; display: flex; align-items: center; justify-content: center; padding: 5px; border: 1px solid #ccc; border-radius: 4px; background: white;">
+                <img src="{{Project_Logo_Base64}}" alt="Project Logo" style="max-height: 90px; max-width: 120px; width: auto; height: auto; object-fit: contain; display: block; filter: grayscale(100%);">
             </div>
-            <div class="info-item" style="grid-column: 1 / -1;">
-                <span class="info-label">Department:</span>
-                <span class="info-value">{{Department}}</span>
-            </div>
-            <div class="info-item" style="grid-column: 1 / -1;">
-                <span class="info-label">Remarks:</span>
-                <span class="info-value">{{#if Remarks}}{{Remarks}}{{else}}-{{/if}}</span>
-            </div>
+            {{/if}}
         </div>
     </div>
 
@@ -373,8 +390,8 @@
                 <span class="info-value">{{Model}}</span>
             </div>
             <div class="info-item" style="grid-column: 1 / -1;">
-                <span class="info-label">Contract:</span>
-                <span class="info-value">{{Project_Title}}</span>
+                <span class="info-label">Remarks:</span>
+                <span class="info-value">{{#if Remarks}}{{Remarks}}{{else}}-{{/if}}</span>
             </div>
         </div>
     </div>
@@ -387,10 +404,10 @@
             <thead>
                 <tr>
                     <th style="width: 25px;">No.</th>
-                    <th style="width: 42%;">Checklist</th>
-                    <th style="width: 40px;">Yes</th>
-                    <th style="width: 40px;">No</th>
-                    <th style="width: 30%;">Remarks</th>
+                    <th style="width: 35%;">Checklist</th>
+                    <th style="width: 30px;">Yes</th>
+                    <th style="width: 30px;">No</th>
+                    <th style="width: 40%;">Remarks</th>
                 </tr>
             </thead>
             <tbody>
@@ -420,6 +437,25 @@
         {{else}}
         <div class="no-checklist">⚠️ No checklist data available for this PM record</div>
         {{/if}}
+    </div>
+
+    <!-- Accessories Section -->
+    <div class="section">
+        <div class="section-title">Accessories</div>
+        <div style="padding: 8px 10px; min-height: 40px;">
+            {{#if peripherals}}
+            {{#each peripherals}}
+            <div style="margin-bottom: 4px; font-size: 7.5pt; color: #2c3e50;">
+                <strong style="color: #000;">{{Peripheral_Type_Name}}:</strong> {{Serial_Code}}
+            </div>
+            {{/each}}
+            {{/if}}
+            <div style="margin-top: 8px; font-size: 7.5pt;">
+                <strong style="color: #000;">Other Accessories:</strong>
+                <div style="border: 1px solid #ccc; border-radius: 3px; padding: 8px; min-height: 35px; margin-top: 4px; background: white;">
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Signatures Section -->

@@ -60,6 +60,47 @@ class PDFGenerator {
     }
 
     /**
+     * Convert project logo to base64 for embedding in PDF
+     * @param {string} logoPath - The file path from PROJECT.file_path_logo
+     * @returns {string} - Base64 encoded project logo or empty string if not found
+     */
+    getProjectLogoBase64(logoPath) {
+        try {
+            if (!logoPath) {
+                return '';
+            }
+            
+            // The logoPath from database is like: uploads/project-logo/ILIM.png
+            // We need to construct the full path from backend directory
+            const fullPath = path.join(__dirname, '..', logoPath);
+            
+            if (fsSync.existsSync(fullPath)) {
+                const logoBuffer = fsSync.readFileSync(fullPath);
+                const logoBase64 = logoBuffer.toString('base64');
+                
+                // Detect image type from file extension
+                const ext = path.extname(logoPath).toLowerCase();
+                let mimeType = 'image/png';
+                if (ext === '.jpg' || ext === '.jpeg') {
+                    mimeType = 'image/jpeg';
+                } else if (ext === '.gif') {
+                    mimeType = 'image/gif';
+                } else if (ext === '.svg') {
+                    mimeType = 'image/svg+xml';
+                }
+                
+                return `data:${mimeType};base64,${logoBase64}`;
+            } else {
+                console.warn('Project logo file not found at:', fullPath);
+                return '';
+            }
+        } catch (error) {
+            console.error('Error reading project logo file:', error);
+            return '';
+        }
+    }
+
+    /**
      * Generate PDF report for a specific PM record
      * @param {number} pmId - The PM_ID from PMAINTENANCE table
      * @returns {Promise<Object>} - { success, filepath, filename, error }
@@ -274,6 +315,9 @@ class PDFGenerator {
 
         // Convert logo to base64 for embedding in PDF
         const logoBase64 = this.getLogoBase64();
+        
+        // Convert project logo to base64 if available
+        const projectLogoBase64 = this.getProjectLogoBase64(pmData.Project_Logo_Path);
 
         return {
             // PM Information
@@ -296,15 +340,20 @@ class PDFGenerator {
             // Recipient Information
             Recipient_Name: pmData.Recipient_Name || '-',
             Department: pmData.Department || '-',
+            Position: pmData.Position || '-',
 
             // Created By (Technician) Information
             Created_By_Name: pmData.Created_By_Name || '-',
 
             // Logo as Base64
             Logo_Base64: logoBase64,
+            Project_Logo_Base64: projectLogoBase64,
 
             // Checklist Results
             checklist_results: checklistResults,
+            
+            // Peripherals/Accessories
+            peripherals: pmData.peripherals || [],
 
             // Footer
             Generated_Date: generatedDate
