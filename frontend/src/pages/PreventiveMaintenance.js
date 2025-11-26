@@ -22,6 +22,7 @@ const PreventiveMaintenance = () => {
   const [selectedAsset, setSelectedAsset] = useState(null);
   const [checklistItems, setChecklistItems] = useState([]);
   const [checklistResults, setChecklistResults] = useState({});
+  const [checklistItemRemarks, setChecklistItemRemarks] = useState({});
   const [pmRemarks, setPmRemarks] = useState('');
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [showCancelDialog, setShowCancelDialog] = useState(false);
@@ -34,7 +35,9 @@ const PreventiveMaintenance = () => {
   const [checklistItemsForEdit, setChecklistItemsForEdit] = useState([]);
   const [editingItemId, setEditingItemId] = useState(null);
   const [editingItemText, setEditingItemText] = useState('');
+  const [editingItemTextLong, setEditingItemTextLong] = useState('');
   const [newItemText, setNewItemText] = useState('');
+  const [newItemTextLong, setNewItemTextLong] = useState('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [itemToDelete, setItemToDelete] = useState(null);
   const [showEditConfirm, setShowEditConfirm] = useState(false);
@@ -311,15 +314,21 @@ const PreventiveMaintenance = () => {
   const handleStartEdit = (item) => {
     setEditingItemId(item.Checklist_ID);
     setEditingItemText(item.Check_Item);
+    setEditingItemTextLong(item.Check_item_Long || item.Check_Item);
   };
 
   const handleCancelEdit = () => {
     setEditingItemId(null);
     setEditingItemText('');
+    setEditingItemTextLong('');
   };
 
   const handleConfirmEdit = () => {
-    setPendingEdit({ id: editingItemId, text: editingItemText });
+    setPendingEdit({ 
+      id: editingItemId, 
+      text: editingItemText,
+      textLong: editingItemTextLong 
+    });
     setShowEditConfirm(true);
   };
 
@@ -331,7 +340,10 @@ const PreventiveMaintenance = () => {
       const response = await fetch(`http://localhost:5000/api/v1/pm/checklist/${pendingEdit.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ checkItem: pendingEdit.text })
+        body: JSON.stringify({ 
+          checkItem: pendingEdit.text,
+          checkItemLong: pendingEdit.textLong
+        })
       });
 
       if (!response.ok) throw new Error('Failed to update checklist item');
@@ -342,6 +354,7 @@ const PreventiveMaintenance = () => {
       await handleCategoryChangeForEdit({ target: { value: selectedCategoryForEdit } });
       setEditingItemId(null);
       setEditingItemText('');
+      setEditingItemTextLong('');
       setPendingEdit(null);
     } catch (err) {
       console.error('Error updating checklist item:', err);
@@ -390,8 +403,8 @@ const PreventiveMaintenance = () => {
   };
 
   const handleAddNewItem = () => {
-    if (!newItemText.trim()) {
-      alert('Please enter checklist item text');
+    if (!newItemText.trim() || !newItemTextLong.trim()) {
+      alert('Please enter both short and long version of checklist item');
       return;
     }
     setShowAddConfirm(true);
@@ -407,7 +420,8 @@ const PreventiveMaintenance = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           categoryId: selectedCategoryForEdit,
-          checkItem: newItemText
+          checkItem: newItemText,
+          checkItemLong: newItemTextLong
         })
       });
 
@@ -418,6 +432,7 @@ const PreventiveMaintenance = () => {
       // Refresh checklist
       await handleCategoryChangeForEdit({ target: { value: selectedCategoryForEdit } });
       setNewItemText('');
+      setNewItemTextLong('');
     } catch (err) {
       console.error('Error adding checklist item:', err);
       alert('Failed to add checklist item');
@@ -432,6 +447,7 @@ const PreventiveMaintenance = () => {
     setChecklistItemsForEdit([]);
     setEditingItemId(null);
     setNewItemText('');
+    setNewItemTextLong('');
   };
 
   // Handlers for customer and branch selection with URL parameter updates
@@ -465,6 +481,7 @@ const PreventiveMaintenance = () => {
     setShowPMForm(true);
     setPmRemarks('');
     setChecklistResults({});
+    setChecklistItemRemarks({});
     
     // Fetch checklist items for this asset's category
     try {
@@ -495,6 +512,7 @@ const PreventiveMaintenance = () => {
     setSelectedAsset(null);
     setChecklistItems([]);
     setChecklistResults({});
+    setChecklistItemRemarks({});
     setPmRemarks('');
   };
 
@@ -502,6 +520,13 @@ const PreventiveMaintenance = () => {
     setChecklistResults(prev => ({
       ...prev,
       [checklistId]: isOk
+    }));
+  };
+
+  const handleChecklistRemarkChange = (checklistId, remark) => {
+    setChecklistItemRemarks(prev => ({
+      ...prev,
+      [checklistId]: remark
     }));
   };
 
@@ -518,14 +543,18 @@ const PreventiveMaintenance = () => {
       const resultsArray = Object.keys(checklistResults).map(checklistId => ({
         Checklist_ID: parseInt(checklistId),
         Is_OK_bool: checklistResults[checklistId] ? 1 : 0,
-        Remarks: null
+        Remarks: checklistItemRemarks[checklistId] || null
       }));
 
+      // Get auth token
+      const token = localStorage.getItem('authToken');
+      
       // Submit PM record
       const response = await fetch('http://localhost:5000/api/v1/pm', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
           assetId: selectedAsset.Asset_ID,
@@ -548,6 +577,7 @@ const PreventiveMaintenance = () => {
       setSelectedAsset(null);
       setChecklistItems([]);
       setChecklistResults({});
+      setChecklistItemRemarks({});
       setPmRemarks('');
     } catch (err) {
       console.error('Error submitting PM record:', err);
@@ -1220,56 +1250,77 @@ const PreventiveMaintenance = () => {
                       style={{
                         padding: '16px',
                         borderBottom: index < checklistItems.length - 1 ? '1px solid #e0e0e0' : 'none',
-                        background: index % 2 === 0 ? 'white' : '#f8f9fa',
+                        background: index % 2 === 0 ? 'white' : '#f8f9fa'
+                      }}
+                    >
+                      <div style={{
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'space-between',
-                        gap: '16px'
-                      }}
-                    >
-                      <div style={{ flex: 1 }}>
-                        <span style={{ color: '#7f8c8d', fontSize: '0.75rem', marginRight: '8px' }}>
-                          #{index + 1}
-                        </span>
-                        <span style={{ color: '#2c3e50', fontSize: '0.95rem', fontWeight: '500' }}>
-                          {item.Check_Item}
-                        </span>
+                        gap: '16px',
+                        marginBottom: '12px'
+                      }}>
+                        <div style={{ flex: 1 }}>
+                          <span style={{ color: '#7f8c8d', fontSize: '0.75rem', marginRight: '8px' }}>
+                            #{index + 1}
+                          </span>
+                          <span style={{ color: '#2c3e50', fontSize: '0.95rem', fontWeight: '500' }}>
+                            {item.Check_item_Long}
+                          </span>
+                        </div>
+                        <div style={{ display: 'flex', gap: '12px' }}>
+                          <button
+                            onClick={() => handleChecklistChange(item.Checklist_ID, true)}
+                            style={{
+                              padding: '8px 20px',
+                              border: checklistResults[item.Checklist_ID] === true ? '2px solid #27ae60' : '2px solid #ddd',
+                              borderRadius: '6px',
+                              background: checklistResults[item.Checklist_ID] === true ? '#27ae60' : 'white',
+                              color: checklistResults[item.Checklist_ID] === true ? 'white' : '#666',
+                              cursor: 'pointer',
+                              fontSize: '0.9rem',
+                              fontWeight: '600',
+                              transition: 'all 0.2s',
+                              minWidth: '80px'
+                            }}
+                          >
+                            Good
+                          </button>
+                          <button
+                            onClick={() => handleChecklistChange(item.Checklist_ID, false)}
+                            style={{
+                              padding: '8px 20px',
+                              border: checklistResults[item.Checklist_ID] === false ? '2px solid #e74c3c' : '2px solid #ddd',
+                              borderRadius: '6px',
+                              background: checklistResults[item.Checklist_ID] === false ? '#e74c3c' : 'white',
+                              color: checklistResults[item.Checklist_ID] === false ? 'white' : '#666',
+                              cursor: 'pointer',
+                              fontSize: '0.9rem',
+                              fontWeight: '600',
+                              transition: 'all 0.2s',
+                              minWidth: '80px'
+                            }}
+                          >
+                            Bad
+                          </button>
+                        </div>
                       </div>
-                      <div style={{ display: 'flex', gap: '12px' }}>
-                        <button
-                          onClick={() => handleChecklistChange(item.Checklist_ID, true)}
+                      <div style={{ paddingLeft: '40px' }}>
+                        <input
+                          type="text"
+                          placeholder="Remarks (optional)"
+                          value={checklistItemRemarks[item.Checklist_ID] || ''}
+                          onChange={(e) => handleChecklistRemarkChange(item.Checklist_ID, e.target.value)}
                           style={{
-                            padding: '8px 20px',
-                            border: checklistResults[item.Checklist_ID] === true ? '2px solid #27ae60' : '2px solid #ddd',
-                            borderRadius: '6px',
-                            background: checklistResults[item.Checklist_ID] === true ? '#27ae60' : 'white',
-                            color: checklistResults[item.Checklist_ID] === true ? 'white' : '#666',
-                            cursor: 'pointer',
-                            fontSize: '0.9rem',
-                            fontWeight: '600',
-                            transition: 'all 0.2s',
-                            minWidth: '80px'
+                            width: '100%',
+                            padding: '8px 12px',
+                            border: '1px solid #ddd',
+                            borderRadius: '4px',
+                            fontSize: '0.85rem',
+                            color: '#2c3e50',
+                            fontFamily: 'inherit'
                           }}
-                        >
-                          Good
-                        </button>
-                        <button
-                          onClick={() => handleChecklistChange(item.Checklist_ID, false)}
-                          style={{
-                            padding: '8px 20px',
-                            border: checklistResults[item.Checklist_ID] === false ? '2px solid #e74c3c' : '2px solid #ddd',
-                            borderRadius: '6px',
-                            background: checklistResults[item.Checklist_ID] === false ? '#e74c3c' : 'white',
-                            color: checklistResults[item.Checklist_ID] === false ? 'white' : '#666',
-                            cursor: 'pointer',
-                            fontSize: '0.9rem',
-                            fontWeight: '600',
-                            transition: 'all 0.2s',
-                            minWidth: '80px'
-                          }}
-                        >
-                          Bad
-                        </button>
+                        />
                       </div>
                     </div>
                   ))}
@@ -1620,20 +1671,65 @@ const PreventiveMaintenance = () => {
                             >
                               {editingItemId === item.Checklist_ID ? (
                                 <>
-                                  <input
-                                    type="text"
-                                    value={editingItemText}
-                                    onChange={(e) => setEditingItemText(e.target.value)}
-                                    style={{
-                                      flex: 1,
-                                      padding: '8px 12px',
-                                      border: '2px solid #667eea',
-                                      borderRadius: '4px',
-                                      fontSize: '0.95rem',
-                                      marginRight: '12px'
-                                    }}
-                                    autoFocus
-                                  />
+                                  <div style={{ 
+                                    flex: 1, 
+                                    display: 'flex', 
+                                    flexDirection: 'column', 
+                                    gap: '10px',
+                                    marginRight: '12px'
+                                  }}>
+                                    <div>
+                                      <label style={{ 
+                                        fontSize: '0.75rem', 
+                                        color: '#7f8c8d', 
+                                        fontWeight: '600',
+                                        textTransform: 'uppercase',
+                                        marginBottom: '4px',
+                                        display: 'block'
+                                      }}>
+                                        Long Version
+                                      </label>
+                                      <input
+                                        type="text"
+                                        value={editingItemTextLong}
+                                        onChange={(e) => setEditingItemTextLong(e.target.value)}
+                                        style={{
+                                          width: '100%',
+                                          padding: '8px 12px',
+                                          border: '2px solid #667eea',
+                                          borderRadius: '4px',
+                                          fontSize: '0.95rem'
+                                        }}
+                                        autoFocus
+                                        placeholder="Enter long version"
+                                      />
+                                    </div>
+                                    <div>
+                                      <label style={{ 
+                                        fontSize: '0.75rem', 
+                                        color: '#7f8c8d', 
+                                        fontWeight: '600',
+                                        textTransform: 'uppercase',
+                                        marginBottom: '4px',
+                                        display: 'block'
+                                      }}>
+                                        Short Version
+                                      </label>
+                                      <input
+                                        type="text"
+                                        value={editingItemText}
+                                        onChange={(e) => setEditingItemText(e.target.value)}
+                                        style={{
+                                          width: '100%',
+                                          padding: '8px 12px',
+                                          border: '2px solid #667eea',
+                                          borderRadius: '4px',
+                                          fontSize: '0.95rem'
+                                        }}
+                                        placeholder="Enter short version"
+                                      />
+                                    </div>
+                                  </div>
                                   <div style={{ display: 'flex', gap: '8px' }}>
                                     <button
                                       onClick={handleConfirmEdit}
@@ -1673,9 +1769,50 @@ const PreventiveMaintenance = () => {
                                 </>
                               ) : (
                                 <>
-                                  <span style={{ flex: 1, fontSize: '0.95rem', color: '#2c3e50' }}>
-                                    {item.Check_Item}
-                                  </span>
+                                  <div style={{ 
+                                    display: 'flex', 
+                                    gap: '12px', 
+                                    flex: 1,
+                                    alignItems: 'center'
+                                  }}>
+                                    <div style={{ 
+                                      flex: 2, 
+                                      fontSize: '0.95rem', 
+                                      color: '#2c3e50',
+                                      fontWeight: '500'
+                                    }}>
+                                      <div style={{ 
+                                        fontSize: '0.75rem', 
+                                        color: '#7f8c8d', 
+                                        marginBottom: '4px',
+                                        fontWeight: '600',
+                                        textTransform: 'uppercase',
+                                        letterSpacing: '0.5px'
+                                      }}>
+                                        Long Version
+                                      </div>
+                                      {item.Check_item_Long || item.Check_Item}
+                                    </div>
+                                    <div style={{ 
+                                      flex: 1, 
+                                      fontSize: '0.9rem', 
+                                      color: '#5a6268',
+                                      paddingLeft: '12px',
+                                      borderLeft: '2px solid #e9ecef'
+                                    }}>
+                                      <div style={{ 
+                                        fontSize: '0.75rem', 
+                                        color: '#7f8c8d', 
+                                        marginBottom: '4px',
+                                        fontWeight: '600',
+                                        textTransform: 'uppercase',
+                                        letterSpacing: '0.5px'
+                                      }}>
+                                        Short Version
+                                      </div>
+                                      {item.Check_Item}
+                                    </div>
+                                  </div>
                                   <div style={{ display: 'flex', gap: '8px' }}>
                                     <button
                                       onClick={() => handleStartEdit(item)}
@@ -1739,35 +1876,75 @@ const PreventiveMaintenance = () => {
                           <Plus size={18} color="#27ae60" />
                           Add New Checklist Item
                         </h4>
-                        <div style={{ display: 'flex', gap: '12px' }}>
-                          <input
-                            type="text"
-                            value={newItemText}
-                            onChange={(e) => setNewItemText(e.target.value)}
-                            placeholder="Enter new checklist item..."
-                            style={{
-                              flex: 1,
-                              padding: '10px 12px',
-                              border: '2px solid #ddd',
-                              borderRadius: '4px',
-                              fontSize: '0.95rem'
-                            }}
-                            onKeyPress={(e) => {
-                              if (e.key === 'Enter') handleAddNewItem();
-                            }}
-                          />
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                          <div>
+                            <label style={{ 
+                              fontSize: '0.75rem', 
+                              color: '#7f8c8d', 
+                              fontWeight: '600',
+                              textTransform: 'uppercase',
+                              marginBottom: '4px',
+                              display: 'block'
+                            }}>
+                              Long Version
+                            </label>
+                            <input
+                              type="text"
+                              value={newItemTextLong}
+                              onChange={(e) => setNewItemTextLong(e.target.value)}
+                              placeholder="Enter long version of checklist item..."
+                              style={{
+                                width: '100%',
+                                padding: '10px 12px',
+                                border: '2px solid #ddd',
+                                borderRadius: '4px',
+                                fontSize: '0.95rem'
+                              }}
+                            />
+                          </div>
+                          <div>
+                            <label style={{ 
+                              fontSize: '0.75rem', 
+                              color: '#7f8c8d', 
+                              fontWeight: '600',
+                              textTransform: 'uppercase',
+                              marginBottom: '4px',
+                              display: 'block'
+                            }}>
+                              Short Version
+                            </label>
+                            <input
+                              type="text"
+                              value={newItemText}
+                              onChange={(e) => setNewItemText(e.target.value)}
+                              placeholder="Enter short version of checklist item..."
+                              style={{
+                                width: '100%',
+                                padding: '10px 12px',
+                                border: '2px solid #ddd',
+                                borderRadius: '4px',
+                                fontSize: '0.95rem'
+                              }}
+                              onKeyPress={(e) => {
+                                if (e.key === 'Enter' && newItemText.trim() && newItemTextLong.trim()) {
+                                  handleAddNewItem();
+                                }
+                              }}
+                            />
+                          </div>
                           <button
                             onClick={handleAddNewItem}
-                            disabled={!newItemText.trim()}
+                            disabled={!newItemText.trim() || !newItemTextLong.trim()}
                             style={{
                               padding: '10px 20px',
-                              background: newItemText.trim() ? '#27ae60' : '#95a5a6',
+                              background: (newItemText.trim() && newItemTextLong.trim()) ? '#27ae60' : '#95a5a6',
                               color: 'white',
                               border: 'none',
                               borderRadius: '4px',
-                              cursor: newItemText.trim() ? 'pointer' : 'not-allowed',
+                              cursor: (newItemText.trim() && newItemTextLong.trim()) ? 'pointer' : 'not-allowed',
                               display: 'flex',
                               alignItems: 'center',
+                              justifyContent: 'center',
                               gap: '8px',
                               fontSize: '0.95rem',
                               fontWeight: '600'

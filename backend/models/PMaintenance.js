@@ -19,6 +19,9 @@ class PMaintenance {
           pm.PM_Date,
           pm.Remarks,
           pm.Status as PM_Status,
+          pm.Created_By,
+          u.username as Created_By_Username,
+          CONCAT(u.First_Name, ' ', u.Last_Name) as Created_By_Name,
           a.Asset_Serial_Number,
           a.Asset_Tag_ID,
           a.Item_Name,
@@ -43,6 +46,7 @@ class PMaintenance {
         LEFT JOIN INVENTORY i ON a.Asset_ID = i.Asset_ID
         LEFT JOIN PROJECT p ON i.Project_ID = p.Project_ID
         LEFT JOIN CUSTOMER cust ON i.Customer_ID = cust.Customer_ID
+        LEFT JOIN USER u ON pm.Created_By = u.User_ID
         ORDER BY pm.PM_Date DESC
       `);
       return rows;
@@ -222,7 +226,7 @@ class PMaintenance {
           pmr.Checklist_ID,
           pmr.Is_OK_bool,
           pmr.Remarks,
-          pmc.Check_Item,
+          pmc.Check_item_Long,
           pmc.Category_ID
         FROM PM_RESULT pmr
         LEFT JOIN PM_CHECKLIST pmc ON pmr.Checklist_ID = pmc.Checklist_ID
@@ -243,6 +247,9 @@ class PMaintenance {
       const [pmRows] = await pool.execute(`
         SELECT 
           pm.*,
+          u.username as Created_By_Username,
+          CONCAT(u.First_Name, ' ', u.Last_Name) as Created_By_Name,
+          u.User_Department as Created_By_Department,
           a.Asset_Serial_Number,
           a.Asset_Tag_ID,
           a.Item_Name,
@@ -251,8 +258,11 @@ class PMaintenance {
           m.Model_Name as Model,
           r.Recipient_Name,
           r.Department,
+          r.Position,
           cust.Customer_Name,
-          cust.Branch
+          cust.Branch,
+          p.Project_Title,
+          p.file_path_logo as Project_Logo_Path
         FROM PMAINTENANCE pm
         LEFT JOIN ASSET a ON pm.Asset_ID = a.Asset_ID
         LEFT JOIN CATEGORY c ON a.Category_ID = c.Category_ID
@@ -260,6 +270,8 @@ class PMaintenance {
         LEFT JOIN RECIPIENTS r ON a.Recipients_ID = r.Recipients_ID
         LEFT JOIN INVENTORY inv ON a.Asset_ID = inv.Asset_ID
         LEFT JOIN CUSTOMER cust ON inv.Customer_ID = cust.Customer_ID
+        LEFT JOIN PROJECT p ON inv.Project_ID = p.Project_ID
+        LEFT JOIN USER u ON pm.Created_By = u.User_ID
         WHERE pm.PM_ID = ?
       `, [pmId]);
 
@@ -269,6 +281,9 @@ class PMaintenance {
 
       // Get checklist results
       pmData.checklist_results = await this.getResultsByPMId(pmId);
+      
+      // Get peripherals for the asset
+      pmData.peripherals = await this.getPeripheralsByAssetId(pmData.Asset_ID);
 
       return pmData;
     } catch (error) {
@@ -326,7 +341,7 @@ class PMaintenance {
               pmr.Checklist_ID,
               pmr.Is_OK_bool,
               pmr.Remarks,
-              pmc.Check_Item,
+              pmc.Check_item_Long,
               pmc.Category_ID
             FROM PM_RESULT pmr
             LEFT JOIN PM_CHECKLIST pmc ON pmr.Checklist_ID = pmc.Checklist_ID
@@ -355,7 +370,8 @@ class PMaintenance {
         SELECT 
           Checklist_ID,
           Category_ID,
-          Check_Item
+          Check_Item,
+          Check_item_Long
         FROM PM_CHECKLIST
         WHERE Category_ID = ?
         ORDER BY Checklist_ID
@@ -363,6 +379,55 @@ class PMaintenance {
       return rows;
     } catch (error) {
       console.error('Error in PMaintenance.getAllChecklistItemsByCategory:', error);
+      throw error;
+    }
+  }
+
+  // Delete PM record and all related PM_RESULT entries
+  static async deletePM(pmId) {
+    const connection = await pool.getConnection();
+    try {
+      await connection.beginTransaction();
+      
+      // Delete all PM_RESULT entries for this PM_ID
+      await connection.execute(
+        'DELETE FROM PM_RESULT WHERE PM_ID = ?',
+        [pmId]
+      );
+      
+      // Delete the PM record
+      const [result] = await connection.execute(
+        'DELETE FROM PMAINTENANCE WHERE PM_ID = ?',
+        [pmId]
+      );
+      
+      await connection.commit();
+      return result.affectedRows > 0;
+    } catch (error) {
+      await connection.rollback();
+      console.error('Error in PMaintenance.deletePM:', error);
+      throw error;
+    } finally {
+      connection.release();
+    }
+  }
+
+  // Get peripherals for a specific asset
+  static async getPeripheralsByAssetId(assetId) {
+    try {
+      const [rows] = await pool.execute(`
+        SELECT 
+          per.Peripheral_ID,
+          per.Serial_Code,
+          pt.Peripheral_Type_Name
+        FROM PERIPHERAL per
+        LEFT JOIN PERIPHERAL_TYPE pt ON per.Peripheral_Type_ID = pt.Peripheral_Type_ID
+        WHERE per.Asset_ID = ?
+        ORDER BY pt.Peripheral_Type_Name
+      `, [assetId]);
+      return rows;
+    } catch (error) {
+      console.error('Error in PMaintenance.getPeripheralsByAssetId:', error);
       throw error;
     }
   }
@@ -376,8 +441,12 @@ class PMaintenance {
           pm.Asset_ID,
           pm.PM_Date,
           pm.Remarks,
-          pm.Status
+          pm.Status,
+          pm.Created_By,
+          u.username as Created_By_Username,
+          CONCAT(u.First_Name, ' ', u.Last_Name) as Created_By_Name
         FROM PMAINTENANCE pm
+        LEFT JOIN USER u ON pm.Created_By = u.User_ID
         WHERE pm.Asset_ID = ?
         ORDER BY pm.PM_Date DESC
       `, [assetId]);
@@ -389,12 +458,12 @@ class PMaintenance {
   }
 
   // Create new PM record
-  static async create(assetId, pmDate, remarks, status = 'In-Process') {
+  static async create(assetId, pmDate, remarks, status = 'In-Process', createdBy = null) {
     try {
       const [result] = await pool.execute(`
-        INSERT INTO PMAINTENANCE (Asset_ID, PM_Date, Remarks, Status)
-        VALUES (?, ?, ?, ?)
-      `, [assetId, pmDate, remarks, status]);
+        INSERT INTO PMAINTENANCE (Asset_ID, PM_Date, Remarks, Status, Created_By)
+        VALUES (?, ?, ?, ?, ?)
+      `, [assetId, pmDate, remarks, status, createdBy]);
       
       return result.insertId;
     } catch (error) {
@@ -429,16 +498,16 @@ class PMaintenance {
   }
 
   // Create PM record with results in one transaction
-  static async createWithResults(assetId, pmDate, remarks, checklistResults, status = 'In-Process') {
+  static async createWithResults(assetId, pmDate, remarks, checklistResults, status = 'In-Process', createdBy = null) {
     const connection = await pool.getConnection();
     try {
       await connection.beginTransaction();
 
       // Create PM record
       const [pmResult] = await connection.execute(`
-        INSERT INTO PMAINTENANCE (Asset_ID, PM_Date, Remarks, Status)
-        VALUES (?, ?, ?, ?)
-      `, [assetId, pmDate, remarks, status]);
+        INSERT INTO PMAINTENANCE (Asset_ID, PM_Date, Remarks, Status, Created_By)
+        VALUES (?, ?, ?, ?, ?)
+      `, [assetId, pmDate, remarks, status, createdBy]);
 
       const pmId = pmResult.insertId;
 
@@ -479,12 +548,12 @@ class PMaintenance {
   }
 
   // Create new checklist item
-  static async createChecklistItem(categoryId, checkItem) {
+  static async createChecklistItem(categoryId, checkItem, checkItemLong) {
     try {
       const [result] = await pool.execute(`
-        INSERT INTO PM_CHECKLIST (Category_ID, Check_Item)
-        VALUES (?, ?)
-      `, [categoryId, checkItem]);
+        INSERT INTO PM_CHECKLIST (Category_ID, Check_Item, Check_item_Long)
+        VALUES (?, ?, ?)
+      `, [categoryId, checkItem, checkItemLong || checkItem]);
       
       return result.insertId;
     } catch (error) {
@@ -494,13 +563,13 @@ class PMaintenance {
   }
 
   // Update checklist item
-  static async updateChecklistItem(checklistId, checkItem) {
+  static async updateChecklistItem(checklistId, checkItem, checkItemLong) {
     try {
       const [result] = await pool.execute(`
         UPDATE PM_CHECKLIST
-        SET Check_Item = ?
+        SET Check_Item = ?, Check_item_Long = ?
         WHERE Checklist_ID = ?
-      `, [checkItem, checklistId]);
+      `, [checkItem, checkItemLong || checkItem, checklistId]);
       
       return result.affectedRows > 0;
     } catch (error) {

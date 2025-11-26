@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { User, Mail, Lock, Bell, Shield, Palette, Save, Eye, EyeOff, CheckCircle, Users, Plus, X } from 'lucide-react';
+import { User, Mail, Lock, Bell, Shield, Palette, Save, Eye, EyeOff, CheckCircle, Users, Plus, X, Edit } from 'lucide-react';
 
 const AccountSettings = () => {
   const [activeTab, setActiveTab] = useState('profile');
@@ -11,6 +11,19 @@ const AccountSettings = () => {
   const [loadingUsers, setLoadingUsers] = useState(false);
   const [showAddUserModal, setShowAddUserModal] = useState(false);
   const [showNewUserPassword, setShowNewUserPassword] = useState(false);
+  const [showEditUserModal, setShowEditUserModal] = useState(false);
+  const [showPasswordConfirmModal, setShowPasswordConfirmModal] = useState(false);
+  const [adminPassword, setAdminPassword] = useState('');
+  const [showAdminPassword, setShowAdminPassword] = useState(false);
+  const [editUserData, setEditUserData] = useState({
+    userId: '',
+    username: '',
+    email: '',
+    firstName: '',
+    lastName: '',
+    department: '',
+    role: 'Staff'
+  });
   const [newUserData, setNewUserData] = useState({
     username: '',
     email: '',
@@ -252,6 +265,80 @@ const AccountSettings = () => {
     } catch (error) {
       console.error('Error creating user:', error);
       setUpdateMessage({ type: 'error', text: 'Failed to create user. Please try again.' });
+    }
+  };
+
+  const handleEditUser = (user) => {
+    setEditUserData({
+      userId: user.userId,
+      username: user.username,
+      email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      department: user.department || '',
+      role: user.role
+    });
+    setShowEditUserModal(true);
+    setUpdateMessage({ type: '', text: '' });
+  };
+
+  const handleEditUserSubmit = (e) => {
+    e.preventDefault();
+    // Show password confirmation modal
+    setShowEditUserModal(false);
+    setShowPasswordConfirmModal(true);
+  };
+
+  const handlePasswordConfirm = async (e) => {
+    e.preventDefault();
+    setUpdateMessage({ type: '', text: '' });
+
+    if (!adminPassword) {
+      setUpdateMessage({ type: 'error', text: 'Please enter your password' });
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('authToken');
+      const response = await fetch(`http://localhost:5000/api/v1/auth/users/${editUserData.userId}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          username: editUserData.username,
+          email: editUserData.email,
+          firstName: editUserData.firstName,
+          lastName: editUserData.lastName,
+          department: editUserData.department,
+          role: editUserData.role,
+          adminPassword: adminPassword
+        })
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        setUpdateMessage({ type: 'success', text: `User "${editUserData.username}" updated successfully!` });
+        setShowPasswordConfirmModal(false);
+        setAdminPassword('');
+        setEditUserData({
+          userId: '',
+          username: '',
+          email: '',
+          firstName: '',
+          lastName: '',
+          department: '',
+          role: 'Staff'
+        });
+        // Refresh user list
+        fetchAllUsers();
+      } else {
+        setUpdateMessage({ type: 'error', text: data.message || 'Failed to update user' });
+      }
+    } catch (error) {
+      console.error('Error updating user:', error);
+      setUpdateMessage({ type: 'error', text: 'Failed to update user. Please try again.' });
     }
   };
 
@@ -742,12 +829,22 @@ const AccountSettings = () => {
                           letterSpacing: '0.5px',
                           whiteSpace: 'nowrap'
                         }}>Joined</th>
+                        <th style={{ 
+                          padding: '10px 12px', 
+                          textAlign: 'center', 
+                          fontWeight: '600', 
+                          color: '#333',
+                          fontSize: '0.85rem',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.5px',
+                          whiteSpace: 'nowrap'
+                        }}>Edit</th>
                       </tr>
                     </thead>
                     <tbody>
                       {allUsers.length === 0 ? (
                         <tr>
-                          <td colSpan="6" style={{ padding: '20px', textAlign: 'center', color: '#999' }}>
+                          <td colSpan="7" style={{ padding: '20px', textAlign: 'center', color: '#999' }}>
                             No users found
                           </td>
                         </tr>
@@ -811,6 +908,37 @@ const AccountSettings = () => {
                                 month: 'short',
                                 year: 'numeric'
                               }) : '-'}
+                            </td>
+                            <td style={{ 
+                              padding: '10px 12px',
+                              textAlign: 'center'
+                            }}>
+                              <button
+                                onClick={() => handleEditUser(user)}
+                                style={{
+                                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                                  border: 'none',
+                                  borderRadius: '6px',
+                                  padding: '8px',
+                                  color: 'white',
+                                  cursor: 'pointer',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  transition: 'transform 0.2s, box-shadow 0.2s',
+                                  boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                                }}
+                                onMouseEnter={(e) => {
+                                  e.currentTarget.style.transform = 'translateY(-2px)';
+                                  e.currentTarget.style.boxShadow = '0 4px 8px rgba(0,0,0,0.15)';
+                                }}
+                                onMouseLeave={(e) => {
+                                  e.currentTarget.style.transform = 'translateY(0)';
+                                  e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
+                                }}
+                              >
+                                <Edit size={16} />
+                              </button>
                             </td>
                           </tr>
                         ))
@@ -1009,6 +1137,299 @@ const AccountSettings = () => {
                       department: '',
                       role: 'Staff'
                     });
+                  }}
+                  style={{
+                    flex: 1,
+                    padding: '10px 20px',
+                    border: '1px solid #ddd',
+                    borderRadius: '6px',
+                    background: 'white',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    fontWeight: '500'
+                  }}
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit User Modal */}
+      {showEditUserModal && profileData.role.toLowerCase() === 'admin' && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            backgroundColor: 'white',
+            borderRadius: '12px',
+            width: '90%',
+            maxWidth: '600px',
+            maxHeight: '90vh',
+            overflow: 'auto',
+            boxShadow: '0 10px 40px rgba(0,0,0,0.2)'
+          }}>
+            <div style={{
+              padding: '20px 24px',
+              borderBottom: '1px solid #e0e0e0',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center'
+            }}>
+              <h2 style={{ margin: 0, fontSize: '1.5rem' }}>Edit User Information</h2>
+              <button
+                onClick={() => {
+                  setShowEditUserModal(false);
+                  setEditUserData({
+                    userId: '',
+                    username: '',
+                    email: '',
+                    firstName: '',
+                    lastName: '',
+                    department: '',
+                    role: 'Staff'
+                  });
+                }}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  padding: '8px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  color: '#666'
+                }}
+              >
+                <X size={24} />
+              </button>
+            </div>
+
+            <form onSubmit={handleEditUserSubmit} style={{ padding: '24px' }}>
+              <div className="form-group">
+                <label>Username</label>
+                <input
+                  type="text"
+                  value={editUserData.username}
+                  onChange={(e) => setEditUserData({ ...editUserData, username: e.target.value })}
+                  placeholder={editUserData.username}
+                  required
+                  minLength={3}
+                  maxLength={50}
+                  pattern="[a-zA-Z0-9_]+"
+                  title="Username can only contain letters, numbers, and underscores"
+                />
+              </div>
+
+              <div className="form-grid">
+                <div className="form-group">
+                  <label>First Name</label>
+                  <input
+                    type="text"
+                    value={editUserData.firstName}
+                    onChange={(e) => setEditUserData({ ...editUserData, firstName: e.target.value })}
+                    placeholder={editUserData.firstName}
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Last Name</label>
+                  <input
+                    type="text"
+                    value={editUserData.lastName}
+                    onChange={(e) => setEditUserData({ ...editUserData, lastName: e.target.value })}
+                    placeholder={editUserData.lastName}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="form-group">
+                <label>Email Address</label>
+                <input
+                  type="email"
+                  value={editUserData.email}
+                  onChange={(e) => setEditUserData({ ...editUserData, email: e.target.value })}
+                  placeholder={editUserData.email}
+                  required
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Department</label>
+                <input
+                  type="text"
+                  value={editUserData.department}
+                  onChange={(e) => setEditUserData({ ...editUserData, department: e.target.value })}
+                  placeholder={editUserData.department || 'Enter department (optional)'}
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Role</label>
+                <select
+                  value={editUserData.role}
+                  onChange={(e) => setEditUserData({ ...editUserData, role: e.target.value })}
+                  required
+                  style={{
+                    width: '100%',
+                    padding: '10px',
+                    border: '1px solid #ddd',
+                    borderRadius: '6px',
+                    fontSize: '14px'
+                  }}
+                >
+                  <option value="Staff">Staff</option>
+                  <option value="Admin">Admin</option>
+                </select>
+              </div>
+
+              <div style={{ display: 'flex', gap: '12px', marginTop: '24px' }}>
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  style={{ flex: 1 }}
+                >
+                  <Save size={16} style={{ marginRight: '5px' }} />
+                  Confirm
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowEditUserModal(false);
+                    setEditUserData({
+                      userId: '',
+                      username: '',
+                      email: '',
+                      firstName: '',
+                      lastName: '',
+                      department: '',
+                      role: 'Staff'
+                    });
+                  }}
+                  style={{
+                    flex: 1,
+                    padding: '10px 20px',
+                    border: '1px solid #ddd',
+                    borderRadius: '6px',
+                    background: 'white',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    fontWeight: '500'
+                  }}
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Password Confirmation Modal */}
+      {showPasswordConfirmModal && profileData.role.toLowerCase() === 'admin' && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1001
+        }}>
+          <div style={{
+            backgroundColor: 'white',
+            borderRadius: '12px',
+            width: '90%',
+            maxWidth: '450px',
+            boxShadow: '0 10px 40px rgba(0,0,0,0.2)'
+          }}>
+            <div style={{
+              padding: '20px 24px',
+              borderBottom: '1px solid #e0e0e0',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center'
+            }}>
+              <h2 style={{ margin: 0, fontSize: '1.3rem' }}>Confirm Your Password</h2>
+              <button
+                onClick={() => {
+                  setShowPasswordConfirmModal(false);
+                  setAdminPassword('');
+                  setShowEditUserModal(true);
+                }}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  padding: '8px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  color: '#666'
+                }}
+              >
+                <X size={24} />
+              </button>
+            </div>
+
+            <form onSubmit={handlePasswordConfirm} style={{ padding: '24px' }}>
+              <p style={{ 
+                color: '#666', 
+                marginBottom: '20px',
+                fontSize: '0.95rem'
+              }}>
+                Please enter your password to confirm the changes to user <strong>{editUserData.username}</strong>.
+              </p>
+
+              <div className="form-group">
+                <label>Your Password</label>
+                <div className="password-field">
+                  <input
+                    type={showAdminPassword ? 'text' : 'password'}
+                    value={adminPassword}
+                    onChange={(e) => setAdminPassword(e.target.value)}
+                    placeholder="Enter your password"
+                    required
+                    autoFocus
+                  />
+                  <button
+                    type="button"
+                    className="password-toggle"
+                    onClick={() => setShowAdminPassword(!showAdminPassword)}
+                  >
+                    {showAdminPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '12px', marginTop: '24px' }}>
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  style={{ flex: 1 }}
+                >
+                  <CheckCircle size={16} style={{ marginRight: '5px' }} />
+                  Confirm Update
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowPasswordConfirmModal(false);
+                    setAdminPassword('');
+                    setShowEditUserModal(true);
                   }}
                   style={{
                     flex: 1,

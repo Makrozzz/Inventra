@@ -199,13 +199,17 @@ const createPM = async (req, res, next) => {
       });
     }
 
+    // Get user ID from authenticated user (from JWT token)
+    const createdBy = req.user.userId;
+
     // Create PM with results
     const pmId = await PMaintenance.createWithResults(
       assetId, 
       pmDate, 
       remarks || null, 
       checklistResults,
-      status || 'In-Process'
+      status || 'In-Process',
+      createdBy
     );
 
     res.status(201).json({
@@ -243,7 +247,7 @@ const getAllCategories = async (req, res, next) => {
  */
 const createChecklistItem = async (req, res, next) => {
   try {
-    const { categoryId, checkItem } = req.body;
+    const { categoryId, checkItem, checkItemLong } = req.body;
 
     if (!categoryId || !checkItem) {
       return res.status(400).json({
@@ -251,7 +255,7 @@ const createChecklistItem = async (req, res, next) => {
       });
     }
 
-    const checklistId = await PMaintenance.createChecklistItem(categoryId, checkItem);
+    const checklistId = await PMaintenance.createChecklistItem(categoryId, checkItem, checkItemLong);
 
     res.status(201).json({
       success: true,
@@ -273,7 +277,7 @@ const createChecklistItem = async (req, res, next) => {
 const updateChecklistItem = async (req, res, next) => {
   try {
     const { checklistId } = req.params;
-    const { checkItem } = req.body;
+    const { checkItem, checkItemLong } = req.body;
 
     if (!checkItem) {
       return res.status(400).json({
@@ -281,7 +285,7 @@ const updateChecklistItem = async (req, res, next) => {
       });
     }
 
-    const success = await PMaintenance.updateChecklistItem(checklistId, checkItem);
+    const success = await PMaintenance.updateChecklistItem(checklistId, checkItem, checkItemLong);
 
     if (!success) {
       return res.status(404).json({
@@ -522,6 +526,41 @@ const bulkDownloadPM = async (req, res, next) => {
   }
 };
 
+/**
+ * Delete a PM record and all related PM_RESULT entries
+ */
+const deletePM = async (req, res, next) => {
+  try {
+    const { pmId } = req.params;
+    
+    if (!pmId) {
+      return res.status(400).json({
+        error: 'PM ID is required'
+      });
+    }
+    
+    const deleted = await PMaintenance.deletePM(pmId);
+    
+    if (!deleted) {
+      return res.status(404).json({
+        error: 'PM record not found'
+      });
+    }
+    
+    logger.info(`PM record deleted: PM_ID ${pmId}`);
+    res.status(200).json({
+      success: true,
+      message: 'PM record deleted successfully'
+    });
+  } catch (error) {
+    logger.error('Error in deletePM:', error);
+    res.status(500).json({
+      error: 'Failed to delete PM record',
+      message: error.message
+    });
+  }
+};
+
 module.exports = {
   getAllPM,
   getPMStatistics,
@@ -534,6 +573,7 @@ module.exports = {
   getDetailedPM,
   getPMByAssetId,
   createPM,
+  deletePM,
   getAllCategories,
   createChecklistItem,
   updateChecklistItem,

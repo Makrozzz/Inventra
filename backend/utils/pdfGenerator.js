@@ -1,6 +1,7 @@
 const puppeteer = require('puppeteer');
 const handlebars = require('handlebars');
 const fs = require('fs').promises;
+const fsSync = require('fs');
 const path = require('path');
 const PMaintenance = require('../models/PMaintenance');
 const { pool } = require('../config/database');
@@ -35,6 +36,68 @@ class PDFGenerator {
             .replace(/[^a-zA-Z0-9_-]/g, '') // Remove special characters
             .toUpperCase()               // Convert to uppercase
             .substring(0, 50);           // Limit length to 50 characters
+    }
+
+    /**
+     * Convert logo to base64 for embedding in PDF
+     * @returns {string} - Base64 encoded logo or empty string if logo not found
+     */
+    getLogoBase64() {
+        try {
+            const logoPath = path.join(__dirname, '../../frontend/public/logo.png');
+            if (fsSync.existsSync(logoPath)) {
+                const logoBuffer = fsSync.readFileSync(logoPath);
+                const logoBase64 = logoBuffer.toString('base64');
+                return `data:image/png;base64,${logoBase64}`;
+            } else {
+                console.warn('Logo file not found at:', logoPath);
+                return '';
+            }
+        } catch (error) {
+            console.error('Error reading logo file:', error);
+            return '';
+        }
+    }
+
+    /**
+     * Convert project logo to base64 for embedding in PDF
+     * @param {string} logoPath - The file path from PROJECT.file_path_logo
+     * @returns {string} - Base64 encoded project logo or empty string if not found
+     */
+    getProjectLogoBase64(logoPath) {
+        try {
+            if (!logoPath) {
+                return '';
+            }
+            
+            // The logoPath from database is like: uploads/project-logo/ILIM.png
+            // We need to construct the full path from backend directory
+            const fullPath = path.join(__dirname, '..', logoPath);
+            
+            if (fsSync.existsSync(fullPath)) {
+                const logoBuffer = fsSync.readFileSync(fullPath);
+                const logoBase64 = logoBuffer.toString('base64');
+                
+                // Detect image type from file extension
+                const ext = path.extname(logoPath).toLowerCase();
+                let mimeType = 'image/png';
+                if (ext === '.jpg' || ext === '.jpeg') {
+                    mimeType = 'image/jpeg';
+                } else if (ext === '.gif') {
+                    mimeType = 'image/gif';
+                } else if (ext === '.svg') {
+                    mimeType = 'image/svg+xml';
+                }
+                
+                return `data:${mimeType};base64,${logoBase64}`;
+            } else {
+                console.warn('Project logo file not found at:', fullPath);
+                return '';
+            }
+        } catch (error) {
+            console.error('Error reading project logo file:', error);
+            return '';
+        }
     }
 
     /**
@@ -172,14 +235,15 @@ class PDFGenerator {
     async getPMSequenceNumber(pmId, assetId) {
         try {
             const query = `
-                SELECT COUNT(*) as pm_count
+                SELECT COUNT(*) + 1 as pm_count
                 FROM PMAINTENANCE
                 WHERE Asset_ID = ?
-                AND PM_Date <= (SELECT PM_Date FROM PMAINTENANCE WHERE PM_ID = ?)
-                ORDER BY PM_Date ASC
+                AND (PM_Date < (SELECT PM_Date FROM PMAINTENANCE WHERE PM_ID = ?)
+                     OR (PM_Date = (SELECT PM_Date FROM PMAINTENANCE WHERE PM_ID = ?) 
+                         AND PM_ID < ?))
             `;
             
-            const [result] = await pool.execute(query, [assetId, pmId]);
+            const [result] = await pool.execute(query, [assetId, pmId, pmId, pmId]);
             
             return result[0].pm_count || 1;
         } catch (error) {
@@ -198,7 +262,7 @@ class PDFGenerator {
                     pmr.PM_Result_ID,
                     pmr.Is_OK_bool,
                     pmr.Remarks,
-                    pmc.Check_Item
+                    pmc.Check_item_Long
                 FROM PM_RESULT pmr
                 LEFT JOIN PM_CHECKLIST pmc ON pmr.Checklist_ID = pmc.Checklist_ID
                 WHERE pmr.PM_ID = ?
@@ -211,7 +275,7 @@ class PDFGenerator {
             
             // Add index and ensure Is_OK_bool is boolean
             return results.map((item, index) => ({
-                Check_Item: item.Check_Item || 'N/A',
+                Check_item_Long: item.Check_item_Long || 'N/A',
                 Is_OK_bool: item.Is_OK_bool === 1 || item.Is_OK_bool === true,
                 Remarks: item.Remarks || null,
                 index: index + 1
@@ -249,6 +313,12 @@ class PDFGenerator {
             statusClass = pmData.Status.toLowerCase().replace(/\s+/g, '-');
         }
 
+        // Convert logo to base64 for embedding in PDF
+        const logoBase64 = this.getLogoBase64();
+        
+        // Convert project logo to base64 if available
+        const projectLogoBase64 = this.getProjectLogoBase64(pmData.Project_Logo_Path);
+
         return {
             // PM Information
             PM_ID: pmData.PM_ID,
@@ -265,13 +335,25 @@ class PDFGenerator {
             Model: pmData.Model || '-',
             Asset_Status: pmData.Asset_Status || 'Active',
             Customer_Name: pmData.Customer_Name || 'N/A',
+            Project_Title: pmData.Project_Title || '-',
 
             // Recipient Information
             Recipient_Name: pmData.Recipient_Name || '-',
             Department: pmData.Department || '-',
+            Position: pmData.Position || '-',
+
+            // Created By (Technician) Information
+            Created_By_Name: pmData.Created_By_Name || '-',
+
+            // Logo as Base64
+            Logo_Base64: logoBase64,
+            Project_Logo_Base64: projectLogoBase64,
 
             // Checklist Results
             checklist_results: checklistResults,
+            
+            // Peripherals/Accessories
+            peripherals: pmData.peripherals || [],
 
             // Footer
             Generated_Date: generatedDate

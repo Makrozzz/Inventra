@@ -17,8 +17,10 @@ const {
   deleteChecklistItem,
   createCategory,
   getPMReport,
-  bulkDownloadPM
+  bulkDownloadPM,
+  deletePM
 } = require('../controllers/pmController');
+const { authenticateToken } = require('../middleware/auth');
 
 const router = express.Router();
 
@@ -40,9 +42,10 @@ router.get('/:pmId/report', getPMReport);
 // Bulk download route
 router.post('/bulk-download', bulkDownloadPM);
 
-router.post('/', createPM);
+router.post('/', authenticateToken, createPM);
+router.delete('/:pmId', deletePM);
 
-// Checklist management routes
+// Checklist Management Routes
 router.get('/categories', getAllCategories);
 router.post('/categories', createCategory);
 router.post('/checklist', createChecklistItem);

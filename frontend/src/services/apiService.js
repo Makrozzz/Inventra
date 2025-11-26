@@ -848,6 +848,41 @@ class ApiService {
       return { data: [] };
     }
   }
+
+  // ==================== HISTORY LOG METHODS ====================
+
+  /**
+   * Get history logs with pagination
+   * @param {number} page - Page number (default: 1)
+   * @param {number} limit - Records per page (default: 100)
+   */
+  async getHistoryLogs(page = 1, limit = 100) {
+    try {
+      const response = await this.makeRequest(`history-log?page=${page}&limit=${limit}`, {
+        method: 'GET'
+      });
+      return response;
+    } catch (error) {
+      console.error('Failed to fetch history logs:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Create a history log entry (for testing purposes)
+   */
+  async createHistoryLog(logData) {
+    try {
+      const response = await this.makeRequest('history-log', {
+        method: 'POST',
+        body: JSON.stringify(logData)
+      });
+      return response;
+    } catch (error) {
+      console.error('Failed to create history log:', error);
+      throw error;
+    }
+  }
 }
 
 // Create and export a singleton instance
