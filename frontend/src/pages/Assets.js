@@ -569,8 +569,8 @@ const Assets = ({ onDelete }) => {
       {/* Full Width Asset Table Section */}
       <div style={{ padding: '0 20px', width: '100%', boxSizing: 'border-box' }}>
         <div className="card" style={{ width: '100%' }}>
-        <div className="search-bar" style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-          <div style={{ position: 'relative', flex: 1 }}>
+        <div className="search-bar" style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+          <div style={{ position: 'relative', flex: 1, minWidth: '200px' }}>
             <Search size={16} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#666' }} />
             <input
               type="text"
@@ -583,7 +583,7 @@ const Assets = ({ onDelete }) => {
           
           {/* Bulk Action Buttons */}
           {selectedAssets.length > 0 && (
-            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
               <button 
                 onClick={handleBulkView}
                 disabled={selectedAssets.length !== 1}
@@ -675,7 +675,8 @@ const Assets = ({ onDelete }) => {
               gap: '8px',
               transition: 'all 0.2s ease',
               boxShadow: '0 2px 8px rgba(102, 126, 234, 0.3)',
-              whiteSpace: 'nowrap'
+              whiteSpace: 'nowrap',
+              marginLeft: 'auto'
             }}
             onMouseOver={(e) => {
               e.currentTarget.style.transform = 'translateY(-2px)';
