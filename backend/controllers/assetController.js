@@ -1,6 +1,7 @@
 const Asset = require('../models/Asset');
 const { formatResponse } = require('../utils/helpers');
 const logger = require('../utils/logger');
+const { pool } = require('../config/database');
 
 /**
  * Get all assets with pagination and filtering
@@ -422,22 +423,123 @@ const updateAssetById = async (req, res, next) => {
       }
     }
 
+    // Handle Peripherals update
+    let peripheralsUpdated = false;
+    if (updateData.peripherals && Array.isArray(updateData.peripherals)) {
+      try {
+        console.log('Updating peripherals for asset:', id);
+        console.log('Peripheral data received:', updateData.peripherals);
+        
+        // Get existing peripherals for this asset
+        const [existingPeripherals] = await pool.execute(
+          'SELECT Peripheral_ID FROM PERIPHERAL WHERE Asset_ID = ?',
+          [id]
+        );
+        
+        // Track which peripherals to keep (ones with IDs that we update)
+        const peripheralsToKeep = new Set();
+        
+        // Process each peripheral from the request
+        for (const peripheral of updateData.peripherals) {
+          // Skip empty peripherals
+          if (!peripheral.Peripheral_Type_Name && !peripheral.Serial_Code && !peripheral.Condition && !peripheral.Remarks) {
+            continue;
+          }
+          
+          // Get or create peripheral type
+          let peripheralTypeId = null;
+          if (peripheral.Peripheral_Type_Name) {
+            const [typeRows] = await pool.execute(
+              'SELECT Peripheral_Type_ID FROM PERIPHERAL_TYPE WHERE Peripheral_Type_Name = ?',
+              [peripheral.Peripheral_Type_Name]
+            );
+            
+            if (typeRows.length > 0) {
+              peripheralTypeId = typeRows[0].Peripheral_Type_ID;
+            } else {
+              // Create new peripheral type if it doesn't exist
+              const [insertResult] = await pool.execute(
+                'INSERT INTO PERIPHERAL_TYPE (Peripheral_Type_Name) VALUES (?)',
+                [peripheral.Peripheral_Type_Name]
+              );
+              peripheralTypeId = insertResult.insertId;
+              console.log('Created new peripheral type:', peripheral.Peripheral_Type_Name, 'with ID:', peripheralTypeId);
+            }
+          }
+          
+          if (peripheral.Peripheral_ID) {
+            // Update existing peripheral
+            await pool.execute(
+              `UPDATE PERIPHERAL 
+               SET Peripheral_Type_ID = ?, Serial_Code = ?, \`Condition\` = ?, Remarks = ?
+               WHERE Peripheral_ID = ? AND Asset_ID = ?`,
+              [
+                peripheralTypeId,
+                peripheral.Serial_Code || null,
+                peripheral.Condition || null,
+                peripheral.Remarks || null,
+                peripheral.Peripheral_ID,
+                id
+              ]
+            );
+            peripheralsToKeep.add(peripheral.Peripheral_ID);
+            console.log('Updated peripheral ID:', peripheral.Peripheral_ID);
+            peripheralsUpdated = true;
+          } else {
+            // Insert new peripheral
+            const [insertResult] = await pool.execute(
+              'INSERT INTO PERIPHERAL (Asset_ID, Peripheral_Type_ID, Serial_Code, `Condition`, Remarks) VALUES (?, ?, ?, ?, ?)',
+              [
+                id,
+                peripheralTypeId,
+                peripheral.Serial_Code || null,
+                peripheral.Condition || null,
+                peripheral.Remarks || null
+              ]
+            );
+            peripheralsToKeep.add(insertResult.insertId);
+            console.log('Created new peripheral with ID:', insertResult.insertId);
+            peripheralsUpdated = true;
+          }
+        }
+        
+        // Delete peripherals that were removed (not in the update list)
+        for (const existing of existingPeripherals) {
+          if (!peripheralsToKeep.has(existing.Peripheral_ID)) {
+            await pool.execute(
+              'DELETE FROM PERIPHERAL WHERE Peripheral_ID = ?',
+              [existing.Peripheral_ID]
+            );
+            console.log('Deleted peripheral ID:', existing.Peripheral_ID);
+            peripheralsUpdated = true;
+          }
+        }
+        
+        console.log('Peripheral update completed successfully');
+      } catch (error) {
+        console.error('Error updating peripherals:', error);
+        console.warn('Could not update peripherals:', error.message);
+      }
+    }
+
     console.log('Final update data:', finalUpdateData);
 
-    // Ensure we have data to update
-    if (Object.keys(finalUpdateData).length === 0) {
+    // Ensure we have data to update (either asset fields or peripherals)
+    if (Object.keys(finalUpdateData).length === 0 && !peripheralsUpdated) {
       console.log('No valid updates to apply');
       return res.status(400).json({
         error: 'No valid updates provided'
       });
     }
 
-    // Update the asset properties
-    Object.assign(existingAsset, finalUpdateData);
-    
-    // Save the updated asset
-    console.log('Executing update for Asset_ID:', existingAsset.Asset_ID);
-    await existingAsset.update();
+    // Update the asset properties if there are any changes
+    if (Object.keys(finalUpdateData).length > 0) {
+      Object.assign(existingAsset, finalUpdateData);
+      
+      // Save the updated asset
+      console.log('Executing update for Asset_ID:', existingAsset.Asset_ID);
+      await existingAsset.update();
+    }
     
     // Fetch the updated asset to return with joined data
     const updatedAsset = await Asset.findById(id);

@@ -17,12 +17,20 @@ const EditAsset = () => {
   const [antivirusOptions, setAntivirusOptions] = useState([]);
   const [softwareOptions, setSoftwareOptions] = useState([]);
   const [modelOptions, setModelOptions] = useState([]);
+  const [peripheralTypeOptions, setPeripheralTypeOptions] = useState([]);
   
   // Modal states for adding new options
   const [showAddModal, setShowAddModal] = useState(false);
-  const [modalType, setModalType] = useState(''); // 'windows', 'office', 'antivirus', 'software', or 'model'
+  const [modalType, setModalType] = useState(''); // 'windows', 'office', 'antivirus', 'software', 'model', or 'peripheral'
   const [newOptionValue, setNewOptionValue] = useState('');
   const [addingOption, setAddingOption] = useState(false);
+  
+  // Delete peripheral confirmation
+  const [showDeletePeripheralModal, setShowDeletePeripheralModal] = useState(false);
+  const [peripheralToDelete, setPeripheralToDelete] = useState(null);
+  
+  // Peripherals state - array of peripheral objects
+  const [peripherals, setPeripherals] = useState([]);
   
   const [originalData, setOriginalData] = useState(null);
   const [formData, setFormData] = useState({
@@ -75,6 +83,20 @@ const EditAsset = () => {
       const data = await response.json();
       console.log('✅ Asset data loaded:', data);
       
+      // Extract peripheral data
+      const peripheralData = data.Peripherals && data.Peripherals.length > 0 
+        ? data.Peripherals.map(p => ({
+            Peripheral_ID: p.Peripheral_ID,
+            Peripheral_Type_Name: p.Peripheral_Type_Name || '',
+            Serial_Code: p.Serial_Code || '',
+            Condition: p.Condition || '',
+            Remarks: p.Remarks || ''
+          }))
+        : [];
+      
+      console.log('📦 Peripheral data:', peripheralData);
+      setPeripherals(peripheralData);
+      
       // Store original data for comparison
       setOriginalData(data);
       
@@ -118,6 +140,40 @@ const EditAsset = () => {
     }));
   };
 
+  // Peripheral handlers
+  const handleAddPeripheral = () => {
+    setPeripherals([...peripherals, {
+      Peripheral_Type_Name: '',
+      Serial_Code: '',
+      Condition: '',
+      Remarks: ''
+    }]);
+  };
+
+  const handleRemovePeripheral = (index) => {
+    setPeripheralToDelete(index);
+    setShowDeletePeripheralModal(true);
+  };
+  
+  const confirmDeletePeripheral = () => {
+    if (peripheralToDelete !== null) {
+      setPeripherals(peripherals.filter((_, i) => i !== peripheralToDelete));
+      setShowDeletePeripheralModal(false);
+      setPeripheralToDelete(null);
+    }
+  };
+  
+  const cancelDeletePeripheral = () => {
+    setShowDeletePeripheralModal(false);
+    setPeripheralToDelete(null);
+  };
+
+  const handlePeripheralChange = (index, field, value) => {
+    const updatedPeripherals = [...peripherals];
+    updatedPeripherals[index][field] = value;
+    setPeripherals(updatedPeripherals);
+  };
+
   const fetchDropdownOptions = async () => {
     try {
       // Fetch Windows versions
@@ -156,6 +212,15 @@ const EditAsset = () => {
         const models = modelData.data?.map(model => model.Model_Name || model.name) || [];
         setModelOptions(models);
       }
+      
+      // Fetch Peripheral Types
+      const peripheralTypesRes = await fetch('http://localhost:5000/api/v1/peripherals/types');
+      if (peripheralTypesRes.ok) {
+        const peripheralTypesData = await peripheralTypesRes.json();
+        // Extract peripheral type names from the response
+        const types = peripheralTypesData.data?.map(type => type.Peripheral_Type_Name || type.name) || [];
+        setPeripheralTypeOptions(types);
+      }
     } catch (err) {
       console.error('Error fetching dropdown options:', err);
       // Set default options as fallback
@@ -187,14 +252,19 @@ const EditAsset = () => {
 
     setAddingOption(true);
     try {
-      // Use different endpoint for model
-      const endpoint = modalType === 'model' 
-        ? `http://localhost:5000/api/v1/models`
-        : `http://localhost:5000/api/v1/options/${modalType}`;
+      let endpoint, body;
       
-      const body = modalType === 'model'
-        ? JSON.stringify({ name: newOptionValue.trim() })
-        : JSON.stringify({ value: newOptionValue.trim() });
+      // Use different endpoint for model and peripheral
+      if (modalType === 'model') {
+        endpoint = `http://localhost:5000/api/v1/models`;
+        body = JSON.stringify({ name: newOptionValue.trim() });
+      } else if (modalType === 'peripheral') {
+        endpoint = `http://localhost:5000/api/v1/peripherals/types`;
+        body = JSON.stringify({ name: newOptionValue.trim() });
+      } else {
+        endpoint = `http://localhost:5000/api/v1/options/${modalType}`;
+        body = JSON.stringify({ value: newOptionValue.trim() });
+      }
 
       const response = await fetch(endpoint, {
         method: 'POST',
@@ -224,6 +294,8 @@ const EditAsset = () => {
       } else if (modalType === 'model') {
         setModelOptions(prev => [...prev, newOptionValue.trim()]);
         setFormData(prev => ({ ...prev, Model: newOptionValue.trim() }));
+      } else if (modalType === 'peripheral') {
+        setPeripheralTypeOptions(prev => [...prev, newOptionValue.trim()]);
       }
 
       handleCloseAddModal();
@@ -250,13 +322,22 @@ const EditAsset = () => {
       setSuccess(null);
       
       console.log('🔄 Updating asset:', formData);
+      console.log('📦 Updating peripherals:', peripherals);
+      
+      // Include peripherals in the request body
+      const updateData = {
+        ...formData,
+        peripherals: peripherals.filter(p => 
+          p.Peripheral_Type_Name || p.Serial_Code || p.Condition || p.Remarks
+        )
+      };
       
       const response = await fetch(`http://localhost:5000/api/v1/assets/id/${id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData)
+        body: JSON.stringify(updateData)
       });
       
       if (!response.ok) {
@@ -863,6 +944,234 @@ const EditAsset = () => {
                     placeholder="0.00"
                   />
                 </div>
+
+                {/* Peripheral Information Section */}
+                <div className="form-group" style={{ gridColumn: '1 / -1', marginTop: '20px' }}>
+                  <div style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    paddingBottom: '12px',
+                    borderBottom: '2px solid #f0f0f0',
+                    marginBottom: '16px'
+                  }}>
+                    <h4 style={{
+                      color: '#2c3e50',
+                      fontSize: '1.1rem',
+                      fontWeight: '600',
+                      margin: 0,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px'
+                    }}>
+                      Peripheral Details
+                      <span style={{
+                        fontSize: '0.85rem',
+                        fontWeight: '400',
+                        color: '#6c757d',
+                        fontStyle: 'italic'
+                      }}>
+                        (Optional)
+                      </span>
+                    </h4>
+                    <button
+                      type="button"
+                      onClick={handleAddPeripheral}
+                      style={{
+                        background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '6px',
+                        padding: '8px 14px',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        fontSize: '13px',
+                        fontWeight: '600',
+                        transition: 'all 0.2s ease',
+                        boxShadow: '0 2px 4px rgba(16, 185, 129, 0.3)'
+                      }}
+                      onMouseOver={(e) => {
+                        e.currentTarget.style.transform = 'translateY(-1px)';
+                        e.currentTarget.style.boxShadow = '0 3px 6px rgba(16, 185, 129, 0.4)';
+                      }}
+                      onMouseOut={(e) => {
+                        e.currentTarget.style.transform = 'translateY(0)';
+                        e.currentTarget.style.boxShadow = '0 2px 4px rgba(16, 185, 129, 0.3)';
+                      }}
+                    >
+                      <Plus size={16} />
+                      Add Peripheral
+                    </button>
+                  </div>
+                </div>
+
+                {peripherals.length === 0 ? (
+                  <div style={{
+                    gridColumn: '1 / -1',
+                    textAlign: 'center',
+                    padding: '30px',
+                    background: '#f8f9fa',
+                    borderRadius: '8px',
+                    color: '#6c757d',
+                    fontSize: '14px'
+                  }}>
+                    No peripherals added. Click "Add Peripheral" to add one.
+                  </div>
+                ) : (
+                  peripherals.map((peripheral, index) => (
+                    <React.Fragment key={index}>
+                      <div style={{
+                        gridColumn: '1 / -1',
+                        background: '#f8f9fa',
+                        padding: '16px',
+                        borderRadius: '8px',
+                        marginBottom: '12px',
+                        position: 'relative'
+                      }}>
+                        <div style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          marginBottom: '12px'
+                        }}>
+                          <h5 style={{
+                            margin: 0,
+                            color: '#495057',
+                            fontSize: '0.95rem',
+                            fontWeight: '600'
+                          }}>
+                            Peripheral #{index + 1}
+                          </h5>
+                          <button
+                            type="button"
+                            onClick={() => handleRemovePeripheral(index)}
+                            style={{
+                              background: 'linear-gradient(135deg, #e74c3c 0%, #c0392b 100%)',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '6px',
+                              padding: '6px 12px',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              fontSize: '12px',
+                              fontWeight: '600',
+                              transition: 'all 0.2s ease',
+                              boxShadow: '0 2px 4px rgba(231, 76, 60, 0.3)'
+                            }}
+                            onMouseOver={(e) => {
+                              e.currentTarget.style.transform = 'translateY(-1px)';
+                              e.currentTarget.style.boxShadow = '0 3px 6px rgba(231, 76, 60, 0.4)';
+                            }}
+                            onMouseOut={(e) => {
+                              e.currentTarget.style.transform = 'translateY(0)';
+                              e.currentTarget.style.boxShadow = '0 2px 4px rgba(231, 76, 60, 0.3)';
+                            }}
+                          >
+                            <X size={14} />
+                            Remove
+                          </button>
+                        </div>
+
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
+                          <div className="form-group" style={{ margin: 0 }}>
+                            <label style={{ fontSize: '0.9rem' }}>Peripheral Type</label>
+                            <div style={{ display: 'flex', gap: '8px', alignItems: 'stretch' }}>
+                              <select
+                                value={peripheral.Peripheral_Type_Name}
+                                onChange={(e) => handlePeripheralChange(index, 'Peripheral_Type_Name', e.target.value)}
+                                style={{ flex: 1 }}
+                              >
+                                <option value="">Select Peripheral Type</option>
+                                {peripheralTypeOptions.map((type, idx) => (
+                                  <option key={idx} value={type}>
+                                    {type}
+                                  </option>
+                                ))}
+                              </select>
+                              <button
+                                type="button"
+                                onClick={() => handleOpenAddModal('peripheral')}
+                                style={{
+                                  background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                                  color: 'white',
+                                  border: 'none',
+                                  borderRadius: '6px',
+                                  padding: '0 12px',
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '4px',
+                                  fontSize: '0.85rem',
+                                  fontWeight: '500',
+                                  transition: 'all 0.2s ease',
+                                  boxShadow: '0 2px 4px rgba(16, 185, 129, 0.3)',
+                                  whiteSpace: 'nowrap'
+                                }}
+                                onMouseOver={(e) => {
+                                  e.currentTarget.style.transform = 'translateY(-1px)';
+                                  e.currentTarget.style.boxShadow = '0 3px 6px rgba(16, 185, 129, 0.4)';
+                                }}
+                                onMouseOut={(e) => {
+                                  e.currentTarget.style.transform = 'translateY(0)';
+                                  e.currentTarget.style.boxShadow = '0 2px 4px rgba(16, 185, 129, 0.3)';
+                                }}
+                              >
+                                <Plus size={14} />                              
+                              </button>
+                            </div>
+                          </div>
+
+                          <div className="form-group" style={{ margin: 0 }}>
+                            <label style={{ fontSize: '0.9rem' }}>Serial Code</label>
+                            <input
+                              type="text"
+                              value={peripheral.Serial_Code}
+                              onChange={(e) => handlePeripheralChange(index, 'Serial_Code', e.target.value)}
+                              placeholder="Enter peripheral serial code"
+                            />
+                          </div>
+
+                          <div className="form-group" style={{ margin: 0 }}>
+                            <label style={{ fontSize: '0.9rem' }}>Condition</label>
+                            <select
+                              value={peripheral.Condition}
+                              onChange={(e) => handlePeripheralChange(index, 'Condition', e.target.value)}
+                            >
+                              <option value="">Select Condition</option>
+                              <option value="Good">Good</option>
+                              <option value="Fair">Fair</option>
+                              <option value="Poor">Poor</option>
+                              <option value="New">New</option>
+                            </select>
+                          </div>
+
+                          <div className="form-group" style={{ margin: 0, gridColumn: '1 / -1' }}>
+                            <label style={{ fontSize: '0.9rem' }}>Remarks</label>
+                            <textarea
+                              value={peripheral.Remarks}
+                              onChange={(e) => handlePeripheralChange(index, 'Remarks', e.target.value)}
+                              placeholder="Additional notes about the peripheral"
+                              rows="2"
+                              style={{
+                                width: '100%',
+                                padding: '8px',
+                                border: '1px solid #ddd',
+                                borderRadius: '6px',
+                                fontSize: '13px',
+                                fontFamily: 'inherit',
+                                resize: 'vertical'
+                              }}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </React.Fragment>
+                  ))
+                )}
               </div>
             </div>
           )}
@@ -1144,7 +1453,7 @@ const EditAsset = () => {
                 gap: '10px'
               }}>
                 <Plus size={24} strokeWidth={2.5} style={{ color: '#10b981' }} />
-                Add New {modalType === 'windows' ? 'Windows Version' : modalType === 'office' ? 'Office Version' : modalType === 'antivirus' ? 'Antivirus' : modalType === 'software' ? 'Software' : 'Model'}
+                Add New {modalType === 'windows' ? 'Windows Version' : modalType === 'office' ? 'Office Version' : modalType === 'antivirus' ? 'Antivirus' : modalType === 'software' ? 'Software' : modalType === 'peripheral' ? 'Peripheral Type' : 'Model'}
               </h3>
               <button
                 onClick={handleCloseAddModal}
@@ -1164,13 +1473,13 @@ const EditAsset = () => {
 
             <div style={{ marginBottom: '20px' }}>
               <label style={{ display: 'block', marginBottom: '8px', color: '#34495e', fontWeight: '500' }}>
-                {modalType === 'windows' ? 'Windows Version Name' : modalType === 'office' ? 'Office Version Name' : modalType === 'antivirus' ? 'Antivirus Name' : modalType === 'software' ? 'Software Name' : 'Model Name'}
+                {modalType === 'windows' ? 'Windows Version Name' : modalType === 'office' ? 'Office Version Name' : modalType === 'antivirus' ? 'Antivirus Name' : modalType === 'software' ? 'Software Name' : modalType === 'peripheral' ? 'Peripheral Type Name' : 'Model Name'}
               </label>
               <input
                 type="text"
                 value={newOptionValue}
                 onChange={(e) => setNewOptionValue(e.target.value)}
-                placeholder={modalType === 'office' ? 'e.g., Office LTSC 2024' : modalType === 'windows' ? 'e.g., Windows 12' : modalType === 'antivirus' ? 'e.g., Kaspersky Endpoint Security' : modalType === 'software' ? 'e.g., Adobe Acrobat' : 'e.g., Dell OptiPlex 3090, HP ProBook 450 G8'}
+                placeholder={modalType === 'office' ? 'e.g., Office LTSC 2024' : modalType === 'windows' ? 'e.g., Windows 12' : modalType === 'antivirus' ? 'e.g., Kaspersky Endpoint Security' : modalType === 'software' ? 'e.g., Adobe Acrobat' : modalType === 'peripheral' ? 'e.g., Mouse, Keyboard, Monitor' : 'e.g., Dell OptiPlex 3090, HP ProBook 450 G8'}
                 style={{
                   width: '100%',
                   padding: '10px',
@@ -1249,6 +1558,107 @@ const EditAsset = () => {
                 }}
               >
                 {addingOption ? 'Adding...' : 'Add Option'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Peripheral Confirmation Modal */}
+      {showDeletePeripheralModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            background: 'white',
+            borderRadius: '12px',
+            padding: '28px',
+            minWidth: '450px',
+            maxWidth: '500px',
+            boxShadow: '0 10px 40px rgba(0, 0, 0, 0.2)'
+          }}>
+            <div style={{ marginBottom: '24px' }}>
+              <h3 style={{ 
+                margin: '0 0 12px 0', 
+                color: '#e74c3c',
+                fontSize: '1.4rem',
+                fontWeight: '600',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px'
+              }}>
+                <X size={24} strokeWidth={2.5} />
+                Delete Peripheral
+              </h3>
+              <p style={{ 
+                margin: 0, 
+                color: '#555',
+                fontSize: '1rem',
+                lineHeight: '1.5'
+              }}>
+                Are you sure you want to remove this peripheral? This action cannot be undone.
+              </p>
+            </div>
+
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+              <button
+                onClick={cancelDeletePeripheral}
+                style={{
+                  background: 'linear-gradient(135deg, #e9ecef 0%, #dee2e6 100%)',
+                  color: '#495057',
+                  border: 'none',
+                  padding: '10px 20px',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  transition: 'all 0.2s ease',
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.transform = 'translateY(-1px)';
+                  e.currentTarget.style.boxShadow = '0 3px 6px rgba(0,0,0,0.15)';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDeletePeripheral}
+                style={{
+                  background: 'linear-gradient(135deg, #e74c3c 0%, #c0392b 100%)',
+                  color: 'white',
+                  border: 'none',
+                  padding: '10px 24px',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  transition: 'all 0.2s ease',
+                  boxShadow: '0 4px 12px rgba(231, 76, 60, 0.3)'
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.transform = 'translateY(-1px)';
+                  e.currentTarget.style.boxShadow = '0 6px 16px rgba(231, 76, 60, 0.4)';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(231, 76, 60, 0.3)';
+                }}
+              >
+                Delete Peripheral
               </button>
             </div>
           </div>
