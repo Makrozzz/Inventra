@@ -247,7 +247,7 @@ const getAllCategories = async (req, res, next) => {
  */
 const createChecklistItem = async (req, res, next) => {
   try {
-    const { categoryId, checkItem } = req.body;
+    const { categoryId, checkItem, checkItemLong } = req.body;
 
     if (!categoryId || !checkItem) {
       return res.status(400).json({
@@ -255,7 +255,7 @@ const createChecklistItem = async (req, res, next) => {
       });
     }
 
-    const checklistId = await PMaintenance.createChecklistItem(categoryId, checkItem);
+    const checklistId = await PMaintenance.createChecklistItem(categoryId, checkItem, checkItemLong);
 
     res.status(201).json({
       success: true,

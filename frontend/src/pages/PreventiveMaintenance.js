@@ -36,6 +36,7 @@ const PreventiveMaintenance = () => {
   const [editingItemText, setEditingItemText] = useState('');
   const [editingItemTextLong, setEditingItemTextLong] = useState('');
   const [newItemText, setNewItemText] = useState('');
+  const [newItemTextLong, setNewItemTextLong] = useState('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [itemToDelete, setItemToDelete] = useState(null);
   const [showEditConfirm, setShowEditConfirm] = useState(false);
@@ -401,8 +402,8 @@ const PreventiveMaintenance = () => {
   };
 
   const handleAddNewItem = () => {
-    if (!newItemText.trim()) {
-      alert('Please enter checklist item text');
+    if (!newItemText.trim() || !newItemTextLong.trim()) {
+      alert('Please enter both short and long version of checklist item');
       return;
     }
     setShowAddConfirm(true);
@@ -418,7 +419,8 @@ const PreventiveMaintenance = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           categoryId: selectedCategoryForEdit,
-          checkItem: newItemText
+          checkItem: newItemText,
+          checkItemLong: newItemTextLong
         })
       });
 
@@ -429,6 +431,7 @@ const PreventiveMaintenance = () => {
       // Refresh checklist
       await handleCategoryChangeForEdit({ target: { value: selectedCategoryForEdit } });
       setNewItemText('');
+      setNewItemTextLong('');
     } catch (err) {
       console.error('Error adding checklist item:', err);
       alert('Failed to add checklist item');
@@ -443,6 +446,7 @@ const PreventiveMaintenance = () => {
     setChecklistItemsForEdit([]);
     setEditingItemId(null);
     setNewItemText('');
+    setNewItemTextLong('');
   };
 
   // Handlers for customer and branch selection with URL parameter updates
@@ -1840,35 +1844,75 @@ const PreventiveMaintenance = () => {
                           <Plus size={18} color="#27ae60" />
                           Add New Checklist Item
                         </h4>
-                        <div style={{ display: 'flex', gap: '12px' }}>
-                          <input
-                            type="text"
-                            value={newItemText}
-                            onChange={(e) => setNewItemText(e.target.value)}
-                            placeholder="Enter new checklist item..."
-                            style={{
-                              flex: 1,
-                              padding: '10px 12px',
-                              border: '2px solid #ddd',
-                              borderRadius: '4px',
-                              fontSize: '0.95rem'
-                            }}
-                            onKeyPress={(e) => {
-                              if (e.key === 'Enter') handleAddNewItem();
-                            }}
-                          />
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                          <div>
+                            <label style={{ 
+                              fontSize: '0.75rem', 
+                              color: '#7f8c8d', 
+                              fontWeight: '600',
+                              textTransform: 'uppercase',
+                              marginBottom: '4px',
+                              display: 'block'
+                            }}>
+                              Long Version
+                            </label>
+                            <input
+                              type="text"
+                              value={newItemTextLong}
+                              onChange={(e) => setNewItemTextLong(e.target.value)}
+                              placeholder="Enter long version of checklist item..."
+                              style={{
+                                width: '100%',
+                                padding: '10px 12px',
+                                border: '2px solid #ddd',
+                                borderRadius: '4px',
+                                fontSize: '0.95rem'
+                              }}
+                            />
+                          </div>
+                          <div>
+                            <label style={{ 
+                              fontSize: '0.75rem', 
+                              color: '#7f8c8d', 
+                              fontWeight: '600',
+                              textTransform: 'uppercase',
+                              marginBottom: '4px',
+                              display: 'block'
+                            }}>
+                              Short Version
+                            </label>
+                            <input
+                              type="text"
+                              value={newItemText}
+                              onChange={(e) => setNewItemText(e.target.value)}
+                              placeholder="Enter short version of checklist item..."
+                              style={{
+                                width: '100%',
+                                padding: '10px 12px',
+                                border: '2px solid #ddd',
+                                borderRadius: '4px',
+                                fontSize: '0.95rem'
+                              }}
+                              onKeyPress={(e) => {
+                                if (e.key === 'Enter' && newItemText.trim() && newItemTextLong.trim()) {
+                                  handleAddNewItem();
+                                }
+                              }}
+                            />
+                          </div>
                           <button
                             onClick={handleAddNewItem}
-                            disabled={!newItemText.trim()}
+                            disabled={!newItemText.trim() || !newItemTextLong.trim()}
                             style={{
                               padding: '10px 20px',
-                              background: newItemText.trim() ? '#27ae60' : '#95a5a6',
+                              background: (newItemText.trim() && newItemTextLong.trim()) ? '#27ae60' : '#95a5a6',
                               color: 'white',
                               border: 'none',
                               borderRadius: '4px',
-                              cursor: newItemText.trim() ? 'pointer' : 'not-allowed',
+                              cursor: (newItemText.trim() && newItemTextLong.trim()) ? 'pointer' : 'not-allowed',
                               display: 'flex',
                               alignItems: 'center',
+                              justifyContent: 'center',
                               gap: '8px',
                               fontSize: '0.95rem',
                               fontWeight: '600'

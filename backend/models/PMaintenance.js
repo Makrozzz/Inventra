@@ -492,12 +492,12 @@ class PMaintenance {
   }
 
   // Create new checklist item
-  static async createChecklistItem(categoryId, checkItem) {
+  static async createChecklistItem(categoryId, checkItem, checkItemLong) {
     try {
       const [result] = await pool.execute(`
-        INSERT INTO PM_CHECKLIST (Category_ID, Check_Item)
-        VALUES (?, ?)
-      `, [categoryId, checkItem]);
+        INSERT INTO PM_CHECKLIST (Category_ID, Check_Item, Check_item_Long)
+        VALUES (?, ?, ?)
+      `, [categoryId, checkItem, checkItemLong || checkItem]);
       
       return result.insertId;
     } catch (error) {
