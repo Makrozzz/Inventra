@@ -22,6 +22,7 @@ const PreventiveMaintenance = () => {
   const [selectedAsset, setSelectedAsset] = useState(null);
   const [checklistItems, setChecklistItems] = useState([]);
   const [checklistResults, setChecklistResults] = useState({});
+  const [checklistItemRemarks, setChecklistItemRemarks] = useState({});
   const [pmRemarks, setPmRemarks] = useState('');
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [showCancelDialog, setShowCancelDialog] = useState(false);
@@ -480,6 +481,7 @@ const PreventiveMaintenance = () => {
     setShowPMForm(true);
     setPmRemarks('');
     setChecklistResults({});
+    setChecklistItemRemarks({});
     
     // Fetch checklist items for this asset's category
     try {
@@ -510,6 +512,7 @@ const PreventiveMaintenance = () => {
     setSelectedAsset(null);
     setChecklistItems([]);
     setChecklistResults({});
+    setChecklistItemRemarks({});
     setPmRemarks('');
   };
 
@@ -517,6 +520,13 @@ const PreventiveMaintenance = () => {
     setChecklistResults(prev => ({
       ...prev,
       [checklistId]: isOk
+    }));
+  };
+
+  const handleChecklistRemarkChange = (checklistId, remark) => {
+    setChecklistItemRemarks(prev => ({
+      ...prev,
+      [checklistId]: remark
     }));
   };
 
@@ -533,7 +543,7 @@ const PreventiveMaintenance = () => {
       const resultsArray = Object.keys(checklistResults).map(checklistId => ({
         Checklist_ID: parseInt(checklistId),
         Is_OK_bool: checklistResults[checklistId] ? 1 : 0,
-        Remarks: null
+        Remarks: checklistItemRemarks[checklistId] || null
       }));
 
       // Get auth token
@@ -567,6 +577,7 @@ const PreventiveMaintenance = () => {
       setSelectedAsset(null);
       setChecklistItems([]);
       setChecklistResults({});
+      setChecklistItemRemarks({});
       setPmRemarks('');
     } catch (err) {
       console.error('Error submitting PM record:', err);
@@ -1239,56 +1250,77 @@ const PreventiveMaintenance = () => {
                       style={{
                         padding: '16px',
                         borderBottom: index < checklistItems.length - 1 ? '1px solid #e0e0e0' : 'none',
-                        background: index % 2 === 0 ? 'white' : '#f8f9fa',
+                        background: index % 2 === 0 ? 'white' : '#f8f9fa'
+                      }}
+                    >
+                      <div style={{
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'space-between',
-                        gap: '16px'
-                      }}
-                    >
-                      <div style={{ flex: 1 }}>
-                        <span style={{ color: '#7f8c8d', fontSize: '0.75rem', marginRight: '8px' }}>
-                          #{index + 1}
-                        </span>
-                        <span style={{ color: '#2c3e50', fontSize: '0.95rem', fontWeight: '500' }}>
-                          {item.Check_Item}
-                        </span>
+                        gap: '16px',
+                        marginBottom: '12px'
+                      }}>
+                        <div style={{ flex: 1 }}>
+                          <span style={{ color: '#7f8c8d', fontSize: '0.75rem', marginRight: '8px' }}>
+                            #{index + 1}
+                          </span>
+                          <span style={{ color: '#2c3e50', fontSize: '0.95rem', fontWeight: '500' }}>
+                            {item.Check_item_Long}
+                          </span>
+                        </div>
+                        <div style={{ display: 'flex', gap: '12px' }}>
+                          <button
+                            onClick={() => handleChecklistChange(item.Checklist_ID, true)}
+                            style={{
+                              padding: '8px 20px',
+                              border: checklistResults[item.Checklist_ID] === true ? '2px solid #27ae60' : '2px solid #ddd',
+                              borderRadius: '6px',
+                              background: checklistResults[item.Checklist_ID] === true ? '#27ae60' : 'white',
+                              color: checklistResults[item.Checklist_ID] === true ? 'white' : '#666',
+                              cursor: 'pointer',
+                              fontSize: '0.9rem',
+                              fontWeight: '600',
+                              transition: 'all 0.2s',
+                              minWidth: '80px'
+                            }}
+                          >
+                            Good
+                          </button>
+                          <button
+                            onClick={() => handleChecklistChange(item.Checklist_ID, false)}
+                            style={{
+                              padding: '8px 20px',
+                              border: checklistResults[item.Checklist_ID] === false ? '2px solid #e74c3c' : '2px solid #ddd',
+                              borderRadius: '6px',
+                              background: checklistResults[item.Checklist_ID] === false ? '#e74c3c' : 'white',
+                              color: checklistResults[item.Checklist_ID] === false ? 'white' : '#666',
+                              cursor: 'pointer',
+                              fontSize: '0.9rem',
+                              fontWeight: '600',
+                              transition: 'all 0.2s',
+                              minWidth: '80px'
+                            }}
+                          >
+                            Bad
+                          </button>
+                        </div>
                       </div>
-                      <div style={{ display: 'flex', gap: '12px' }}>
-                        <button
-                          onClick={() => handleChecklistChange(item.Checklist_ID, true)}
+                      <div style={{ paddingLeft: '40px' }}>
+                        <input
+                          type="text"
+                          placeholder="Remarks (optional)"
+                          value={checklistItemRemarks[item.Checklist_ID] || ''}
+                          onChange={(e) => handleChecklistRemarkChange(item.Checklist_ID, e.target.value)}
                           style={{
-                            padding: '8px 20px',
-                            border: checklistResults[item.Checklist_ID] === true ? '2px solid #27ae60' : '2px solid #ddd',
-                            borderRadius: '6px',
-                            background: checklistResults[item.Checklist_ID] === true ? '#27ae60' : 'white',
-                            color: checklistResults[item.Checklist_ID] === true ? 'white' : '#666',
-                            cursor: 'pointer',
-                            fontSize: '0.9rem',
-                            fontWeight: '600',
-                            transition: 'all 0.2s',
-                            minWidth: '80px'
+                            width: '100%',
+                            padding: '8px 12px',
+                            border: '1px solid #ddd',
+                            borderRadius: '4px',
+                            fontSize: '0.85rem',
+                            color: '#2c3e50',
+                            fontFamily: 'inherit'
                           }}
-                        >
-                          Good
-                        </button>
-                        <button
-                          onClick={() => handleChecklistChange(item.Checklist_ID, false)}
-                          style={{
-                            padding: '8px 20px',
-                            border: checklistResults[item.Checklist_ID] === false ? '2px solid #e74c3c' : '2px solid #ddd',
-                            borderRadius: '6px',
-                            background: checklistResults[item.Checklist_ID] === false ? '#e74c3c' : 'white',
-                            color: checklistResults[item.Checklist_ID] === false ? 'white' : '#666',
-                            cursor: 'pointer',
-                            fontSize: '0.9rem',
-                            fontWeight: '600',
-                            transition: 'all 0.2s',
-                            minWidth: '80px'
-                          }}
-                        >
-                          Bad
-                        </button>
+                        />
                       </div>
                     </div>
                   ))}

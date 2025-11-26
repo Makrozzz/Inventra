@@ -378,6 +378,35 @@ class PMaintenance {
     }
   }
 
+  // Delete PM record and all related PM_RESULT entries
+  static async deletePM(pmId) {
+    const connection = await pool.getConnection();
+    try {
+      await connection.beginTransaction();
+      
+      // Delete all PM_RESULT entries for this PM_ID
+      await connection.execute(
+        'DELETE FROM PM_RESULT WHERE PM_ID = ?',
+        [pmId]
+      );
+      
+      // Delete the PM record
+      const [result] = await connection.execute(
+        'DELETE FROM PMAINTENANCE WHERE PM_ID = ?',
+        [pmId]
+      );
+      
+      await connection.commit();
+      return result.affectedRows > 0;
+    } catch (error) {
+      await connection.rollback();
+      console.error('Error in PMaintenance.deletePM:', error);
+      throw error;
+    } finally {
+      connection.release();
+    }
+  }
+
   // Get PM records for a specific asset
   static async findByAssetId(assetId) {
     try {

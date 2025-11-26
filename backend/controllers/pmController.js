@@ -526,6 +526,41 @@ const bulkDownloadPM = async (req, res, next) => {
   }
 };
 
+/**
+ * Delete a PM record and all related PM_RESULT entries
+ */
+const deletePM = async (req, res, next) => {
+  try {
+    const { pmId } = req.params;
+    
+    if (!pmId) {
+      return res.status(400).json({
+        error: 'PM ID is required'
+      });
+    }
+    
+    const deleted = await PMaintenance.deletePM(pmId);
+    
+    if (!deleted) {
+      return res.status(404).json({
+        error: 'PM record not found'
+      });
+    }
+    
+    logger.info(`PM record deleted: PM_ID ${pmId}`);
+    res.status(200).json({
+      success: true,
+      message: 'PM record deleted successfully'
+    });
+  } catch (error) {
+    logger.error('Error in deletePM:', error);
+    res.status(500).json({
+      error: 'Failed to delete PM record',
+      message: error.message
+    });
+  }
+};
+
 module.exports = {
   getAllPM,
   getPMStatistics,
@@ -538,6 +573,7 @@ module.exports = {
   getDetailedPM,
   getPMByAssetId,
   createPM,
+  deletePM,
   getAllCategories,
   createChecklistItem,
   updateChecklistItem,

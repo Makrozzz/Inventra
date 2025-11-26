@@ -12,6 +12,8 @@ const PMDetail = () => {
   const [pmData, setPmData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     fetchPMDetail();
@@ -54,6 +56,36 @@ const PMDetail = () => {
       return <CheckCircle size={20} color="#27ae60" />;
     } else {
       return <X size={20} color="#e74c3c" />;
+    }
+  };
+
+  const handleDeleteClick = () => {
+    setShowDeleteConfirm(true);
+  };
+
+  const handleCancelDelete = () => {
+    setShowDeleteConfirm(false);
+  };
+
+  const handleConfirmDelete = async () => {
+    setDeleting(true);
+    try {
+      const response = await fetch(`http://localhost:5000/api/v1/pm/${pmId}`, {
+        method: 'DELETE'
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete PM record');
+      }
+
+      alert('PM record deleted successfully');
+      navigate(-1); // Go back to previous page
+    } catch (err) {
+      console.error('Error deleting PM record:', err);
+      alert('Failed to delete PM record. Please try again.');
+    } finally {
+      setDeleting(false);
+      setShowDeleteConfirm(false);
     }
   };
 
@@ -405,6 +437,106 @@ const PMDetail = () => {
           </div>
         )}
       </div>
+
+      {/* Delete Button */}
+      <div style={{ marginTop: '20px', textAlign: 'center', paddingBottom: '20px' }}>
+        <button
+          onClick={handleDeleteClick}
+          disabled={deleting}
+          style={{
+            padding: '12px 32px',
+            background: '#e74c3c',
+            color: 'white',
+            border: 'none',
+            borderRadius: '6px',
+            fontSize: '1rem',
+            fontWeight: '600',
+            cursor: deleting ? 'not-allowed' : 'pointer',
+            transition: 'all 0.2s',
+            opacity: deleting ? 0.6 : 1
+          }}
+          onMouseOver={(e) => !deleting && (e.target.style.background = '#c0392b')}
+          onMouseOut={(e) => (e.target.style.background = '#e74c3c')}
+        >
+          {deleting ? 'Deleting...' : 'Delete PM Record'}
+        </button>
+      </div>
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            background: 'white',
+            borderRadius: '12px',
+            padding: '30px',
+            maxWidth: '450px',
+            width: '90%',
+            boxShadow: '0 10px 40px rgba(0, 0, 0, 0.3)'
+          }}>
+            <div style={{ textAlign: 'center', marginBottom: '25px' }}>
+              <AlertTriangle size={48} color="#e74c3c" style={{ marginBottom: '15px' }} />
+              <h3 style={{ margin: '0 0 10px 0', color: '#2c3e50', fontSize: '1.3rem' }}>
+                Delete PM Record?
+              </h3>
+              <p style={{ margin: 0, color: '#7f8c8d', fontSize: '0.95rem', lineHeight: '1.5' }}>
+                This will permanently delete PM #{pmData.PM_ID} and all associated checklist results. This action cannot be undone.
+              </p>
+            </div>
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+              <button
+                onClick={handleCancelDelete}
+                disabled={deleting}
+                style={{
+                  padding: '10px 24px',
+                  background: 'white',
+                  color: '#666',
+                  border: '2px solid #ddd',
+                  borderRadius: '6px',
+                  fontSize: '0.95rem',
+                  fontWeight: '600',
+                  cursor: deleting ? 'not-allowed' : 'pointer',
+                  transition: 'all 0.2s'
+                }}
+                onMouseOver={(e) => !deleting && (e.target.style.borderColor = '#999')}
+                onMouseOut={(e) => (e.target.style.borderColor = '#ddd')}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmDelete}
+                disabled={deleting}
+                style={{
+                  padding: '10px 24px',
+                  background: '#e74c3c',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  fontSize: '0.95rem',
+                  fontWeight: '600',
+                  cursor: deleting ? 'not-allowed' : 'pointer',
+                  transition: 'all 0.2s',
+                  opacity: deleting ? 0.6 : 1
+                }}
+                onMouseOver={(e) => !deleting && (e.target.style.background = '#c0392b')}
+                onMouseOut={(e) => (e.target.style.background = '#e74c3c')}
+              >
+                {deleting ? 'Deleting...' : 'Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
