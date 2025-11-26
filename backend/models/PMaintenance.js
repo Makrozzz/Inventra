@@ -226,7 +226,7 @@ class PMaintenance {
           pmr.Checklist_ID,
           pmr.Is_OK_bool,
           pmr.Remarks,
-          pmc.Check_Item,
+          pmc.Check_item_Long,
           pmc.Category_ID
         FROM PM_RESULT pmr
         LEFT JOIN PM_CHECKLIST pmc ON pmr.Checklist_ID = pmc.Checklist_ID
@@ -334,7 +334,7 @@ class PMaintenance {
               pmr.Checklist_ID,
               pmr.Is_OK_bool,
               pmr.Remarks,
-              pmc.Check_Item,
+              pmc.Check_item_Long,
               pmc.Category_ID
             FROM PM_RESULT pmr
             LEFT JOIN PM_CHECKLIST pmc ON pmr.Checklist_ID = pmc.Checklist_ID

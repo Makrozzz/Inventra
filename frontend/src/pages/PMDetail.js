@@ -373,7 +373,7 @@ const PMDetail = () => {
                   </div>
                   <div>
                     <div style={{ color: '#2c3e50', fontSize: '1rem', fontWeight: '500', marginBottom: '4px' }}>
-                      {result.Check_Item}
+                      {result.Check_item_Long}
                     </div>
                     {result.Remarks && (
                       <div style={{ color: '#7f8c8d', fontSize: '0.85rem', fontStyle: 'italic' }}>

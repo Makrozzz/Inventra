@@ -221,7 +221,7 @@ class PDFGenerator {
                     pmr.PM_Result_ID,
                     pmr.Is_OK_bool,
                     pmr.Remarks,
-                    pmc.Check_Item
+                    pmc.Check_item_Long
                 FROM PM_RESULT pmr
                 LEFT JOIN PM_CHECKLIST pmc ON pmr.Checklist_ID = pmc.Checklist_ID
                 WHERE pmr.PM_ID = ?
@@ -234,7 +234,7 @@ class PDFGenerator {
             
             // Add index and ensure Is_OK_bool is boolean
             return results.map((item, index) => ({
-                Check_Item: item.Check_Item || 'N/A',
+                Check_item_Long: item.Check_item_Long || 'N/A',
                 Is_OK_bool: item.Is_OK_bool === 1 || item.Is_OK_bool === true,
                 Remarks: item.Remarks || null,
                 index: index + 1
