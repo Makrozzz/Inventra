@@ -18,7 +18,9 @@ class PeripheralImporter {
       success: 0,
       failed: 0,
       skipped: 0,
+      duplicates: 0,
       errors: [],
+      warnings: [],
       details: []
     };
     
@@ -53,6 +55,26 @@ class PeripheralImporter {
         for (const peripheral of peripherals) {
           try {
             console.log(`   Creating peripheral: ${peripheral.peripheral_name} (${peripheral.serial_code || 'No serial'})`);
+            
+            // Check for duplicate peripheral
+            const isDuplicate = await this.checkDuplicatePeripheral(
+              assetId,
+              peripheral.peripheral_name,
+              peripheral.serial_code
+            );
+            
+            if (isDuplicate) {
+              console.log(`   ⚠️  Duplicate peripheral detected: ${peripheral.peripheral_name} with serial ${peripheral.serial_code || 'N/A'} - Skipping`);
+              results.duplicates++;
+              results.warnings.push({
+                assetSerial,
+                assetId,
+                peripheral: peripheral.peripheral_name,
+                serialCode: peripheral.serial_code || 'N/A',
+                message: `Peripheral '${peripheral.peripheral_name}' with serial code '${peripheral.serial_code || 'N/A'}' already exists for this asset`
+              });
+              continue; // Skip this peripheral and continue with others
+            }
             
             const peripheralId = await Asset.createPeripheral(
               assetId,
@@ -103,6 +125,7 @@ class PeripheralImporter {
     console.log(`   ✅ Success: ${results.success}`);
     console.log(`   ❌ Failed: ${results.failed}`);
     console.log(`   ⏭️  Skipped: ${results.skipped}`);
+    console.log(`   ⚠️  Duplicates: ${results.duplicates}`);
     
     return results;
   }
@@ -142,19 +165,34 @@ class PeripheralImporter {
   /**
    * Check for duplicate peripherals before adding
    * @param {Number} assetId - Asset ID
+   * @param {String} peripheralTypeName - Peripheral type name
    * @param {String} serialCode - Peripheral serial code
    * @returns {Boolean} True if duplicate exists
    */
-  static async checkDuplicatePeripheral(assetId, serialCode) {
-    if (!serialCode) return false;
-    
+  static async checkDuplicatePeripheral(assetId, peripheralTypeName, serialCode) {
     try {
-      // This would require a new method in Asset model
-      // For now, we'll allow duplicates to be handled by database constraints
-      return false;
+      const { pool } = require('../config/database');
+      
+      // Check if peripheral with same type and serial code already exists for this asset
+      // Match by peripheral type name (case-insensitive) and serial code
+      const [existing] = await pool.execute(
+        `SELECT p.Peripheral_ID 
+         FROM PERIPHERAL p
+         JOIN PERIPHERAL_TYPE pt ON p.Peripheral_Type_ID = pt.Peripheral_Type_ID
+         WHERE p.Asset_ID = ? 
+         AND LOWER(pt.Peripheral_Type_Name) = LOWER(?)
+         AND (
+           (p.Serial_Code IS NULL AND ? IS NULL) OR
+           (p.Serial_Code = ?)
+         )
+         LIMIT 1`,
+        [assetId, peripheralTypeName, serialCode || null, serialCode || null]
+      );
+      
+      return existing.length > 0;
     } catch (error) {
       console.error('Error checking duplicate peripheral:', error.message);
-      return false;
+      return false; // On error, allow the insert attempt (will be caught by error handler)
     }
   }
   

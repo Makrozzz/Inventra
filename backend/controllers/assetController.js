@@ -1104,7 +1104,13 @@ const bulkImportAssets = async (req, res, next) => {
         results.peripheralsAdded = peripheralResults.success;
         results.failed += peripheralResults.failed;
         results.errors.push(...peripheralResults.errors);
+        results.warnings.push(...peripheralResults.warnings);
         results.imported += peripheralResults.success;
+        
+        // Track duplicate count
+        if (peripheralResults.duplicates > 0) {
+          results.duplicates = peripheralResults.duplicates;
+        }
       }
       
       // Handle new asset creation if in mixed mode
@@ -1118,7 +1124,7 @@ const bulkImportAssets = async (req, res, next) => {
       }
       
       // Log final results
-      const finalMessage = `Bulk import completed: ${results.imported} total (${results.assetsCreated} new assets, ${results.peripheralsAdded} peripheral additions), ${results.failed} failed`;
+      const finalMessage = `Bulk import completed: ${results.imported} total (${results.assetsCreated} new assets, ${results.peripheralsAdded} peripheral additions), ${results.failed} failed${results.duplicates ? `, ${results.duplicates} duplicates skipped` : ''}`;
       console.log(`\n${finalMessage}`);
       logger.info(finalMessage);
       
@@ -1129,7 +1135,9 @@ const bulkImportAssets = async (req, res, next) => {
         assetsCreated: results.assetsCreated,
         peripheralsAdded: results.peripheralsAdded,
         failed: results.failed,
+        duplicates: results.duplicates || 0,
         errors: results.errors.slice(0, 50),
+        warnings: results.warnings.slice(0, 50),
         total: assets.length,
         mode: results.mode,
         modeAnalysis: results.modeAnalysis
