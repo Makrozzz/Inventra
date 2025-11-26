@@ -414,6 +414,19 @@ const Assets = ({ onDelete }) => {
   // Helper function to format cell values
   const formatCellValue = (value, columnName) => {
     if (value === null || value === undefined) return 'N/A';
+    
+    // Format date columns to show only date (YYYY-MM-DD)
+    if (columnName === 'Start_Date' || columnName === 'End_Date') {
+      try {
+        const date = new Date(value);
+        if (!isNaN(date.getTime())) {
+          return date.toLocaleDateString('en-CA'); // en-CA gives YYYY-MM-DD format
+        }
+      } catch (e) {
+        return value;
+      }
+    }
+    
     if (typeof value === 'string' && value.length > 50) {
       return value.substring(0, 50) + '...';
     }

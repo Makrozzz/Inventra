@@ -116,13 +116,16 @@ const AddAsset = () => {
   // Auto-populate project data when project reference number changes
   useEffect(() => {
     if (projectData.project_reference_num.trim()) {
-      fetchProjectByReference(projectData.project_reference_num);
+      // Only fetch if we don't already have the customer name (meaning data wasn't populated from dropdown)
+      if (!projectData.customer_name) {
+        fetchProjectByReference(projectData.project_reference_num);
+      }
     } else {
       // Clear dependent data when project ref is cleared
       setBranches([]);
       setSelectedBranch('');
       setProjectData(prev => ({
-        ...prev,
+        project_reference_num: prev.project_reference_num,
         customer_name: '',
         customer_reference_number: '',
         project_title: ''
@@ -735,7 +738,10 @@ const AddAsset = () => {
     }
     
     setProjectSearchTerm(value);
-    setProjectData({ ...projectData, project_reference_num: value });
+    setProjectData(prev => ({
+      ...prev,
+      project_reference_num: value
+    }));
     setShowProjectDropdown(value.length > 0);
     
     // Clear previous search errors when user types
@@ -748,15 +754,23 @@ const AddAsset = () => {
     setUserHasInteracted(true); // User has interacted by selecting
     setProjectSearchError(null); // Clear any errors
     
+    // Set project data with fresh values (don't spread old projectData to avoid stale state)
     setProjectData({
-      ...projectData,
-      project_reference_num: project.Project_Ref_Number,
+      project_reference_num: project.Project_Ref_Number || '',
       customer_name: project.Customer_Name || '',
       customer_reference_number: project.Customer_Ref_Number || '',
       project_title: project.Project_Title || ''
     });
-    setProjectSearchTerm(project.Project_Ref_Number);
+    setProjectSearchTerm(project.Project_Ref_Number || '');
     setShowProjectDropdown(false);
+    
+    // Auto-populate antivirus from project if available
+    if (project.Antivirus) {
+      setAsset(prev => ({
+        ...prev,
+        antivirus: project.Antivirus
+      }));
+    }
     
     // Trigger branch fetching if customer name is available
     if (project.Customer_Name) {
@@ -771,7 +785,7 @@ const AddAsset = () => {
 
   const handleProjectInputBlur = () => {
     // Delay hiding dropdown to allow for clicks
-    setTimeout(() => setShowProjectDropdown(false), 200);
+    setTimeout(() => setShowProjectDropdown(false), 300);
   };
 
   // Helper function to check if a peripheral form is complete
@@ -974,7 +988,10 @@ const AddAsset = () => {
                       <div
                         key={index}
                         className="dropdown-item"
-                        onClick={() => handleProjectSelect(project)}
+                        onMouseDown={(e) => {
+                          e.preventDefault(); // Prevent input blur
+                          handleProjectSelect(project);
+                        }}
                       >
                         <div className="dropdown-ref-number">
                           {project.Project_Ref_Number}

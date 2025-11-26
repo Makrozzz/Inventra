@@ -142,8 +142,8 @@ const CSVImport = () => {
   const validateData = async (data, isGroupedData = false) => {
     const validationResults = [];
     
-    // Define validation rules
-    const requiredFields = ['project_reference_num', 'serial_number', 'tag_id', 'item_name'];
+    // Define validation rules - using standard field names from HeaderMapper
+    const requiredFields = ['project_ref_num', 'serial_number', 'tag_id', 'item_name'];
     const validStatuses = ['Active', 'Inactive', 'Maintenance'];
     
     // Track unique values for uniqueness validation (only if not grouped data)
@@ -317,36 +317,6 @@ const CSVImport = () => {
     } finally {
       setImporting(false);
     }
-  };
-
-  const downloadTemplate = () => {
-    const templateData = [
-      {
-        project_reference_num: 'QT240000000015729',
-        customer_name: 'NADMA',
-        customer_reference_number: 'M24050',
-        branch: 'Putrajaya',
-        serial_number: 'SN-001',
-        tag_id: 'TAG-001',
-        item_name: 'Desktop Computer',
-        category: 'Desktop',
-        model: 'Dell OptiPlex 3090',
-        status: 'Active',
-        recipient_name: 'John Doe',
-        department_name: 'IT Department'
-      }
-    ];
-
-    const csv = Papa.unparse(templateData);
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'asset-import-template.csv';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
   };
 
   const resetImport = () => {
@@ -641,12 +611,6 @@ const CSVImport = () => {
             Back to Assets
           </button>
           <h1 className="page-title">CSV Bulk Import</h1>
-        </div>
-        <div className="header-actions">
-          <button className="btn btn-outline" onClick={downloadTemplate}>
-            <Download size={16} />
-            Download Template
-          </button>
         </div>
       </div>
 

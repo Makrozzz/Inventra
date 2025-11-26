@@ -50,12 +50,20 @@ class HeaderMapper {
       'serial_num', 'ser_no', 'sno', 'serialnumber', 'assetserialnumber'
     ],
     
-    // project_reference_num variations  
-    'project_reference_num': [
-      'project_reference_num', 'project reference num', 'project ref',
+    // project_ref_num variations (matches database field Project_Ref_Number)
+    'project_ref_num': [
+      'project_ref_num', 'project ref num', 'project ref',
       'project reference', 'project id', 'project no', 'project number',
       'project_ref', 'proj_ref', 'project reference number',
-      'projectreferencenumber', 'projectref', 'projectid'
+      'projectreferencenumber', 'projectref', 'projectid',
+      'project reference num', 'project_reference_num'
+    ],
+    
+    // project_title variations
+    'project_title': [
+      'project_title', 'project title', 'project name', 'project',
+      'title', 'project_name', 'projecttitle', 'projectname',
+      'project description', 'project desc'
     ],
     
     // tag_id variations
@@ -99,9 +107,9 @@ class HeaderMapper {
       'recipientname', 'assignedto', 'assigneduser', 'username'
     ],
     
-    // department_name variations
-    'department_name': [
-      'department_name', 'department name', 'department', 'dept',
+    // department variations (maps to Department in RECIPIENTS table)
+    'department': [
+      'department', 'department_name', 'department name', 'dept',
       'unit', 'division', 'team', 'departmentname'
     ],
     
@@ -138,13 +146,103 @@ class HeaderMapper {
     'customer_reference_number': [
       'customer_reference_number', 'customer reference number',
       'customer ref', 'customer reference', 'customer ref no',
-      'customerreferencenumber', 'customerref', 'clientref'
+      'customer ref num', 'customer ref number', 'cust ref num',
+      'cust ref number', 'cust reference number', 'client ref num',
+      'client ref number', 'client reference number',
+      'customerreferencenumber', 'customerrefnum', 'customerref', 
+      'clientref', 'clientrefnum', 'customer_ref_num', 'customer_ref_number',
+      'cust_ref_num', 'client_ref_num'
     ],
     
     // branch variations
     'branch': [
       'branch', 'branch name', 'location', 'site',
       'office', 'branchname', 'branchlocation'
+    ],
+    
+    // antivirus variations
+    'antivirus': [
+      'antivirus', 'anti virus', 'anti-virus', 'av',
+      'antivirus software', 'virus protection', 'av software',
+      'antivirussoftware', 'virusprotection'
+    ],
+    
+    // windows variations
+    'windows': [
+      'windows', 'windows os', 'windows version', 'os',
+      'operating system', 'windowsos', 'windowsversion',
+      'windows operating system', 'microsoft windows'
+    ],
+    
+    // microsoft_office variations
+    'microsoft_office': [
+      'microsoft_office', 'microsoft office', 'ms office', 'office',
+      'office version', 'office suite', 'msoffice', 'officeversion',
+      'microsoft_office_version', 'ms_office', 'office_suite'
+    ],
+    
+    // software variations
+    'software': [
+      'software', 'installed software', 'applications', 'apps',
+      'software list', 'installed apps', 'installedsoftware',
+      'softwarelist', 'application software'
+    ],
+    
+    // specifications variations
+    'specifications': [
+      'specifications', 'specs', 'spec', 'technical specs',
+      'technical specifications', 'hardware specs', 'system specs',
+      'techspecs', 'technicalspecifications', 'hardwarespecs'
+    ],
+    
+    // warranty variations
+    'warranty': [
+      'warranty', 'warranty info', 'warranty period', 'warranty status',
+      'warranty expiry', 'warranty date', 'warrantyinfo',
+      'warrantyperiod', 'warranty_expiry', 'warranty_date'
+    ],
+    
+    // preventive_maintenance variations
+    'preventive_maintenance': [
+      'preventive_maintenance', 'preventive maintenance', 'pm',
+      'maintenance', 'pm schedule', 'maintenance schedule',
+      'preventivemaintenance', 'pmschedule', 'maintenanceschedule',
+      'preventative maintenance', 'preventive_maintenance_schedule'
+    ],
+    
+    // start_date variations
+    'start_date': [
+      'start_date', 'start date', 'date start', 'start',
+      'begin date', 'start_dt', 'startdate', 'datestart',
+      'beginning date', 'commencement date'
+    ],
+    
+    // end_date variations
+    'end_date': [
+      'end_date', 'end date', 'date end', 'end',
+      'finish date', 'end_dt', 'enddate', 'dateend',
+      'expiry date', 'completion date', 'expiration date'
+    ],
+    
+    // position variations
+    'position': [
+      'position', 'job position', 'job title', 'title',
+      'role', 'designation', 'jobtitle', 'jobposition',
+      'employee position', 'employee title'
+    ],
+    
+    // monthly_price variations
+    'monthly_price': [
+      'monthly_price', 'monthly price', 'price per month', 'monthly cost',
+      'monthly rate', 'monthly fee', 'monthlyprice', 'monthlycost',
+      'monthly_cost', 'monthly_rate', 'monthly_fee', 'price/month'
+    ],
+    
+    // software_prices variations
+    'software_prices': [
+      'software_prices', 'software prices', 'software price', 'software cost',
+      'software costs', 'software pricing', 'softwareprices', 'softwarecost',
+      'software_cost', 'software_pricing', 'license cost', 'license price'
     ]
   };
 
@@ -167,20 +265,33 @@ class HeaderMapper {
   static getKeywords(field) {
     const keywordMap = {
       'serial_number': ['serial', 'sno', 'ser'],
-      'project_reference_num': ['project', 'ref', 'proj'],
+      'project_ref_num': ['project', 'ref', 'reference', 'proj'],
+      'project_title': ['project', 'title', 'name'],
       'tag_id': ['tag', 'asset'],
       'item_name': ['item', 'asset', 'name', 'equipment', 'device'],
       'category': ['categor', 'type'],
       'model': ['model'],
       'status': ['status', 'condition', 'state'],
       'recipient_name': ['recipient', 'assign', 'user', 'owner'],
-      'department_name': ['department', 'dept', 'unit'],
+      'department': ['department', 'dept', 'unit'],
       'peripheral_name': ['peripheral', 'accessory', 'component'],
       'serial_code': ['serial', 'code'],
       'remarks': ['remark', 'note', 'comment'],
       'customer_name': ['customer', 'client'],
-      'customer_reference_number': ['customer', 'reference'],
-      'branch': ['branch', 'location', 'site']
+      'customer_reference_number': ['customer', 'client', 'cust'],
+      'branch': ['branch', 'location', 'site'],
+      'antivirus': ['antivirus', 'anti', 'virus', 'av'],
+      'windows': ['windows', 'os', 'operating'],
+      'microsoft_office': ['microsoft', 'office', 'ms'],
+      'software': ['software', 'apps', 'applications'],
+      'specifications': ['spec', 'technical', 'hardware'],
+      'warranty': ['warranty', 'guarantee'],
+      'preventive_maintenance': ['maintenance', 'pm', 'preventive'],
+      'start_date': ['start', 'begin', 'commence'],
+      'end_date': ['end', 'finish', 'expir'],
+      'position': ['position', 'title', 'role', 'job'],
+      'monthly_price': ['monthly', 'price', 'cost', 'rate'],
+      'software_prices': ['software', 'price', 'cost', 'license']
     };
     
     return keywordMap[field] || [field];
@@ -203,20 +314,30 @@ class HeaderMapper {
       }
     }
     
-    // Try keyword matching as fallback
+    // Try keyword matching as fallback (only if exact match fails)
+    // Score each field based on keyword matches to find best match
+    let bestMatch = null;
+    let bestScore = 0;
+    
     for (const [standardField, variations] of Object.entries(this.headerMappings)) {
       const keywords = this.getKeywords(standardField);
       
-      const hasKeyword = keywords.some(keyword => 
+      // Count how many keywords match
+      const matchCount = keywords.filter(keyword => 
         normalized.includes(keyword)
-      );
+      ).length;
       
-      if (hasKeyword) {
-        return standardField;
+      // Only consider if at least 70% of keywords match (increased from 50%)
+      const matchThreshold = keywords.length * 0.7;
+      if (matchCount > 0 && matchCount >= matchThreshold) {
+        if (matchCount > bestScore) {
+          bestScore = matchCount;
+          bestMatch = standardField;
+        }
       }
     }
     
-    return null; // No match found
+    return bestMatch; // Return best match or null
   }
 
   /**
@@ -227,7 +348,8 @@ class HeaderMapper {
     const mapping = {};
     const unmapped = [];
     const duplicates = new Set();
-    const usedStandardFields = new Set();
+    const duplicateDetails = {}; // Track which headers map to duplicated fields
+    const usedStandardFields = new Map(); // Track which user header first used each standard field
     
     userHeaders.forEach(userHeader => {
       const standardField = this.findMatchingField(userHeader);
@@ -236,10 +358,16 @@ class HeaderMapper {
         // Check for duplicate mappings
         if (usedStandardFields.has(standardField)) {
           duplicates.add(standardField);
+          // Track the duplicate details for debugging
+          if (!duplicateDetails[standardField]) {
+            duplicateDetails[standardField] = [usedStandardFields.get(standardField)];
+          }
+          duplicateDetails[standardField].push(userHeader);
+        } else {
+          usedStandardFields.set(standardField, userHeader);
         }
         
         mapping[userHeader] = standardField;
-        usedStandardFields.add(standardField);
       } else {
         unmapped.push(userHeader);
       }
@@ -249,7 +377,8 @@ class HeaderMapper {
       mapping, 
       unmapped,
       duplicates: Array.from(duplicates),
-      standardFields: Array.from(usedStandardFields)
+      duplicateDetails, // Include details about which user headers caused duplicates
+      standardFields: Array.from(usedStandardFields.keys())
     };
   }
 
@@ -280,7 +409,7 @@ class HeaderMapper {
    * Get required fields for validation
    */
   static getRequiredFields() {
-    return ['project_reference_num', 'serial_number', 'tag_id', 'item_name'];
+    return ['project_ref_num', 'serial_number', 'tag_id', 'item_name'];
   }
 
   /**

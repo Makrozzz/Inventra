@@ -13,6 +13,25 @@ const HeaderMappingConfirmation = ({
   const requiredFields = HeaderMapper.getRequiredFields();
   const standardFields = HeaderMapper.getStandardFields();
   
+  // Calculate current duplicates dynamically from customMapping
+  const getCurrentDuplicates = () => {
+    const fieldCounts = {};
+    Object.values(customMapping).forEach(field => {
+      if (field) {
+        fieldCounts[field] = (fieldCounts[field] || 0) + 1;
+      }
+    });
+    return Object.keys(fieldCounts).filter(field => fieldCounts[field] > 1);
+  };
+  
+  // Calculate current unmapped headers dynamically
+  const getCurrentUnmapped = () => {
+    return detectedHeaders.filter(header => !customMapping[header]);
+  };
+  
+  const currentDuplicates = getCurrentDuplicates();
+  const currentUnmapped = getCurrentUnmapped();
+  
   const handleMappingChange = (originalHeader, newStandardField) => {
     setCustomMapping(prev => ({
       ...prev,
@@ -57,21 +76,21 @@ const HeaderMappingConfirmation = ({
               </div>
             </div>
             
-            {mappingResult.unmapped.length > 0 && (
+            {currentUnmapped.length > 0 && (
               <div className="info-card warning">
                 <AlertTriangle size={20} />
                 <div>
-                  <strong>{mappingResult.unmapped.length}</strong>
+                  <strong>{currentUnmapped.length}</strong>
                   <span>Headers Unmapped</span>
                 </div>
               </div>
             )}
             
-            {mappingResult.duplicates.length > 0 && (
+            {currentDuplicates.length > 0 && (
               <div className="info-card error">
                 <AlertTriangle size={20} />
                 <div>
-                  <strong>{mappingResult.duplicates.length}</strong>
+                  <strong>{currentDuplicates.length}</strong>
                   <span>Duplicate Mappings</span>
                 </div>
               </div>
@@ -93,7 +112,7 @@ const HeaderMappingConfirmation = ({
                   {detectedHeaders.map((header, index) => {
                     const mappedField = customMapping[header];
                     const isRequired = requiredFields.includes(mappedField);
-                    const isDuplicate = mappingResult.duplicates.includes(mappedField);
+                    const isDuplicate = currentDuplicates.includes(mappedField);
                     
                     return (
                       <tr key={index} className={!mappedField ? 'unmapped' : ''}>
@@ -132,25 +151,42 @@ const HeaderMappingConfirmation = ({
             </div>
           </div>
 
-          {mappingResult.unmapped.length > 0 && (
+          {currentUnmapped.length > 0 && (
             <div className="unmapped-warning">
               <AlertTriangle size={16} />
               <p>
                 The following headers couldn't be automatically mapped: 
-                <strong> {mappingResult.unmapped.join(', ')}</strong>
+                <strong> {currentUnmapped.join(', ')}</strong>
               </p>
               <p className="hint">You can manually map them using the dropdowns above or they will be ignored during import.</p>
             </div>
           )}
 
-          {mappingResult.duplicates.length > 0 && (
+          {currentDuplicates.length > 0 && (
             <div className="duplicate-error">
               <AlertTriangle size={16} />
-              <p>
-                <strong>Warning:</strong> Multiple headers are mapped to the same field: 
-                <strong> {mappingResult.duplicates.join(', ')}</strong>
-              </p>
-              <p className="hint">Please ensure each standard field is mapped only once.</p>
+              <div>
+                <p>
+                  <strong>Warning:</strong> Multiple CSV columns are mapped to the same database field:
+                </p>
+                {currentDuplicates.map(field => {
+                  const duplicateHeaders = Object.entries(customMapping)
+                    .filter(([_, mappedField]) => mappedField === field)
+                    .map(([header, _]) => header);
+                  return (
+                    <div key={field} className="duplicate-detail">
+                      <strong>{field}:</strong> {duplicateHeaders.map((h, i) => (
+                        <span key={i}>
+                          "{h}"{i < duplicateHeaders.length - 1 ? ', ' : ''}
+                        </span>
+                      ))}
+                    </div>
+                  );
+                })}
+                <p className="hint">
+                  Please remove duplicate columns from your CSV or manually remap them to different fields using the dropdowns above.
+                </p>
+              </div>
             </div>
           )}
 
@@ -423,6 +459,20 @@ const HeaderMappingConfirmation = ({
           background: #fef2f2;
           border: 1px solid #fca5a5;
           color: #991b1b;
+        }
+        
+        .duplicate-detail {
+          margin: 8px 0 8px 24px;
+          padding: 8px 12px;
+          background: rgba(255, 255, 255, 0.6);
+          border-radius: 4px;
+          font-size: 13px;
+          font-family: 'Courier New', monospace;
+        }
+        
+        .duplicate-detail strong {
+          color: #7c2d12;
+          margin-right: 8px;
         }
 
         .unmapped-warning svg,

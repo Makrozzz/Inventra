@@ -13,6 +13,7 @@ const authRoutes = require('./auth');
 const registerRoutes = require('./register');
 const profileRoutes = require('./profile');
 const optionsRoutes = require('./options');
+const recipientRoutes = require('./recipients');
 
 // Mount routes
 router.use('/assets', assetRoutes);
@@ -26,5 +27,6 @@ router.use('/auth', authRoutes);
 router.use('/register', registerRoutes);
 router.use('/profile', profileRoutes);
 router.use('/options', optionsRoutes);
+router.use('/recipients', recipientRoutes);
 
 module.exports = router;

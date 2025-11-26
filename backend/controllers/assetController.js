@@ -605,6 +605,139 @@ const getAssetStatistics = async (req, res, next) => {
 };
 
 /**
+ * Helper function to process new asset creation in bulk
+ */
+const processNewAssets = async (assets) => {
+  const results = {
+    imported: 0,
+    failed: 0,
+    errors: []
+  };
+
+  for (const assetData of assets) {
+    try {
+      // Check if asset already exists
+      const existingAsset = await Asset.findBySerialNumber(assetData.serial_number);
+      if (existingAsset) {
+        results.failed++;
+        results.errors.push({
+          serial_number: assetData.serial_number,
+          error: 'Asset with this serial number already exists'
+        });
+        continue;
+      }
+
+      // Get or create recipient
+      let recipientId = null;
+      if (assetData.recipient_name && assetData.department) {
+        try {
+          recipientId = await Asset.createRecipient(
+            assetData.recipient_name,
+            assetData.department,
+            assetData.position || null
+          );
+          console.log(`   👤 Created recipient: ${assetData.recipient_name} (ID: ${recipientId})`);
+        } catch (recipientError) {
+          console.log(`   ⚠️  Failed to create recipient: ${recipientError.message}`);
+          // Continue without recipient - asset can be created without one
+        }
+      } else {
+        console.log(`   ℹ️  No recipient data provided (recipient_name: ${assetData.recipient_name}, department: ${assetData.department})`);
+      }
+
+      // Get or create category
+      let categoryId = null;
+      if (assetData.category) {
+        try {
+          categoryId = await Asset.getOrCreateCategory(assetData.category);
+          console.log(`   📦 Category ID: ${categoryId}`);
+        } catch (categoryError) {
+          console.log(`   ⚠️  Failed to get/create category: ${categoryError.message}`);
+        }
+      }
+
+      // Get or create model
+      let modelId = null;
+      if (assetData.model) {
+        try {
+          modelId = await Asset.getOrCreateModel(assetData.model);
+          console.log(`   🏷️  Model ID: ${modelId}`);
+        } catch (modelError) {
+          console.log(`   ⚠️  Failed to get/create model: ${modelError.message}`);
+        }
+      }
+
+      // Create the asset
+      const assetToCreate = {
+        Asset_Serial_Number: assetData.serial_number,
+        Asset_Tag_ID: assetData.tag_id,
+        Item_Name: assetData.item_name,
+        Status: assetData.status || 'Active',
+        Recipients_ID: recipientId,
+        Category_ID: categoryId,
+        Model_ID: modelId,
+        Windows: assetData.windows || null,
+        Microsoft_Office: assetData.microsoft_office || null,
+        Monthly_Prices: assetData.monthly_prices || null
+      };
+
+      const newAsset = await Asset.create(assetToCreate);
+      console.log(`   ✅ Asset created with ID: ${newAsset.Asset_ID}, Recipients_ID: ${recipientId}`);
+
+      // Create peripherals if provided
+      if (assetData.peripherals && Array.isArray(assetData.peripherals)) {
+        for (const peripheral of assetData.peripherals) {
+          if (peripheral.peripheral_name && peripheral.serial_code) {
+            await Asset.addPeripheral(newAsset.Asset_ID, {
+              peripheral_name: peripheral.peripheral_name,
+              serial_code: peripheral.serial_code,
+              condition: peripheral.condition || 'Good',
+              remarks: peripheral.remarks || null
+            });
+          }
+        }
+      }
+
+      // Link to project/customer via inventory
+      if (assetData.project_ref_num && assetData.customer_name && assetData.branch) {
+        try {
+          const inventoryId = await Asset.linkToProject(
+            newAsset.Asset_ID,
+            assetData.project_ref_num,
+            assetData.customer_name,
+            assetData.branch
+          );
+          console.log(`   🔗 Linked asset ${assetData.serial_number} to project ${assetData.project_ref_num} (Inventory_ID: ${inventoryId})`);
+        } catch (linkError) {
+          console.log(`   ❌ CRITICAL: Failed to link to project: ${linkError.message}`);
+          console.log(`   ⚠️  Asset created but orphaned - will not appear in asset list`);
+          console.log(`   📋 Project data: ref=${assetData.project_ref_num}, customer=${assetData.customer_name}, branch=${assetData.branch}`);
+          // This is critical - asset won't show in the list without inventory link
+          throw new Error(`Failed to link asset to project: ${linkError.message}`);
+        }
+      } else {
+        console.log(`   ⚠️  Missing project data - asset will be orphaned`);
+        console.log(`   📋 Provided: project_ref_num=${assetData.project_ref_num}, customer_name=${assetData.customer_name}, branch=${assetData.branch}`);
+        throw new Error('Cannot create asset without project link - project_ref_num, customer_name, and branch are required');
+      }
+
+      results.imported++;
+      console.log(`   ✅ Created asset: ${assetData.serial_number}`);
+      
+    } catch (error) {
+      results.failed++;
+      results.errors.push({
+        serial_number: assetData.serial_number || 'Unknown',
+        error: error.message
+      });
+      console.error(`   ❌ Failed to create asset ${assetData.serial_number}:`, error.message);
+    }
+  }
+
+  return results;
+};
+
+/**
  * Bulk import assets with comprehensive validation and processing
  * Supports two modes:
  * 1. Create new assets (default)
@@ -687,7 +820,7 @@ const bulkImportAssets = async (req, res, next) => {
       // Handle new asset creation if in mixed mode
       if (separated.createAssets.length > 0) {
         console.log(`\n📝 Creating new assets...`);
-        const createResults = await this.processNewAssets(separated.createAssets);
+        const createResults = await processNewAssets(separated.createAssets);
         results.assetsCreated = createResults.imported;
         results.failed += createResults.failed;
         results.errors.push(...createResults.errors);
