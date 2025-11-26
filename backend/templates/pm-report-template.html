@@ -27,26 +27,49 @@
             background: white;
         }
 
+        .header-container {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 8px;
+        }
+
+        .logo-section {
+            flex-shrink: 0;
+        }
+
+        .header-logo {
+            height: 55px;
+            width: auto;
+            object-fit: contain;
+            filter: grayscale(100%);
+            display: block;
+        }
+
         .header {
             background: #333;
             color: white;
             padding: 8px 15px;
             border-radius: 4px;
-            margin-bottom: 8px;
             display: flex;
             justify-content: space-between;
             align-items: center;
             border: 2px solid #000;
+            flex: 1;
+        }
+
+        .header-content {
+            flex: 1;
         }
 
         .header-left h1 {
-            font-size: 13pt;
+            font-size: 11pt;
             font-weight: bold;
             margin-bottom: 2px;
         }
 
         .header-left p {
-            font-size: 7pt;
+            font-size: 6.5pt;
             opacity: 0.95;
         }
 
@@ -205,8 +228,11 @@
         .signature-box {
             border: 2px solid #333;
             border-radius: 4px;
-            padding: 8px;
+            padding: 8px 8px 10px 8px;
             background: white;
+            min-height: 95px;
+            display: flex;
+            flex-direction: column;
         }
 
         .signature-box h3 {
@@ -217,22 +243,30 @@
             padding-bottom: 3px;
         }
 
+        .signature-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
         .signature-line {
-            margin: 5px 0;
+            margin: 4px 0;
             font-size: 6.5pt;
+            display: flex;
+            align-items: center;
         }
 
         .signature-line strong {
             display: inline-block;
-            width: 60px;
+            width: 70px;
             color: #000;
+            flex-shrink: 0;
         }
 
-        .signature-space {
-            border-bottom: 1px solid #000;
-            display: inline-block;
-            width: 120px;
-            margin-left: 5px;
+        .signature-value {
+            flex: 1;
+            color: #333;
         }
 
         .footer {
@@ -266,17 +300,27 @@
     </style>
 </head>
 <body>
-    <!-- Header -->
-    <div class="header">
-        <div class="header-left">
-            <h1>Preventive Maintenance Report</h1>
-            <p>Asset Inspection & Maintenance Record</p>
+    <!-- Logo and Header Container -->
+    <div class="header-container">
+        {{#if Logo_Base64}}
+        <div class="logo-section">
+            <img src="{{Logo_Base64}}" alt="Company Logo" class="header-logo">
         </div>
-        <div class="header-right">
+        {{/if}}
+        
+        <div class="header">
+            <div class="header-content">
+                <div class="header-left">
+                    <h1>Preventive Maintenance Report</h1>
+                    <p>Asset Inspection & Maintenance Record</p>
+                </div>
+            </div>
+            <div class="header-right">
             <div class="pm-id">PM #{{PM_Sequence_Number}}</div>
             <div class="status-badge {{#if Status}}status-{{Status}}{{else}}status-in-process{{/if}}">
                 {{Status}}
             </div>
+        </div>
         </div>
     </div>
 
@@ -385,35 +429,41 @@
     <div class="signatures">
         <div class="signature-box">
             <h3>Technician Acknowledgment</h3>
-            <div class="signature-line">
-                <strong>Name:</strong>
-                <span class="signature-space"></span>
-            </div>
-            <div class="signature-line">
-                <strong>Signature:</strong>
-                <span class="signature-space"></span>
-            </div>
-            <div class="signature-line">
-                <strong>Date:</strong>
-                <span class="signature-space"></span>
+            <div class="signature-content">
+                <div class="signature-line">
+                    <strong>Name:</strong>
+                    <span class="signature-value">{{Created_By_Name}}</span>
+                </div>
+                <div class="signature-line">
+                    <strong>Signature:</strong>
+                    <span class="signature-value"></span>
+                </div>
+                <div class="signature-line">
+                    <strong>Date:</strong>
+                    <span class="signature-value">{{PM_Date_Formatted}}</span>
+                </div>
             </div>
         </div>
 
         <div class="signature-box">
             <h3>Recipient Acknowledgment</h3>
-            <div class="signature-line">
-                <strong>Name:</strong> {{Recipient_Name}}
-            </div>
-            <div class="signature-line">
-                <strong>Department:</strong> {{Department}}
-            </div>
-            <div class="signature-line">
-                <strong>Signature:</strong>
-                <span class="signature-space"></span>
-            </div>
-            <div class="signature-line">
-                <strong>Date:</strong>
-                <span class="signature-space"></span>
+            <div class="signature-content">
+                <div class="signature-line">
+                    <strong>Name:</strong>
+                    <span class="signature-value">{{Recipient_Name}}</span>
+                </div>
+                <div class="signature-line">
+                    <strong>Department:</strong>
+                    <span class="signature-value">{{Department}}</span>
+                </div>
+                <div class="signature-line">
+                    <strong>Signature:</strong>
+                    <span class="signature-value"></span>
+                </div>
+                <div class="signature-line">
+                    <strong>Date:</strong>
+                    <span class="signature-value"></span>
+                </div>
             </div>
         </div>
     </div>

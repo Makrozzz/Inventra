@@ -1,6 +1,7 @@
 const puppeteer = require('puppeteer');
 const handlebars = require('handlebars');
 const fs = require('fs').promises;
+const fsSync = require('fs');
 const path = require('path');
 const PMaintenance = require('../models/PMaintenance');
 const { pool } = require('../config/database');
@@ -35,6 +36,27 @@ class PDFGenerator {
             .replace(/[^a-zA-Z0-9_-]/g, '') // Remove special characters
             .toUpperCase()               // Convert to uppercase
             .substring(0, 50);           // Limit length to 50 characters
+    }
+
+    /**
+     * Convert logo to base64 for embedding in PDF
+     * @returns {string} - Base64 encoded logo or empty string if logo not found
+     */
+    getLogoBase64() {
+        try {
+            const logoPath = path.join(__dirname, '../../frontend/public/logo.png');
+            if (fsSync.existsSync(logoPath)) {
+                const logoBuffer = fsSync.readFileSync(logoPath);
+                const logoBase64 = logoBuffer.toString('base64');
+                return `data:image/png;base64,${logoBase64}`;
+            } else {
+                console.warn('Logo file not found at:', logoPath);
+                return '';
+            }
+        } catch (error) {
+            console.error('Error reading logo file:', error);
+            return '';
+        }
     }
 
     /**
@@ -172,14 +194,15 @@ class PDFGenerator {
     async getPMSequenceNumber(pmId, assetId) {
         try {
             const query = `
-                SELECT COUNT(*) as pm_count
+                SELECT COUNT(*) + 1 as pm_count
                 FROM PMAINTENANCE
                 WHERE Asset_ID = ?
-                AND PM_Date <= (SELECT PM_Date FROM PMAINTENANCE WHERE PM_ID = ?)
-                ORDER BY PM_Date ASC
+                AND (PM_Date < (SELECT PM_Date FROM PMAINTENANCE WHERE PM_ID = ?)
+                     OR (PM_Date = (SELECT PM_Date FROM PMAINTENANCE WHERE PM_ID = ?) 
+                         AND PM_ID < ?))
             `;
             
-            const [result] = await pool.execute(query, [assetId, pmId]);
+            const [result] = await pool.execute(query, [assetId, pmId, pmId, pmId]);
             
             return result[0].pm_count || 1;
         } catch (error) {
@@ -249,6 +272,9 @@ class PDFGenerator {
             statusClass = pmData.Status.toLowerCase().replace(/\s+/g, '-');
         }
 
+        // Convert logo to base64 for embedding in PDF
+        const logoBase64 = this.getLogoBase64();
+
         return {
             // PM Information
             PM_ID: pmData.PM_ID,
@@ -269,6 +295,12 @@ class PDFGenerator {
             // Recipient Information
             Recipient_Name: pmData.Recipient_Name || '-',
             Department: pmData.Department || '-',
+
+            // Created By (Technician) Information
+            Created_By_Name: pmData.Created_By_Name || '-',
+
+            // Logo as Base64
+            Logo_Base64: logoBase64,
 
             // Checklist Results
             checklist_results: checklistResults,
