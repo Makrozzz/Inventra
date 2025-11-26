@@ -12,6 +12,7 @@ const {
   deleteAsset,
   deleteAssetById,
   getAssetStatistics,
+  validateImportData,
   bulkImportAssets,
   fixOrphanedAssets
 } = require('../controllers/assetController');
@@ -131,6 +132,12 @@ router.delete('/id/:id',
   // authenticateToken,  // Disabled for development/testing
   // authorize('admin', 'manager'), 
   deleteAssetById
+);
+
+router.post('/validate-import',
+  body('assets').isArray().withMessage('Assets must be an array'),
+  handleValidationErrors,
+  validateImportData
 );
 
 router.post('/bulk-import', 

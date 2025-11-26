@@ -6,6 +6,7 @@ import ImportPreview from '../components/ImportPreview';
 import ImportConfirmationDialog from '../components/ImportConfirmationDialog';
 import HeaderMappingConfirmation from '../components/HeaderMappingConfirmation';
 import AssetGroupingPreview from '../components/AssetGroupingPreview';
+import NewOptionsDialog from '../components/NewOptionsDialog';
 import HeaderMapper from '../utils/headerMapper';
 import AssetGrouper from '../utils/assetGrouper';
 import apiService from '../services/apiService';
@@ -26,6 +27,8 @@ const CSVImport = () => {
   const [groupedData, setGroupedData] = useState(null);
   const [validationResults, setValidationResults] = useState(null);
   const [validationSummary, setValidationSummary] = useState(null);
+  const [newOptions, setNewOptions] = useState(null);
+  const [showNewOptionsDialog, setShowNewOptionsDialog] = useState(false);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [importing, setImporting] = useState(false);
   const [importResults, setImportResults] = useState(null);
@@ -326,6 +329,43 @@ const CSVImport = () => {
     setValidationResults(null);
     setValidationSummary(null);
     setImportResults(null);
+    setNewOptions(null);
+    setShowNewOptionsDialog(false);
+  };
+
+  const handleProceedToImport = async () => {
+    try {
+      setProcessing(true);
+      console.log('🔍 Validating import data...', parsedData);
+      
+      // Validate and check for new options
+      const validationResult = await apiService.validateImportAssets(parsedData);
+      console.log('✅ Validation result:', validationResult);
+      
+      if (validationResult.success && validationResult.hasNewOptions) {
+        console.log('📦 New options detected:', validationResult.newOptions);
+        setNewOptions(validationResult.newOptions);
+        setShowNewOptionsDialog(true);
+      } else {
+        console.log('ℹ️ No new options detected, proceeding to confirmation');
+        setShowConfirmDialog(true);
+      }
+    } catch (error) {
+      console.error('❌ Validation error:', error);
+      // Proceed anyway if validation fails
+      setShowConfirmDialog(true);
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  const handleNewOptionsConfirm = () => {
+    setShowNewOptionsDialog(false);
+    setShowConfirmDialog(true);
+  };
+
+  const handleNewOptionsCancel = () => {
+    setShowNewOptionsDialog(false);
   };
 
   const goToAssets = () => {
@@ -667,14 +707,16 @@ const CSVImport = () => {
               <div style={{ marginTop: '24px', textAlign: 'center' }}>
                 <button 
                   className="btn btn-primary"
-                  onClick={() => setShowConfirmDialog(true)}
+                  onClick={handleProceedToImport}
+                  disabled={processing}
                   style={{ marginRight: '12px' }}
                 >
-                  Proceed to Import
+                  {processing ? 'Validating...' : 'Proceed to Import'}
                 </button>
                 <button 
                   className="btn btn-secondary"
                   onClick={resetImport}
+                  disabled={processing}
                 >
                   Upload Different File
                 </button>
@@ -745,6 +787,14 @@ const CSVImport = () => {
           groupingResult={groupingPreview}
           onConfirm={handleGroupingConfirm}
           onCancel={handleGroupingCancel}
+        />
+      )}
+
+      {showNewOptionsDialog && newOptions && (
+        <NewOptionsDialog
+          newOptions={newOptions}
+          onConfirm={handleNewOptionsConfirm}
+          onCancel={handleNewOptionsCancel}
         />
       )}
 

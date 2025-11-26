@@ -16,10 +16,11 @@ const EditAsset = () => {
   const [officeOptions, setOfficeOptions] = useState([]);
   const [antivirusOptions, setAntivirusOptions] = useState([]);
   const [softwareOptions, setSoftwareOptions] = useState([]);
+  const [modelOptions, setModelOptions] = useState([]);
   
   // Modal states for adding new options
   const [showAddModal, setShowAddModal] = useState(false);
-  const [modalType, setModalType] = useState(''); // 'windows', 'office', 'antivirus', or 'software'
+  const [modalType, setModalType] = useState(''); // 'windows', 'office', 'antivirus', 'software', or 'model'
   const [newOptionValue, setNewOptionValue] = useState('');
   const [addingOption, setAddingOption] = useState(false);
   
@@ -29,6 +30,7 @@ const EditAsset = () => {
     Asset_Serial_Number: '',
     Asset_Tag_ID: '',
     Item_Name: '',
+    Model: '',
     Status: 'Active',
     Windows: '',
     Microsoft_Office: '',
@@ -81,6 +83,7 @@ const EditAsset = () => {
         Asset_Serial_Number: data.Asset_Serial_Number || '',
         Asset_Tag_ID: data.Asset_Tag_ID || '',
         Item_Name: data.Item_Name || '',
+        Model: data.Model || '',
         Status: data.Status || 'Active',
         Windows: data.Windows || '',
         Microsoft_Office: data.Microsoft_Office || '',
@@ -144,12 +147,22 @@ const EditAsset = () => {
         const softwareData = await softwareRes.json();
         setSoftwareOptions(softwareData.data || []);
       }
+
+      // Fetch Model options
+      const modelRes = await fetch('http://localhost:5000/api/v1/models');
+      if (modelRes.ok) {
+        const modelData = await modelRes.json();
+        // Extract model names from the response
+        const models = modelData.data?.map(model => model.Model_Name || model.name) || [];
+        setModelOptions(models);
+      }
     } catch (err) {
       console.error('Error fetching dropdown options:', err);
       // Set default options as fallback
       setWindowsOptions(['Windows 10', 'Windows 11', 'Windows Server', 'None']);
       setOfficeOptions(['Office 2019', 'Office 2021', 'Microsoft 365', 'None']);
       setSoftwareOptions([]);
+      setModelOptions([]);
     }
   };
 
@@ -174,10 +187,19 @@ const EditAsset = () => {
 
     setAddingOption(true);
     try {
-      const response = await fetch(`http://localhost:5000/api/v1/options/${modalType}`, {
+      // Use different endpoint for model
+      const endpoint = modalType === 'model' 
+        ? `http://localhost:5000/api/v1/models`
+        : `http://localhost:5000/api/v1/options/${modalType}`;
+      
+      const body = modalType === 'model'
+        ? JSON.stringify({ name: newOptionValue.trim() })
+        : JSON.stringify({ value: newOptionValue.trim() });
+
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ value: newOptionValue.trim() })
+        body: body
       });
 
       if (!response.ok) {
@@ -199,6 +221,9 @@ const EditAsset = () => {
       } else if (modalType === 'software') {
         setSoftwareOptions(prev => [...prev, newOptionValue.trim()]);
         setFormData(prev => ({ ...prev, Software: newOptionValue.trim() }));
+      } else if (modalType === 'model') {
+        setModelOptions(prev => [...prev, newOptionValue.trim()]);
+        setFormData(prev => ({ ...prev, Model: newOptionValue.trim() }));
       }
 
       handleCloseAddModal();
@@ -564,6 +589,54 @@ const EditAsset = () => {
                     onChange={handleInputChange}
                     required
                   />
+                </div>
+
+                <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+                  <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span>Model</span>
+                    <button
+                      type="button"
+                      onClick={() => handleOpenAddModal('model')}
+                      style={{
+                        background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '6px',
+                        padding: '5px 10px',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        fontSize: '12px',
+                        fontWeight: '600',
+                        transition: 'all 0.2s ease',
+                        boxShadow: '0 2px 4px rgba(16, 185, 129, 0.3)'
+                      }}
+                      title="Add new Model"
+                      onMouseOver={(e) => {
+                        e.currentTarget.style.transform = 'translateY(-1px)';
+                        e.currentTarget.style.boxShadow = '0 3px 6px rgba(16, 185, 129, 0.4)';
+                      }}
+                      onMouseOut={(e) => {
+                        e.currentTarget.style.transform = 'translateY(0)';
+                        e.currentTarget.style.boxShadow = '0 2px 4px rgba(16, 185, 129, 0.3)';
+                      }}
+                    >
+                      <Plus size={14} /> 
+                    </button>
+                  </label>
+                  <select
+                    name="Model"
+                    value={formData.Model}
+                    onChange={handleInputChange}
+                  >
+                    <option value="">Select Model</option>
+                    {modelOptions.map((option, index) => (
+                      <option key={index} value={option}>
+                        {option}
+                      </option>
+                    ))}
+                  </select>
                 </div>
 
                 <div className="form-group">
@@ -1070,7 +1143,7 @@ const EditAsset = () => {
                 gap: '10px'
               }}>
                 <Plus size={24} strokeWidth={2.5} style={{ color: '#10b981' }} />
-                Add New {modalType === 'windows' ? 'Windows Version' : modalType === 'office' ? 'Office Version' : modalType === 'antivirus' ? 'Antivirus' : 'Software'}
+                Add New {modalType === 'windows' ? 'Windows Version' : modalType === 'office' ? 'Office Version' : modalType === 'antivirus' ? 'Antivirus' : modalType === 'software' ? 'Software' : 'Model'}
               </h3>
               <button
                 onClick={handleCloseAddModal}
@@ -1090,13 +1163,13 @@ const EditAsset = () => {
 
             <div style={{ marginBottom: '20px' }}>
               <label style={{ display: 'block', marginBottom: '8px', color: '#34495e', fontWeight: '500' }}>
-                {modalType === 'windows' ? 'Windows Version Name' : modalType === 'office' ? 'Office Version Name' : modalType === 'antivirus' ? 'Antivirus Name' : 'Software Name'}
+                {modalType === 'windows' ? 'Windows Version Name' : modalType === 'office' ? 'Office Version Name' : modalType === 'antivirus' ? 'Antivirus Name' : modalType === 'software' ? 'Software Name' : 'Model Name'}
               </label>
               <input
                 type="text"
                 value={newOptionValue}
                 onChange={(e) => setNewOptionValue(e.target.value)}
-                placeholder={modalType === 'office' ? 'e.g., Office LTSC 2024' : modalType === 'windows' ? 'e.g., Windows 12' : modalType === 'antivirus' ? 'e.g., Kaspersky Endpoint Security' : 'e.g., Adobe Acrobat'}
+                placeholder={modalType === 'office' ? 'e.g., Office LTSC 2024' : modalType === 'windows' ? 'e.g., Windows 12' : modalType === 'antivirus' ? 'e.g., Kaspersky Endpoint Security' : modalType === 'software' ? 'e.g., Adobe Acrobat' : 'e.g., Dell OptiPlex 3090, HP ProBook 450 G8'}
                 style={{
                   width: '100%',
                   padding: '10px',

@@ -348,10 +348,9 @@ const updateAssetById = async (req, res, next) => {
     if (updateData.Item_Name) finalUpdateData.Item_Name = updateData.Item_Name;
     if (updateData.Status) finalUpdateData.Status = updateData.Status;
     
-    // Add Windows, Office, Software, and Monthly_Prices fields
+    // Add Windows, Office, and Monthly_Prices fields
     if (updateData.Windows !== undefined) finalUpdateData.Windows = updateData.Windows;
     if (updateData.Microsoft_Office !== undefined) finalUpdateData.Microsoft_Office = updateData.Microsoft_Office;
-    if (updateData.Software !== undefined) finalUpdateData.Software = updateData.Software;
     if (updateData.Monthly_Prices !== undefined) finalUpdateData.Monthly_Prices = updateData.Monthly_Prices;
     
     // For ID fields, use them directly if provided
@@ -391,13 +390,27 @@ const updateAssetById = async (req, res, next) => {
 
     if (updateData.Model) {
       try {
-        const modelId = await Asset.updateModelInfo(updateData.Model, existingAsset.Model_ID);
+        // Pass the current or updated category ID to link model with category
+        const categoryIdForModel = finalUpdateData.Category_ID || existingAsset.Category_ID;
+        const modelId = await Asset.updateModelInfo(updateData.Model, existingAsset.Model_ID, categoryIdForModel);
         if (modelId) {
           finalUpdateData.Model_ID = modelId;
-          console.log('Updated Model_ID to:', modelId);
+          console.log('Updated Model_ID to:', modelId, 'with Category_ID:', categoryIdForModel);
         }
       } catch (error) {
         console.warn('Could not update model:', error.message);
+      }
+    }
+
+    // Handle Software update through bridge table (Software is not a column in ASSET table)
+    if (updateData.Software !== undefined) {
+      try {
+        if (updateData.Software && updateData.Software.trim()) {
+          await Asset.linkSoftwareToAsset(id, updateData.Software.trim());
+          console.log('Updated software link:', updateData.Software);
+        }
+      } catch (error) {
+        console.warn('Could not update software link:', error.message);
       }
     }
 
@@ -645,7 +658,7 @@ const processNewAssets = async (assets) => {
         console.log(`   ℹ️  No recipient data provided (recipient_name: ${assetData.recipient_name}, department: ${assetData.department})`);
       }
 
-      // Get or create category
+      // Get or create category (auto-creates new if not exists)
       let categoryId = null;
       if (assetData.category) {
         try {
@@ -656,15 +669,23 @@ const processNewAssets = async (assets) => {
         }
       }
 
-      // Get or create model
+      // Get or create model (auto-creates new if not exists) - LINKED TO CATEGORY
       let modelId = null;
       if (assetData.model) {
         try {
-          modelId = await Asset.getOrCreateModel(assetData.model);
-          console.log(`   🏷️  Model ID: ${modelId}`);
+          // Pass categoryId to link model with category
+          modelId = await Asset.getOrCreateModel(assetData.model, categoryId);
+          console.log(`   🏷️  Model ID: ${modelId} (linked to Category ID: ${categoryId})`);
         } catch (modelError) {
           console.log(`   ⚠️  Failed to get/create model: ${modelError.message}`);
         }
+      }
+
+      // Link software to asset (auto-creates new if not exists)
+      let softwareToLink = null;
+      if (assetData.software) {
+        softwareToLink = assetData.software;
+        console.log(`   💿 Software to link: ${softwareToLink}`);
       }
 
       // Create the asset
@@ -683,6 +704,16 @@ const processNewAssets = async (assets) => {
 
       const newAsset = await Asset.create(assetToCreate);
       console.log(`   ✅ Asset created with ID: ${newAsset.Asset_ID}, Recipients_ID: ${recipientId}`);
+
+      // Link software to asset via bridge table
+      if (softwareToLink) {
+        try {
+          await Asset.linkSoftwareToAsset(newAsset.Asset_ID, softwareToLink);
+          console.log(`   💿 Linked software: ${softwareToLink}`);
+        } catch (softwareError) {
+          console.log(`   ⚠️  Failed to link software: ${softwareError.message}`);
+        }
+      }
 
       // Create peripherals if provided
       if (assetData.peripherals && Array.isArray(assetData.peripherals)) {
@@ -735,6 +766,148 @@ const processNewAssets = async (assets) => {
   }
 
   return results;
+};
+
+/**
+ * Validate import data and detect new options that will be created
+ * @route POST /api/v1/assets/validate-import
+ */
+const validateImportData = async (req, res, next) => {
+  try {
+    const { assets } = req.body;
+
+    if (!Array.isArray(assets) || assets.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'Assets array is required'
+      });
+    }
+
+    console.log(`Validating import data for ${assets.length} assets...`);
+
+    const { pool } = require('../config/database');
+    const newOptions = {
+      categories: new Set(),
+      models: new Set(),
+      software: new Set(),
+      windows: new Set(),
+      office: new Set()
+    };
+
+    // Get existing options from database
+    const [existingCategories] = await pool.execute(
+      'SELECT DISTINCT Category_Name FROM CATEGORY'
+    );
+    const [existingModels] = await pool.execute(
+      'SELECT DISTINCT Model_Name FROM MODEL'
+    );
+    const [existingSoftware] = await pool.execute(
+      'SELECT DISTINCT Software_Name FROM SOFTWARE'
+    );
+    const [existingWindows] = await pool.execute(
+      'SELECT DISTINCT Windows FROM ASSET WHERE Windows IS NOT NULL AND Windows != ""'
+    );
+    const [existingOffice] = await pool.execute(
+      'SELECT DISTINCT Microsoft_Office FROM ASSET WHERE Microsoft_Office IS NOT NULL AND Microsoft_Office != ""'
+    );
+
+    const existingCategoryNames = new Set(existingCategories.map(c => c.Category_Name.toLowerCase()));
+    const existingModelNames = new Set(existingModels.map(m => m.Model_Name.toLowerCase()));
+    const existingSoftwareNames = new Set(existingSoftware.map(s => s.Software_Name.toLowerCase()));
+    const existingWindowsVersions = new Set(existingWindows.map(w => w.Windows.toLowerCase()));
+    const existingOfficeVersions = new Set(existingOffice.map(o => o.Microsoft_Office.toLowerCase()));
+
+    // Check each asset for new options
+    for (const asset of assets) {
+      // Check category - only if value exists and is not empty
+      if (asset.category && typeof asset.category === 'string' && asset.category.trim() !== '') {
+        const categoryName = asset.category.trim();
+        if (!existingCategoryNames.has(categoryName.toLowerCase())) {
+          newOptions.categories.add(categoryName);
+        }
+      }
+
+      // Check model - only if value exists and is not empty
+      if (asset.model && typeof asset.model === 'string' && asset.model.trim() !== '') {
+        const modelName = asset.model.trim();
+        if (!existingModelNames.has(modelName.toLowerCase())) {
+          newOptions.models.add(modelName);
+        }
+      }
+
+      // Check software - only if value exists and is not empty
+      if (asset.software && typeof asset.software === 'string' && asset.software.trim() !== '') {
+        const softwareName = asset.software.trim();
+        if (!existingSoftwareNames.has(softwareName.toLowerCase())) {
+          newOptions.software.add(softwareName);
+        }
+      }
+
+      // Check Windows - only if value exists and is not empty
+      if (asset.windows && typeof asset.windows === 'string' && asset.windows.trim() !== '') {
+        const windowsVersion = asset.windows.trim();
+        if (!existingWindowsVersions.has(windowsVersion.toLowerCase())) {
+          newOptions.windows.add(windowsVersion);
+        }
+      }
+
+      // Check Microsoft Office - only if value exists and is not empty
+      if (asset.microsoft_office && typeof asset.microsoft_office === 'string' && asset.microsoft_office.trim() !== '') {
+        const officeVersion = asset.microsoft_office.trim();
+        if (!existingOfficeVersions.has(officeVersion.toLowerCase())) {
+          newOptions.office.add(officeVersion);
+        }
+      }
+    }
+
+    // Convert sets to arrays for response
+    const newOptionsFound = {
+      categories: Array.from(newOptions.categories),
+      models: Array.from(newOptions.models),
+      software: Array.from(newOptions.software),
+      windows: Array.from(newOptions.windows),
+      office: Array.from(newOptions.office)
+    };
+
+    const totalNewOptions = 
+      newOptionsFound.categories.length +
+      newOptionsFound.models.length +
+      newOptionsFound.software.length +
+      newOptionsFound.windows.length +
+      newOptionsFound.office.length;
+
+    console.log(`Validation complete: ${totalNewOptions} new options detected`);
+    console.log('New options breakdown:', {
+      categories: newOptionsFound.categories,
+      models: newOptionsFound.models,
+      software: newOptionsFound.software,
+      windows: newOptionsFound.windows,
+      office: newOptionsFound.office
+    });
+
+    res.status(200).json({
+      success: true,
+      hasNewOptions: totalNewOptions > 0,
+      newOptions: newOptionsFound,
+      summary: {
+        totalAssets: assets.length,
+        newCategories: newOptionsFound.categories.length,
+        newModels: newOptionsFound.models.length,
+        newSoftware: newOptionsFound.software.length,
+        newWindows: newOptionsFound.windows.length,
+        newOffice: newOptionsFound.office.length,
+        totalNewOptions: totalNewOptions
+      }
+    });
+
+  } catch (error) {
+    console.error('Error in validateImportData:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to validate import data',
+      message: error.message
+    });
+  }
 };
 
 /**
@@ -1035,6 +1208,7 @@ module.exports = {
   deleteAsset,
   deleteAssetById,
   getAssetStatistics,
+  validateImportData,
   bulkImportAssets,
   fixOrphanedAssets
 };

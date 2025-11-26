@@ -322,7 +322,6 @@ class Asset {
           this.Windows,
           this.Microsoft_Office,
           this.Monthly_Prices,
-          this.Monthly_Prices,
           this.Asset_ID
         ]
       );
@@ -416,27 +415,33 @@ class Asset {
   }
 
   // Helper method to update model information properly
-  static async updateModelInfo(modelName, currentModelId) {
+  static async updateModelInfo(modelName, currentModelId, categoryId = null) {
     try {
       if (!modelName) return currentModelId;
 
-      // If we have a current model ID, update that model's name
-      if (currentModelId) {
-        console.log('Updating existing model:', { modelName, currentModelId });
-        
-        await pool.execute(
-          'UPDATE MODEL SET Model_Name = ? WHERE Model_ID = ?',
-          [modelName, currentModelId]
-        );
-        return currentModelId;
+      // Don't update the existing model's name - instead find or create the model by name
+      // This ensures we don't modify shared model records
+      const cleanModelName = modelName.trim();
+      console.log('Finding or creating model for asset:', { modelName: cleanModelName, categoryId });
+
+      // Find existing model with this name (case-insensitive)
+      const [existing] = await pool.execute(
+        'SELECT Model_ID, Category_ID FROM MODEL WHERE LOWER(Model_Name) = LOWER(?)',
+        [cleanModelName]
+      );
+      
+      if (existing.length > 0) {
+        console.log('Found existing model ID:', existing[0].Model_ID, 'with Category_ID:', existing[0].Category_ID);
+        return existing[0].Model_ID;
       }
 
-      // If no current model ID, create new model
-      console.log('Creating new model:', { modelName });
+      // If model doesn't exist, create new one with category link
+      console.log('Creating new model:', { modelName: cleanModelName, categoryId });
       const [result] = await pool.execute(
-        'INSERT INTO MODEL (Model_Name) VALUES (?)',
-        [modelName]
+        'INSERT INTO MODEL (Model_Name, Category_ID) VALUES (?, ?)',
+        [cleanModelName, categoryId]
       );
+      console.log('Created new model ID:', result.insertId, 'linked to Category_ID:', categoryId);
       return result.insertId;
     } catch (error) {
       console.error('Error in updateModelInfo:', error);
@@ -821,35 +826,45 @@ class Asset {
     }
   }
 
-  // Helper method to get or create model - ENHANCED with hybrid functionality
-  static async getOrCreateModel(modelName) {
+  // Helper method to get or create model - ENHANCED with hybrid functionality and category linking
+  static async getOrCreateModel(modelName, categoryId = null) {
     try {
       if (!modelName || typeof modelName !== 'string' || modelName.trim() === '') {
         throw new Error('Model name is required and must be a non-empty string');
       }
 
       const cleanModelName = modelName.trim();
-      console.log(`Getting or creating model: "${cleanModelName}"`);
+      console.log(`Getting or creating model: "${cleanModelName}" with Category_ID: ${categoryId}`);
 
       // First try to find existing model (case-insensitive)
       const [existing] = await pool.execute(
-        'SELECT Model_ID, Model_Name FROM MODEL WHERE LOWER(Model_Name) = LOWER(?)',
+        'SELECT Model_ID, Model_Name, Category_ID FROM MODEL WHERE LOWER(Model_Name) = LOWER(?)',
         [cleanModelName]
       );
       
       if (existing.length > 0) {
-        console.log(`Found existing model: ID=${existing[0].Model_ID}, Name="${existing[0].Model_Name}"`);
+        console.log(`Found existing model: ID=${existing[0].Model_ID}, Name="${existing[0].Model_Name}", Category_ID=${existing[0].Category_ID}`);
+        
+        // If category is provided and existing model has no category, update it
+        if (categoryId && !existing[0].Category_ID) {
+          await pool.execute(
+            'UPDATE MODEL SET Category_ID = ? WHERE Model_ID = ?',
+            [categoryId, existing[0].Model_ID]
+          );
+          console.log(`✅ Updated model ${existing[0].Model_ID} with Category_ID: ${categoryId}`);
+        }
+        
         return existing[0].Model_ID;
       }
       
-      // Create new model
+      // Create new model with category link
       const [result] = await pool.execute(
-        'INSERT INTO MODEL (Model_Name) VALUES (?)',
-        [cleanModelName]
+        'INSERT INTO MODEL (Model_Name, Category_ID) VALUES (?, ?)',
+        [cleanModelName, categoryId]
       );
       
       const newModelId = result.insertId;
-      console.log(`✅ Created new model: ID=${newModelId}, Name="${cleanModelName}"`);
+      console.log(`✅ Created new model: ID=${newModelId}, Name="${cleanModelName}", Category_ID=${categoryId}`);
       return newModelId;
     } catch (error) {
       // Handle duplicate key error (race condition)
