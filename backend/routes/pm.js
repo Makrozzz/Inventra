@@ -19,6 +19,7 @@ const {
   getPMReport,
   bulkDownloadPM
 } = require('../controllers/pmController');
+const { authenticateToken } = require('../middleware/auth');
 
 const router = express.Router();
 
@@ -40,7 +41,7 @@ router.get('/:pmId/report', getPMReport);
 // Bulk download route
 router.post('/bulk-download', bulkDownloadPM);
 
-router.post('/', createPM);
+router.post('/', authenticateToken, createPM);
 
 // Checklist management routes
 router.get('/categories', getAllCategories);

@@ -281,9 +281,7 @@ const PMDetail = () => {
           display: 'flex', 
           alignItems: 'center', 
           justifyContent: 'space-between',
-          marginBottom: '20px',
-          paddingBottom: '15px',
-          borderBottom: '2px solid #27ae60'
+          marginBottom: '10px'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <ClipboardCheck size={24} color="#27ae60" />
@@ -308,6 +306,28 @@ const PMDetail = () => {
             </div>
           )}
         </div>
+
+        {/* User Information */}
+        {pmData.Created_By_Name && (
+          <div style={{ 
+            marginBottom: '15px',
+            padding: '8px 0',
+            color: '#6c757d',
+            fontSize: '0.9rem',
+            fontStyle: 'italic',
+            fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif"
+          }}>
+            Recorded by: <span style={{ fontWeight: '500', color: '#5a6268' }}>
+              {pmData.Created_By_Name}
+              {pmData.Created_By_Department && ` (${pmData.Created_By_Department})`}
+            </span>
+          </div>
+        )}
+
+        <div style={{ 
+          borderBottom: '2px solid #27ae60',
+          marginBottom: '20px'
+        }} />
 
         {!pmData.checklist_results || pmData.checklist_results.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '40px', background: '#f8f9fa', borderRadius: '8px' }}>

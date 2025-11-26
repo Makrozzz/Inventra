@@ -199,13 +199,17 @@ const createPM = async (req, res, next) => {
       });
     }
 
+    // Get user ID from authenticated user (from JWT token)
+    const createdBy = req.user.userId;
+
     // Create PM with results
     const pmId = await PMaintenance.createWithResults(
       assetId, 
       pmDate, 
       remarks || null, 
       checklistResults,
-      status || 'In-Process'
+      status || 'In-Process',
+      createdBy
     );
 
     res.status(201).json({

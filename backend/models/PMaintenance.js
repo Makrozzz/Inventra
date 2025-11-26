@@ -19,6 +19,9 @@ class PMaintenance {
           pm.PM_Date,
           pm.Remarks,
           pm.Status as PM_Status,
+          pm.Created_By,
+          u.username as Created_By_Username,
+          CONCAT(u.First_Name, ' ', u.Last_Name) as Created_By_Name,
           a.Asset_Serial_Number,
           a.Asset_Tag_ID,
           a.Item_Name,
@@ -43,6 +46,7 @@ class PMaintenance {
         LEFT JOIN INVENTORY i ON a.Asset_ID = i.Asset_ID
         LEFT JOIN PROJECT p ON i.Project_ID = p.Project_ID
         LEFT JOIN CUSTOMER cust ON i.Customer_ID = cust.Customer_ID
+        LEFT JOIN USER u ON pm.Created_By = u.User_ID
         ORDER BY pm.PM_Date DESC
       `);
       return rows;
@@ -243,6 +247,9 @@ class PMaintenance {
       const [pmRows] = await pool.execute(`
         SELECT 
           pm.*,
+          u.username as Created_By_Username,
+          CONCAT(u.First_Name, ' ', u.Last_Name) as Created_By_Name,
+          u.User_Department as Created_By_Department,
           a.Asset_Serial_Number,
           a.Asset_Tag_ID,
           a.Item_Name,
@@ -260,6 +267,7 @@ class PMaintenance {
         LEFT JOIN RECIPIENTS r ON a.Recipients_ID = r.Recipients_ID
         LEFT JOIN INVENTORY inv ON a.Asset_ID = inv.Asset_ID
         LEFT JOIN CUSTOMER cust ON inv.Customer_ID = cust.Customer_ID
+        LEFT JOIN USER u ON pm.Created_By = u.User_ID
         WHERE pm.PM_ID = ?
       `, [pmId]);
 
@@ -376,8 +384,12 @@ class PMaintenance {
           pm.Asset_ID,
           pm.PM_Date,
           pm.Remarks,
-          pm.Status
+          pm.Status,
+          pm.Created_By,
+          u.username as Created_By_Username,
+          CONCAT(u.First_Name, ' ', u.Last_Name) as Created_By_Name
         FROM PMAINTENANCE pm
+        LEFT JOIN USER u ON pm.Created_By = u.User_ID
         WHERE pm.Asset_ID = ?
         ORDER BY pm.PM_Date DESC
       `, [assetId]);
@@ -389,12 +401,12 @@ class PMaintenance {
   }
 
   // Create new PM record
-  static async create(assetId, pmDate, remarks, status = 'In-Process') {
+  static async create(assetId, pmDate, remarks, status = 'In-Process', createdBy = null) {
     try {
       const [result] = await pool.execute(`
-        INSERT INTO PMAINTENANCE (Asset_ID, PM_Date, Remarks, Status)
-        VALUES (?, ?, ?, ?)
-      `, [assetId, pmDate, remarks, status]);
+        INSERT INTO PMAINTENANCE (Asset_ID, PM_Date, Remarks, Status, Created_By)
+        VALUES (?, ?, ?, ?, ?)
+      `, [assetId, pmDate, remarks, status, createdBy]);
       
       return result.insertId;
     } catch (error) {
@@ -429,16 +441,16 @@ class PMaintenance {
   }
 
   // Create PM record with results in one transaction
-  static async createWithResults(assetId, pmDate, remarks, checklistResults, status = 'In-Process') {
+  static async createWithResults(assetId, pmDate, remarks, checklistResults, status = 'In-Process', createdBy = null) {
     const connection = await pool.getConnection();
     try {
       await connection.beginTransaction();
 
       // Create PM record
       const [pmResult] = await connection.execute(`
-        INSERT INTO PMAINTENANCE (Asset_ID, PM_Date, Remarks, Status)
-        VALUES (?, ?, ?, ?)
-      `, [assetId, pmDate, remarks, status]);
+        INSERT INTO PMAINTENANCE (Asset_ID, PM_Date, Remarks, Status, Created_By)
+        VALUES (?, ?, ?, ?, ?)
+      `, [assetId, pmDate, remarks, status, createdBy]);
 
       const pmId = pmResult.insertId;
 
