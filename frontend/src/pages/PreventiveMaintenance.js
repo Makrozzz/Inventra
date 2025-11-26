@@ -34,6 +34,7 @@ const PreventiveMaintenance = () => {
   const [checklistItemsForEdit, setChecklistItemsForEdit] = useState([]);
   const [editingItemId, setEditingItemId] = useState(null);
   const [editingItemText, setEditingItemText] = useState('');
+  const [editingItemTextLong, setEditingItemTextLong] = useState('');
   const [newItemText, setNewItemText] = useState('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [itemToDelete, setItemToDelete] = useState(null);
@@ -311,15 +312,21 @@ const PreventiveMaintenance = () => {
   const handleStartEdit = (item) => {
     setEditingItemId(item.Checklist_ID);
     setEditingItemText(item.Check_Item);
+    setEditingItemTextLong(item.Check_item_Long || item.Check_Item);
   };
 
   const handleCancelEdit = () => {
     setEditingItemId(null);
     setEditingItemText('');
+    setEditingItemTextLong('');
   };
 
   const handleConfirmEdit = () => {
-    setPendingEdit({ id: editingItemId, text: editingItemText });
+    setPendingEdit({ 
+      id: editingItemId, 
+      text: editingItemText,
+      textLong: editingItemTextLong 
+    });
     setShowEditConfirm(true);
   };
 
@@ -331,7 +338,10 @@ const PreventiveMaintenance = () => {
       const response = await fetch(`http://localhost:5000/api/v1/pm/checklist/${pendingEdit.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ checkItem: pendingEdit.text })
+        body: JSON.stringify({ 
+          checkItem: pendingEdit.text,
+          checkItemLong: pendingEdit.textLong
+        })
       });
 
       if (!response.ok) throw new Error('Failed to update checklist item');
@@ -342,6 +352,7 @@ const PreventiveMaintenance = () => {
       await handleCategoryChangeForEdit({ target: { value: selectedCategoryForEdit } });
       setEditingItemId(null);
       setEditingItemText('');
+      setEditingItemTextLong('');
       setPendingEdit(null);
     } catch (err) {
       console.error('Error updating checklist item:', err);
@@ -1624,20 +1635,65 @@ const PreventiveMaintenance = () => {
                             >
                               {editingItemId === item.Checklist_ID ? (
                                 <>
-                                  <input
-                                    type="text"
-                                    value={editingItemText}
-                                    onChange={(e) => setEditingItemText(e.target.value)}
-                                    style={{
-                                      flex: 1,
-                                      padding: '8px 12px',
-                                      border: '2px solid #667eea',
-                                      borderRadius: '4px',
-                                      fontSize: '0.95rem',
-                                      marginRight: '12px'
-                                    }}
-                                    autoFocus
-                                  />
+                                  <div style={{ 
+                                    flex: 1, 
+                                    display: 'flex', 
+                                    flexDirection: 'column', 
+                                    gap: '10px',
+                                    marginRight: '12px'
+                                  }}>
+                                    <div>
+                                      <label style={{ 
+                                        fontSize: '0.75rem', 
+                                        color: '#7f8c8d', 
+                                        fontWeight: '600',
+                                        textTransform: 'uppercase',
+                                        marginBottom: '4px',
+                                        display: 'block'
+                                      }}>
+                                        Long Version
+                                      </label>
+                                      <input
+                                        type="text"
+                                        value={editingItemTextLong}
+                                        onChange={(e) => setEditingItemTextLong(e.target.value)}
+                                        style={{
+                                          width: '100%',
+                                          padding: '8px 12px',
+                                          border: '2px solid #667eea',
+                                          borderRadius: '4px',
+                                          fontSize: '0.95rem'
+                                        }}
+                                        autoFocus
+                                        placeholder="Enter long version"
+                                      />
+                                    </div>
+                                    <div>
+                                      <label style={{ 
+                                        fontSize: '0.75rem', 
+                                        color: '#7f8c8d', 
+                                        fontWeight: '600',
+                                        textTransform: 'uppercase',
+                                        marginBottom: '4px',
+                                        display: 'block'
+                                      }}>
+                                        Short Version
+                                      </label>
+                                      <input
+                                        type="text"
+                                        value={editingItemText}
+                                        onChange={(e) => setEditingItemText(e.target.value)}
+                                        style={{
+                                          width: '100%',
+                                          padding: '8px 12px',
+                                          border: '2px solid #667eea',
+                                          borderRadius: '4px',
+                                          fontSize: '0.95rem'
+                                        }}
+                                        placeholder="Enter short version"
+                                      />
+                                    </div>
+                                  </div>
                                   <div style={{ display: 'flex', gap: '8px' }}>
                                     <button
                                       onClick={handleConfirmEdit}
@@ -1677,9 +1733,50 @@ const PreventiveMaintenance = () => {
                                 </>
                               ) : (
                                 <>
-                                  <span style={{ flex: 1, fontSize: '0.95rem', color: '#2c3e50' }}>
-                                    {item.Check_Item}
-                                  </span>
+                                  <div style={{ 
+                                    display: 'flex', 
+                                    gap: '12px', 
+                                    flex: 1,
+                                    alignItems: 'center'
+                                  }}>
+                                    <div style={{ 
+                                      flex: 2, 
+                                      fontSize: '0.95rem', 
+                                      color: '#2c3e50',
+                                      fontWeight: '500'
+                                    }}>
+                                      <div style={{ 
+                                        fontSize: '0.75rem', 
+                                        color: '#7f8c8d', 
+                                        marginBottom: '4px',
+                                        fontWeight: '600',
+                                        textTransform: 'uppercase',
+                                        letterSpacing: '0.5px'
+                                      }}>
+                                        Long Version
+                                      </div>
+                                      {item.Check_item_Long || item.Check_Item}
+                                    </div>
+                                    <div style={{ 
+                                      flex: 1, 
+                                      fontSize: '0.9rem', 
+                                      color: '#5a6268',
+                                      paddingLeft: '12px',
+                                      borderLeft: '2px solid #e9ecef'
+                                    }}>
+                                      <div style={{ 
+                                        fontSize: '0.75rem', 
+                                        color: '#7f8c8d', 
+                                        marginBottom: '4px',
+                                        fontWeight: '600',
+                                        textTransform: 'uppercase',
+                                        letterSpacing: '0.5px'
+                                      }}>
+                                        Short Version
+                                      </div>
+                                      {item.Check_Item}
+                                    </div>
+                                  </div>
                                   <div style={{ display: 'flex', gap: '8px' }}>
                                     <button
                                       onClick={() => handleStartEdit(item)}

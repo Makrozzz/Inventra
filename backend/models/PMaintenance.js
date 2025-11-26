@@ -363,7 +363,8 @@ class PMaintenance {
         SELECT 
           Checklist_ID,
           Category_ID,
-          Check_Item
+          Check_Item,
+          Check_item_Long
         FROM PM_CHECKLIST
         WHERE Category_ID = ?
         ORDER BY Checklist_ID
@@ -506,13 +507,13 @@ class PMaintenance {
   }
 
   // Update checklist item
-  static async updateChecklistItem(checklistId, checkItem) {
+  static async updateChecklistItem(checklistId, checkItem, checkItemLong) {
     try {
       const [result] = await pool.execute(`
         UPDATE PM_CHECKLIST
-        SET Check_Item = ?
+        SET Check_Item = ?, Check_item_Long = ?
         WHERE Checklist_ID = ?
-      `, [checkItem, checklistId]);
+      `, [checkItem, checkItemLong || checkItem, checklistId]);
       
       return result.affectedRows > 0;
     } catch (error) {

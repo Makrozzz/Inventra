@@ -277,7 +277,7 @@ const createChecklistItem = async (req, res, next) => {
 const updateChecklistItem = async (req, res, next) => {
   try {
     const { checklistId } = req.params;
-    const { checkItem } = req.body;
+    const { checkItem, checkItemLong } = req.body;
 
     if (!checkItem) {
       return res.status(400).json({
@@ -285,7 +285,7 @@ const updateChecklistItem = async (req, res, next) => {
       });
     }
 
-    const success = await PMaintenance.updateChecklistItem(checklistId, checkItem);
+    const success = await PMaintenance.updateChecklistItem(checklistId, checkItem, checkItemLong);
 
     if (!success) {
       return res.status(404).json({
