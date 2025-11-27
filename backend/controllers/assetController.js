@@ -544,12 +544,13 @@ const updateAssetById = async (req, res, next) => {
       });
     }
 
+    // Detect changes for audit log
+    let changes = [];
+    
     // Update the asset properties if there are any changes
     if (Object.keys(finalUpdateData).length > 0) {
       Object.assign(existingAsset, finalUpdateData);
-      
-    // Detect changes for audit log
-    const changes = detectChanges(existingAsset, finalUpdateData);
+      changes = detectChanges(existingAsset, finalUpdateData);
     
       // Save the updated asset
       console.log('Executing update for Asset_ID:', existingAsset.Asset_ID);
