@@ -316,7 +316,11 @@
                 </div>
             </div>
             <div class="header-right">
+            {{#if isBlankForm}}
+            <div class="pm-id">PM #<span style="display: inline-block; border-bottom: 1px solid white; min-width: 40px; height: 14px;"></span></div>
+            {{else}}
             <div class="pm-id">PM #{{PM_Sequence_Number}}</div>
+            {{/if}}
         </div>
         </div>
     </div>
@@ -331,7 +335,11 @@
                     </div>
                     <div style="display: flex; align-items: center; gap: 8px;">
                         <span style="font-weight: bold; color: #000; font-size: 7pt;">PM Date:</span>
+                        {{#if isBlankForm}}
+                        <span style="display: inline-block; border-bottom: 1px solid #333; min-width: 100px; height: 12px;"></span>
+                        {{else}}
                         <span style="color: #333; font-size: 7pt; font-weight: 500;">{{PM_Date_Formatted}}</span>
+                        {{/if}}
                     </div>
                 </div>
                 <div class="info-grid">
@@ -416,20 +424,28 @@
                     <td>{{index}}</td>
                     <td class="checklist-item">{{Check_item_Long}}</td>
                     <td>
-                        {{#if Is_OK_bool}}
-                        <span class="checkbox checked"></span>
-                        {{else}}
+                        {{#if ../isBlankForm}}
                         <span class="checkbox"></span>
+                        {{else}}
+                            {{#if Is_OK_bool}}
+                            <span class="checkbox checked"></span>
+                            {{else}}
+                            <span class="checkbox"></span>
+                            {{/if}}
                         {{/if}}
                     </td>
                     <td>
-                        {{#if Is_OK_bool}}
+                        {{#if ../isBlankForm}}
                         <span class="checkbox"></span>
                         {{else}}
-                        <span class="checkbox checked"></span>
+                            {{#if Is_OK_bool}}
+                            <span class="checkbox"></span>
+                            {{else}}
+                            <span class="checkbox checked"></span>
+                            {{/if}}
                         {{/if}}
                     </td>
-                    <td class="remarks-cell">{{#if Remarks}}{{Remarks}}{{else}}-{{/if}}</td>
+                    <td class="remarks-cell">{{#if ../isBlankForm}}-{{else}}{{#if Remarks}}{{Remarks}}{{else}}-{{/if}}{{/if}}</td>
                 </tr>
                 {{/each}}
             </tbody>
@@ -465,7 +481,11 @@
             <div class="signature-content">
                 <div class="signature-line">
                     <strong>Name:</strong>
+                    {{#if isBlankForm}}
+                    <span class="signature-value"></span>
+                    {{else}}
                     <span class="signature-value">{{Created_By_Name}}</span>
+                    {{/if}}
                 </div>
                 <div class="signature-line">
                     <strong>Signature:</strong>
@@ -473,7 +493,11 @@
                 </div>
                 <div class="signature-line">
                     <strong>Date:</strong>
+                    {{#if isBlankForm}}
+                    <span class="signature-value"></span>
+                    {{else}}
                     <span class="signature-value">{{PM_Date_Formatted}}</span>
+                    {{/if}}
                 </div>
             </div>
         </div>

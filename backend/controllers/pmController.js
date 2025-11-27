@@ -447,49 +447,63 @@ const getPMReport = async (req, res, next) => {
 };
 
 /**
- * Bulk download PM reports as single PDF
+ * Bulk download PM reports as single PDF (including blank forms)
  */
 const bulkDownloadPM = async (req, res, next) => {
   try {
-    const { pmIds } = req.body;
+    const { pmIds = [], blankAssetIds = [] } = req.body;
 
-    if (!pmIds || !Array.isArray(pmIds) || pmIds.length === 0) {
-      logger.error('Invalid pmIds in bulk download request');
+    // Validate at least one type of ID is provided
+    if ((!pmIds || !Array.isArray(pmIds)) && (!blankAssetIds || !Array.isArray(blankAssetIds))) {
+      logger.error('Invalid request in bulk download');
       return res.status(400).json({
         error: 'Invalid request',
-        message: 'pmIds array is required and must not be empty'
+        message: 'pmIds or blankAssetIds array is required'
       });
     }
 
-    logger.info(`📦 Bulk download requested for ${pmIds.length} PM records: ${pmIds.join(', ')}`);
+    if (pmIds.length === 0 && blankAssetIds.length === 0) {
+      logger.error('No IDs provided in bulk download request');
+      return res.status(400).json({
+        error: 'Invalid request',
+        message: 'At least one PM ID or blank asset ID must be provided'
+      });
+    }
+
+    logger.info(`📦 Bulk download requested - PM records: ${pmIds.length}, Blank forms: ${blankAssetIds.length}`);
 
     // Fetch all PM records with details
     const pmRecordsPromises = pmIds.map(pmId => PMaintenance.getDetailedPM(pmId));
     const pmRecords = await Promise.all(pmRecordsPromises);
 
-    // Filter out any null results (in case some PM IDs don't exist)
-    const validPMRecords = pmRecords.filter(record => record !== null);
+    // Fetch all blank asset data
+    const blankAssetsPromises = blankAssetIds.map(assetId => PMaintenance.getAssetForBlankPM(assetId));
+    const blankAssets = await Promise.all(blankAssetsPromises);
 
-    if (validPMRecords.length === 0) {
-      logger.error('No valid PM records found for provided IDs');
+    // Filter out any null results
+    const validPMRecords = pmRecords.filter(record => record !== null);
+    const validBlankAssets = blankAssets.filter(asset => asset !== null);
+
+    if (validPMRecords.length === 0 && validBlankAssets.length === 0) {
+      logger.error('No valid records found for provided IDs');
       return res.status(404).json({
-        error: 'No valid PM records found',
-        message: 'None of the provided PM IDs exist'
+        error: 'No valid records found',
+        message: 'None of the provided IDs exist'
       });
     }
 
-    logger.info(`✅ Found ${validPMRecords.length} valid PM records out of ${pmIds.length} requested`);
+    logger.info(`✅ Found ${validPMRecords.length} PM records and ${validBlankAssets.length} blank forms`);
 
     // Generate combined PDF using pdfGenerator
     logger.info('Starting bulk PDF generation...');
-    const result = await pdfGenerator.generateBulkPM(validPMRecords);
+    const result = await pdfGenerator.generateBulkPM(validPMRecords, validBlankAssets);
     
     if (!result || !result.success || !result.absolutePath) {
       logger.error('PDF generation failed:', result?.error);
       throw new Error(result?.error || 'Failed to generate bulk PDF');
     }
 
-    const absolutePath = result.absolutePath; // Use absolutePath directly from generator
+    const absolutePath = result.absolutePath;
     const filename = result.filename;
 
     logger.info(`✅ Bulk PDF generated successfully: ${filename}`);
@@ -603,6 +617,58 @@ const updateChecklistOrder = async (req, res, next) => {
   }
 };
 
+/**
+ * Get blank PM report for an asset
+ */
+const getBlankPMReport = async (req, res, next) => {
+  try {
+    const { assetId } = req.params;
+
+    logger.info(`📄 Generating blank PM report for Asset_ID: ${assetId}`);
+
+    // Generate blank PDF report
+    const result = await pdfGenerator.generateBlankPMReport(assetId);
+
+    if (!result.success) {
+      return res.status(500).json({
+        error: 'Failed to generate blank PDF report',
+        message: result.error
+      });
+    }
+
+    // Convert relative path to absolute path for res.download()
+    const absolutePath = path.join(__dirname, '../', result.filepath);
+
+    // Send file for download and delete after sending
+    res.download(absolutePath, result.filename, (err) => {
+      if (err) {
+        logger.error('❌ Error sending blank PDF file:', err);
+        if (!res.headersSent) {
+          res.status(500).json({
+            error: 'Failed to download blank PDF',
+            message: err.message
+          });
+        }
+      } else {
+        logger.info(`📥 Blank PDF downloaded successfully: ${result.filename}`);
+        
+        // Delete blank PDF file after successful download
+        const fs = require('fs').promises;
+        fs.unlink(absolutePath)
+          .then(() => logger.info(`🗑️  Cleaned up blank PDF: ${result.filename}`))
+          .catch(unlinkErr => logger.error('Error deleting blank PDF:', unlinkErr));
+      }
+    });
+
+  } catch (error) {
+    logger.error('Error in getBlankPMReport:', error);
+    res.status(500).json({
+      error: 'Failed to generate blank PM report',
+      message: error.message
+    });
+  }
+};
+
 module.exports = {
   getAllPM,
   getPMStatistics,
@@ -623,5 +689,6 @@ module.exports = {
   updateChecklistOrder,
   createCategory,
   getPMReport,
+  getBlankPMReport,
   bulkDownloadPM
 };

@@ -3133,32 +3133,70 @@ const PreventiveMaintenance = () => {
                             </div>
 
                             {/* PM Records Selection - Horizontal in same row */}
-                            {assetPMRecords.length === 0 ? (
-                              <div style={{ 
-                                fontSize: '0.85rem', 
-                                color: '#999',
-                                fontStyle: 'italic',
-                                flex: 1
+                            <div style={{
+                              flex: 1,
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '8px',
+                              flexWrap: 'wrap'
+                            }}>
+                              <span style={{
+                                fontSize: '0.85rem',
+                                color: '#666',
+                                fontWeight: '600',
+                                marginRight: '4px'
                               }}>
-                                No PM records available
-                              </div>
-                            ) : (
-                              <div style={{
-                                flex: 1,
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '8px',
-                                flexWrap: 'wrap'
-                              }}>
-                                <span style={{
+                                Forms:
+                              </span>
+                              {/* Blank Form Option */}
+                              <div
+                                style={{
+                                  padding: '6px 12px',
+                                  border: selectedPMs.includes('BLANK') ? '2px solid #9b59b6' : '1px solid #ddd',
+                                  borderRadius: '6px',
+                                  cursor: 'pointer',
+                                  background: selectedPMs.includes('BLANK') ? '#f4ecf7' : 'white',
+                                  transition: 'all 0.2s',
                                   fontSize: '0.85rem',
-                                  color: '#666',
-                                  fontWeight: '600',
-                                  marginRight: '4px'
-                                }}>
-                                  PM:
-                                </span>
-                                {assetPMRecords.map((pm, index) => {
+                                  fontWeight: selectedPMs.includes('BLANK') ? '600' : '500',
+                                  color: selectedPMs.includes('BLANK') ? '#2c3e50' : '#666',
+                                  whiteSpace: 'nowrap',
+                                  boxShadow: selectedPMs.includes('BLANK') ? '0 2px 4px rgba(155, 89, 182, 0.2)' : 'none'
+                                }}
+                                onClick={() => {
+                                  const currentPMs = selectedPMRecords[asset.Asset_ID] || [];
+                                  if (currentPMs.includes('BLANK')) {
+                                    setSelectedPMRecords({
+                                      ...selectedPMRecords,
+                                      [asset.Asset_ID]: currentPMs.filter(id => id !== 'BLANK')
+                                    });
+                                  } else {
+                                    setSelectedPMRecords({
+                                      ...selectedPMRecords,
+                                      [asset.Asset_ID]: [...currentPMs, 'BLANK']
+                                    });
+                                  }
+                                }}
+                                onMouseOver={(e) => {
+                                  if (!selectedPMs.includes('BLANK')) {
+                                    e.currentTarget.style.background = '#f0f0f0';
+                                    e.currentTarget.style.borderColor = '#9b59b6';
+                                  }
+                                }}
+                                onMouseOut={(e) => {
+                                  if (!selectedPMs.includes('BLANK')) {
+                                    e.currentTarget.style.background = 'white';
+                                    e.currentTarget.style.borderColor = '#ddd';
+                                  }
+                                }}
+                                title="Blank PM Form (empty template)"
+                              >
+                                {selectedPMs.includes('BLANK') && <span style={{ marginRight: '4px', color: '#27ae60' }}>✓</span>}
+                                Blank
+                              </div>
+                              
+                              {/* Existing PM Records */}
+                              {assetPMRecords.length > 0 && assetPMRecords.map((pm, index) => {
                                   const isPMSelected = selectedPMs.includes(pm.PM_ID);
                                   return (
                                     <div
@@ -3209,8 +3247,7 @@ const PreventiveMaintenance = () => {
                                     </div>
                                   );
                                 })}
-                              </div>
-                            )}
+                            </div>
 
                             {/* Remove Button */}
                             <button
@@ -3282,8 +3319,20 @@ const PreventiveMaintenance = () => {
                     const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
                     const filename = `${customerName}_${branchName}_${timestamp}.pdf`;
                     
-                    // Prepare data for backend
-                    const pmIds = Object.values(selectedPMRecords).flat();
+                    // Separate PM IDs and blank forms
+                    const allSelections = Object.entries(selectedPMRecords);
+                    const pmIds = [];
+                    const blankAssetIds = [];
+                    
+                    allSelections.forEach(([assetId, selections]) => {
+                      selections.forEach(selection => {
+                        if (selection === 'BLANK') {
+                          blankAssetIds.push(parseInt(assetId));
+                        } else {
+                          pmIds.push(selection);
+                        }
+                      });
+                    });
                     
                     // Call backend API to generate PDF
                     const token = localStorage.getItem('authToken');
@@ -3293,7 +3342,7 @@ const PreventiveMaintenance = () => {
                         'Authorization': `Bearer ${token}`,
                         'Content-Type': 'application/json'
                       },
-                      body: JSON.stringify({ pmIds })
+                      body: JSON.stringify({ pmIds, blankAssetIds })
                     });
 
                     if (!response.ok) {

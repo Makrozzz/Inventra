@@ -18,6 +18,7 @@ const {
   updateChecklistOrder,
   createCategory,
   getPMReport,
+  getBlankPMReport,
   bulkDownloadPM,
   deletePM
 } = require('../controllers/pmController');
@@ -39,6 +40,9 @@ router.get('/asset/:assetId', getPMByAssetId);
 
 // PDF Report route
 router.get('/:pmId/report', getPMReport);
+
+// Blank PM Report route
+router.get('/asset/:assetId/blank-report', getBlankPMReport);
 
 // Bulk download route
 router.post('/bulk-download', bulkDownloadPM);

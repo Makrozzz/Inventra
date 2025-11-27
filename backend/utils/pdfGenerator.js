@@ -361,6 +361,144 @@ class PDFGenerator {
     }
 
     /**
+     * Generate blank PM report for an asset (no PM data, empty form)
+     * @param {number} assetId - The Asset_ID
+     * @returns {Promise<Object>} - { success, filepath, filename, error }
+     */
+    async generateBlankPMReport(assetId) {
+        let browser;
+        try {
+            // 1. Fetch asset data
+            console.log(`Fetching asset data for Asset_ID: ${assetId}`);
+            const assetData = await PMaintenance.getAssetForBlankPM(assetId);
+            
+            if (!assetData) {
+                throw new Error(`Asset not found for Asset_ID: ${assetId}`);
+            }
+
+            // 2. Format data for blank template
+            const templateData = this.formatBlankFormData(assetData);
+
+            // 3. Load and compile HTML template
+            console.log('Loading HTML template...');
+            const templateHtml = await fs.readFile(this.templatePath, 'utf8');
+            const template = handlebars.compile(templateHtml);
+            const html = template(templateData);
+
+            // 4. Generate filename
+            const customerName = assetData.Customer_Name ? this.sanitizeForFilename(assetData.Customer_Name) : 'UNKNOWN';
+            const timestamp = Date.now();
+            const filename = `PM_Blank_Asset${assetId}_${customerName}_${assetData.Asset_Serial_Number}_${timestamp}.pdf`;
+            const filepath = path.join(this.outputDir, filename);
+            
+            console.log('Generated blank form filename:', filename);
+
+            // 5. Launch Puppeteer and generate PDF
+            console.log('Launching Puppeteer to generate PDF...');
+            browser = await puppeteer.launch({
+                headless: 'new',
+                args: ['--no-sandbox', '--disable-setuid-sandbox']
+            });
+
+            const page = await browser.newPage();
+            await page.setContent(html, { waitUntil: 'networkidle0' });
+
+            await page.pdf({
+                path: filepath,
+                format: 'A4',
+                printBackground: true,
+                margin: {
+                    top: '10mm',
+                    right: '10mm',
+                    bottom: '10mm',
+                    left: '10mm'
+                }
+            });
+
+            console.log(`Blank PDF generated successfully: ${filename}`);
+
+            const relativePath = path.join('uploads', 'pm-reports', filename);
+
+            return {
+                success: true,
+                filepath: relativePath,
+                filename: filename
+            };
+
+        } catch (error) {
+            console.error('Error generating blank PDF:', error);
+            return {
+                success: false,
+                error: error.message
+            };
+        } finally {
+            if (browser) {
+                await browser.close();
+            }
+        }
+    }
+
+    /**
+     * Format asset data for blank PM template
+     */
+    formatBlankFormData(assetData) {
+        // Current date for footer
+        const generatedDate = new Date().toLocaleDateString('en-GB', {
+            day: '2-digit',
+            month: 'long',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+
+        // Convert logos to base64
+        const logoBase64 = this.getLogoBase64();
+        const projectLogoBase64 = this.getProjectLogoBase64(assetData.Project_Logo_Path);
+
+        return {
+            // Mark as blank form
+            isBlankForm: true,
+            
+            // PM Information - all empty/blank
+            PM_ID: null,
+            PM_Sequence_Number: null, // This will show as empty box in template
+            PM_Date_Formatted: null,  // Empty date
+            Status: null,
+            Remarks: null,
+
+            // Asset Information
+            Asset_Serial_Number: assetData.Asset_Serial_Number,
+            Asset_Tag_ID: assetData.Asset_Tag_ID,
+            Item_Name: assetData.Item_Name,
+            Category: assetData.Category,
+            Model: assetData.Model || '-',
+            Customer_Name: assetData.Customer_Name || 'N/A',
+            Project_Title: assetData.Project_Title || '-',
+
+            // Recipient Information
+            Recipient_Name: assetData.Recipient_Name || '-',
+            Department: assetData.Department || '-',
+            Position: assetData.Position || '-',
+
+            // No technician info for blank form
+            Created_By_Name: null,
+
+            // Logos
+            Logo_Base64: logoBase64,
+            Project_Logo_Base64: projectLogoBase64,
+
+            // Checklist Results - all empty
+            checklist_results: assetData.checklist_results,
+            
+            // Peripherals/Accessories
+            peripherals: assetData.peripherals || [],
+
+            // Footer
+            Generated_Date: generatedDate
+        };
+    }
+
+    /**
      * Update PMAINTENANCE table with generated PDF file path
      */
     async updatePMFilePath(pmId, filepath) {
@@ -417,12 +555,12 @@ class PDFGenerator {
      * @param {Array} pmRecords - Array of PM records with full details
      * @returns {Promise<Object>} - { success, filepath, filename, absolutePath, error }
      */
-    async generateBulkPM(pmRecords) {
+    async generateBulkPM(pmRecords, blankAssets = []) {
         let browser;
         try {
-            console.log(`📦 Generating bulk PDF for ${pmRecords.length} PM records with caching`);
+            console.log(`📦 Generating bulk PDF for ${pmRecords.length} PM records and ${blankAssets.length} blank forms with caching`);
 
-            // Step 1: Ensure all individual PDFs exist (check cache, regenerate if needed)
+            // Step 1: Ensure all individual PM PDFs exist (check cache, regenerate if needed)
             const individualPDFs = [];
             
             for (let i = 0; i < pmRecords.length; i++) {
@@ -465,7 +603,23 @@ class PDFGenerator {
                     pmId: pmData.PM_ID,
                     path: pdfPath,
                     customer: pmData.Customer_Name,
-                    branch: pmData.Branch
+                    branch: pmData.Branch,
+                    data: pmData,
+                    isBlank: false
+                });
+            }
+
+            // Add blank forms to the list
+            for (let i = 0; i < blankAssets.length; i++) {
+                const assetData = blankAssets[i];
+                console.log(`  Processing blank form ${i + 1}/${blankAssets.length}: Asset_ID ${assetData.Asset_ID}`);
+                
+                individualPDFs.push({
+                    assetId: assetData.Asset_ID,
+                    customer: assetData.Customer_Name,
+                    branch: assetData.Branch,
+                    data: assetData,
+                    isBlank: true
                 });
             }
 
@@ -473,30 +627,36 @@ class PDFGenerator {
                 throw new Error('No valid PDFs generated');
             }
 
-            console.log(`  ✅ All individual PDFs ready (${individualPDFs.length}/${pmRecords.length})`);
+            console.log(`  ✅ All records ready (${pmRecords.length} PM records + ${blankAssets.length} blank forms)`);
 
-            // Step 2: Compile individual PDFs into bulk PDF
-            // Load template and generate combined HTML from all PM records
+            // Step 2: Compile individual records into bulk PDF
+            // Load template and generate combined HTML from all records
             const templateHtml = await fs.readFile(this.templatePath, 'utf8');
             const template = handlebars.compile(templateHtml);
             const htmlPages = [];
 
             for (let i = 0; i < individualPDFs.length; i++) {
                 const pdfInfo = individualPDFs[i];
-                const pmData = pmRecords.find(pm => pm.PM_ID === pdfInfo.pmId);
-                
-                if (pmData) {
+                let templateData;
+
+                if (pdfInfo.isBlank) {
+                    // Format blank form data
+                    templateData = this.formatBlankFormData(pdfInfo.data);
+                } else {
+                    // Format regular PM data
+                    const pmData = pdfInfo.data;
                     const pmSequenceNumber = await this.getPMSequenceNumber(pmData.PM_ID, pmData.Asset_ID);
                     const checklistResults = await this.getChecklistResults(pmData.PM_ID);
-                    const templateData = this.formatDataForTemplate(pmData, checklistResults, pmSequenceNumber);
-                    const html = template(templateData);
-                    
-                    // Add page break after each PM (except the last one)
-                    if (i < individualPDFs.length - 1) {
-                        htmlPages.push(html + '<div style="page-break-after: always;"></div>');
-                    } else {
-                        htmlPages.push(html);
-                    }
+                    templateData = this.formatDataForTemplate(pmData, checklistResults, pmSequenceNumber);
+                }
+
+                const html = template(templateData);
+                
+                // Add page break after each record (except the last one)
+                if (i < individualPDFs.length - 1) {
+                    htmlPages.push(html + '<div style="page-break-after: always;"></div>');
+                } else {
+                    htmlPages.push(html);
                 }
             }
 
@@ -507,10 +667,10 @@ class PDFGenerator {
             const now = new Date();
             const timestamp = now.getTime();
             
-            // Use first customer and branch for bulk filename
-            const firstPDF = individualPDFs[0];
-            const customerName = this.sanitizeForFilename(firstPDF.customer || 'UNKNOWN');
-            const branchName = this.sanitizeForFilename(firstPDF.branch || 'UNKNOWN');
+            // Use first record's customer and branch for bulk filename
+            const firstRecord = individualPDFs[0];
+            const customerName = this.sanitizeForFilename(firstRecord.customer || 'UNKNOWN');
+            const branchName = this.sanitizeForFilename(firstRecord.branch || 'UNKNOWN');
             const filename = `${customerName}_${branchName}_${timestamp}.pdf`;
             const filepath = path.join(this.bulkOutputDir, filename);
 

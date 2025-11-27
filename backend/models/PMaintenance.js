@@ -299,6 +299,65 @@ class PMaintenance {
     }
   }
 
+  // Get asset details for blank PM report
+  static async getAssetForBlankPM(assetId) {
+    try {
+      // Get asset basic info with all related data
+      const [assetRows] = await pool.execute(`
+        SELECT 
+          a.Asset_ID,
+          a.Asset_Serial_Number,
+          a.Asset_Tag_ID,
+          a.Item_Name,
+          c.Category_ID,
+          c.Category,
+          m.Model_Name as Model,
+          r.Recipient_Name,
+          r.Department,
+          r.Position,
+          cust.Customer_Name,
+          cust.Branch,
+          p.Project_Title,
+          p.file_path_logo as Project_Logo_Path
+        FROM ASSET a
+        LEFT JOIN CATEGORY c ON a.Category_ID = c.Category_ID
+        LEFT JOIN MODEL m ON a.Model_ID = m.Model_ID
+        LEFT JOIN RECIPIENTS r ON a.Recipients_ID = r.Recipients_ID
+        LEFT JOIN INVENTORY inv ON a.Asset_ID = inv.Asset_ID
+        LEFT JOIN CUSTOMER cust ON inv.Customer_ID = cust.Customer_ID
+        LEFT JOIN PROJECT p ON inv.Project_ID = p.Project_ID
+        WHERE a.Asset_ID = ?
+      `, [assetId]);
+
+      if (assetRows.length === 0) return null;
+
+      const assetData = assetRows[0];
+
+      // Get checklist items for this category (empty, no results)
+      if (assetData.Category_ID) {
+        const checklistItems = await this.getAllChecklistItemsByCategory(assetData.Category_ID);
+        // Convert to blank checklist results format with index
+        assetData.checklist_results = checklistItems.map((item, index) => ({
+          Checklist_ID: item.Checklist_ID,
+          Check_item_Long: item.Check_item_Long,
+          Is_OK_bool: null,  // Empty checkbox
+          Remarks: null,     // No remarks
+          index: index + 1   // Add index for display
+        }));
+      } else {
+        assetData.checklist_results = [];
+      }
+      
+      // Get peripherals for the asset
+      assetData.peripherals = await this.getPeripheralsByAssetId(assetData.Asset_ID);
+
+      return assetData;
+    } catch (error) {
+      console.error('Error in PMaintenance.getAssetForBlankPM:', error);
+      throw error;
+    }
+  }
+
   // Get PM data with checklist results grouped by category
   static async getPMWithChecklistByCustomerAndBranch(customerRefNumber, branch) {
     try {
