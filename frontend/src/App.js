@@ -23,6 +23,7 @@ function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [assets, setAssets] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [isSidebarMinimized, setIsSidebarMinimized] = useState(false);
 
   useEffect(() => {
     // Check if user is authenticated on app load
@@ -82,8 +83,12 @@ function App() {
   return (
     <Router>
       <div className="app-layout">
-        <Sidebar onLogout={handleLogout} />
-        <main className="main-content">
+        <Sidebar onLogout={handleLogout} onMinimizeChange={setIsSidebarMinimized} />
+        <main className="main-content" style={{
+          marginLeft: isSidebarMinimized ? '80px' : '250px',
+          width: isSidebarMinimized ? 'calc(100% - 80px)' : 'calc(100% - 250px)',
+          transition: 'margin-left 0.3s ease, width 0.3s ease'
+        }}>
           <Routes>
             <Route path="/" element={<Dashboard />} />
             <Route path="/projects" element={<Projects />} />

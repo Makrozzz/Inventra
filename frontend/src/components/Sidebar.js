@@ -12,9 +12,10 @@ import {
   Users
 } from 'lucide-react';
 
-const Sidebar = ({ onLogout }) => {
+const Sidebar = ({ onLogout, onMinimizeChange }) => {
   const location = useLocation();
   const [username, setUsername] = useState('');
+  const [isMinimized, setIsMinimized] = useState(false);
 
   useEffect(() => {
     // Get username from localStorage
@@ -29,6 +30,14 @@ const Sidebar = ({ onLogout }) => {
     }
   }, []);
 
+  const toggleMinimize = () => {
+    const newMinimizedState = !isMinimized;
+    setIsMinimized(newMinimizedState);
+    if (onMinimizeChange) {
+      onMinimizeChange(newMinimizedState);
+    }
+  };
+
   const navItems = [
     { path: '/', icon: LayoutDashboard, label: 'Dashboard' },
     { path: '/projects', icon: FolderOpen, label: 'Projects' },
@@ -40,10 +49,16 @@ const Sidebar = ({ onLogout }) => {
   ];
 
   return (
-    <div className="sidebar">
+    <div className={`sidebar ${isMinimized ? 'minimized' : ''}`} style={{ width: isMinimized ? '80px' : '250px', transition: 'width 0.3s ease' }}>
       <div className="sidebar-header">
-        <div className="sidebar-logo">Inventra</div>
-        <div className="sidebar-subtitle">Asset Management System</div>
+        {isMinimized ? (
+          <div className="sidebar-logo" style={{ textAlign: 'center', fontSize: '24px' }}>I</div>
+        ) : (
+          <>
+            <div className="sidebar-logo">Inventra</div>
+            <div className="sidebar-subtitle">Asset Management System</div>
+          </>
+        )}
       </div>
       
       <nav className="sidebar-nav">
@@ -57,23 +72,66 @@ const Sidebar = ({ onLogout }) => {
                 key={item.path}
                 to={item.path}
                 className={`nav-item ${isActive ? 'active' : ''}`}
+                title={isMinimized ? item.label : ''}
+                style={{
+                  justifyContent: isMinimized ? 'center' : 'flex-start',
+                  padding: isMinimized ? '12px' : '12px 20px'
+                }}
               >
                 <IconComponent className="nav-icon" />
-                <span>{item.label}</span>
+                {!isMinimized && <span>{item.label}</span>}
               </Link>
             );
           })}
         </div>
         
-        <div className="sidebar-bottom-nav">
-          <button onClick={onLogout} className="nav-item logout-item">
+        <div className="sidebar-bottom-nav" style={{ borderTop: 'none', paddingTop: '0' }}>
+          <button 
+            onClick={toggleMinimize}
+            className="nav-item minimize-item"
+            style={{
+              justifyContent: 'center',
+              padding: '10px 12px',
+              color: '#95a5a6',
+              fontSize: '13px',
+              fontStyle: 'italic',
+              cursor: 'pointer',
+              background: 'transparent',
+              border: 'none',
+              borderBottom: '3px solid rgba(255, 255, 255, 0.1)',
+              width: '100%',
+              textAlign: 'center',
+              marginBottom: '10px',
+              letterSpacing: '3px'
+            }}
+          >
+            {!isMinimized && '- minimize -'}
+            {isMinimized && '>'}
+          </button>
+
+          <button 
+            onClick={onLogout} 
+            className="nav-item logout-item"
+            title={isMinimized ? 'Logout' : ''}
+            style={{
+              justifyContent: isMinimized ? 'center' : 'flex-start',
+              padding: isMinimized ? '12px' : '12px 20px'
+            }}
+          >
             <LogOut className="nav-icon" />
-            <span>Logout</span>
+            {!isMinimized && <span>Logout</span>}
           </button>
           
-          <div className="nav-item user-item">
+          <div 
+            className="nav-item user-item"
+            title={isMinimized ? username : ''}
+            style={{
+              justifyContent: isMinimized ? 'center' : 'flex-start',
+              padding: isMinimized ? '12px' : '12px 20px'
+            }}
+          >
             <User className="nav-icon" />
-            <span>{username}</span>
+            {!isMinimized && <span>{username}</span>}
           </div>
         </div>
       </nav>
