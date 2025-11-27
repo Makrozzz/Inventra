@@ -15,6 +15,7 @@ const {
   createChecklistItem,
   updateChecklistItem,
   deleteChecklistItem,
+  updateChecklistOrder,
   createCategory,
   getPMReport,
   bulkDownloadPM,
@@ -51,5 +52,6 @@ router.post('/categories', createCategory);
 router.post('/checklist', createChecklistItem);
 router.put('/checklist/:checklistId', updateChecklistItem);
 router.delete('/checklist/:checklistId', deleteChecklistItem);
+router.put('/checklist-order', updateChecklistOrder);
 
 module.exports = router;

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Calendar, Clock, CheckCircle, AlertTriangle, Wrench, Filter, Building2, MapPin, Package, FileText, X, ClipboardCheck, Edit, Trash2, Plus, Save, Search, Download, ChevronRight, ChevronLeft } from 'lucide-react';
+import { Calendar, Clock, CheckCircle, AlertTriangle, Wrench, Filter, Building2, MapPin, Package, FileText, X, ClipboardCheck, Edit, Trash2, Plus, Save, Search, Download, ChevronRight, ChevronLeft, Copy, ArrowLeft, GripVertical } from 'lucide-react';
 
 const PreventiveMaintenance = () => {
   const navigate = useNavigate();
@@ -44,6 +44,20 @@ const PreventiveMaintenance = () => {
   const [pendingEdit, setPendingEdit] = useState(null);
   const [showAddConfirm, setShowAddConfirm] = useState(false);
   const [loadingChecklist, setLoadingChecklist] = useState(false);
+  const [showCopyChecklist, setShowCopyChecklist] = useState(false);
+  const [sourceCategoryForCopy, setSourceCategoryForCopy] = useState('');
+  const [sourceChecklistItems, setSourceChecklistItems] = useState([]);
+  const [selectedItemsToCopy, setSelectedItemsToCopy] = useState([]);
+  const [showCopyConfirm, setShowCopyConfirm] = useState(false);
+  const [loadingSourceChecklist, setLoadingSourceChecklist] = useState(false);
+  const [copyingItems, setCopyingItems] = useState(false);
+
+  // Rearrange mode states
+  const [rearrangeMode, setRearrangeMode] = useState(false);
+  const [draggedItem, setDraggedItem] = useState(null);
+  const [dragOverIndex, setDragOverIndex] = useState(null);
+  const [showRearrangeConfirm, setShowRearrangeConfirm] = useState(false);
+  const [savingOrder, setSavingOrder] = useState(false);
 
   // Bulk Download Modal States
   const [showBulkDownloadModal, setShowBulkDownloadModal] = useState(false);
@@ -448,6 +462,196 @@ const PreventiveMaintenance = () => {
     setEditingItemId(null);
     setNewItemText('');
     setNewItemTextLong('');
+    setShowCopyChecklist(false);
+  };
+
+  const handleOpenCopyChecklist = () => {
+    setShowCopyChecklist(true);
+    setSourceCategoryForCopy('');
+    setSourceChecklistItems([]);
+    setSelectedItemsToCopy([]);
+  };
+
+  const handleBackToManageChecklist = () => {
+    setShowCopyChecklist(false);
+    setSourceCategoryForCopy('');
+    setSourceChecklistItems([]);
+    setSelectedItemsToCopy([]);
+  };
+
+  const handleSourceCategoryChange = async (e) => {
+    const categoryId = e.target.value;
+    setSourceCategoryForCopy(categoryId);
+    setSelectedItemsToCopy([]);
+    
+    if (!categoryId) {
+      setSourceChecklistItems([]);
+      return;
+    }
+    
+    try {
+      setLoadingSourceChecklist(true);
+      const response = await fetch(`http://localhost:5000/api/v1/pm/all-checklist/${categoryId}`);
+      if (!response.ok) throw new Error('Failed to fetch source checklist');
+      const data = await response.json();
+      setSourceChecklistItems(data);
+    } catch (err) {
+      console.error('Error fetching source checklist:', err);
+      alert('Failed to load checklist items');
+    } finally {
+      setLoadingSourceChecklist(false);
+    }
+  };
+
+  const handleToggleItemToCopy = (item) => {
+    setSelectedItemsToCopy(prev => {
+      const exists = prev.find(i => i.Checklist_ID === item.Checklist_ID);
+      if (exists) {
+        return prev.filter(i => i.Checklist_ID !== item.Checklist_ID);
+      } else {
+        return [...prev, item];
+      }
+    });
+  };
+
+  const handleConfirmCopyClick = () => {
+    if (selectedItemsToCopy.length === 0) {
+      alert('Please select at least one item to copy');
+      return;
+    }
+    setShowCopyConfirm(true);
+  };
+
+  const handleConfirmCopy = async () => {
+    setCopyingItems(true);
+    try {
+      const token = localStorage.getItem('authToken');
+      
+      // Copy each selected item
+      for (const item of selectedItemsToCopy) {
+        const response = await fetch('http://localhost:5000/api/v1/pm/checklist', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            categoryId: selectedCategoryForEdit,
+            checkItem: item.Check_Item,
+            checkItemLong: item.Check_item_Long
+          })
+        });
+        
+        if (!response.ok) throw new Error('Failed to copy item');
+      }
+      
+      alert(`Successfully copied ${selectedItemsToCopy.length} item(s)!`);
+      
+      // Refresh the checklist for the target category
+      await handleCategoryChangeForEdit({ target: { value: selectedCategoryForEdit } });
+      
+      // Go back to manage checklist page
+      handleBackToManageChecklist();
+      setShowCopyConfirm(false);
+    } catch (err) {
+      console.error('Error copying items:', err);
+      alert('Failed to copy items. Please try again.');
+    } finally {
+      setCopyingItems(false);
+    }
+  };
+
+  // Rearrange mode handlers
+  const handleToggleRearrangeMode = () => {
+    if (rearrangeMode) {
+      // User clicked Confirm - show confirmation dialog
+      setShowRearrangeConfirm(true);
+    } else {
+      // Enter rearrange mode
+      setRearrangeMode(true);
+    }
+  };
+
+  const handleCancelRearrange = () => {
+    // Reload checklist to reset order
+    handleCategoryChangeForEdit({ target: { value: selectedCategoryForEdit } });
+    setRearrangeMode(false);
+    setDraggedItem(null);
+    setDragOverIndex(null);
+  };
+
+  const handleConfirmRearrange = async () => {
+    setSavingOrder(true);
+    try {
+      const token = localStorage.getItem('authToken');
+      
+      // Prepare order updates with new Display_Order values
+      const orderUpdates = checklistItemsForEdit.map((item, index) => ({
+        Checklist_ID: item.Checklist_ID,
+        Display_Order: index + 1
+      }));
+      
+      const response = await fetch('http://localhost:5000/api/v1/pm/checklist-order', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ orderUpdates })
+      });
+      
+      if (!response.ok) throw new Error('Failed to update order');
+      
+      alert('Checklist order updated successfully!');
+      
+      // Refresh the checklist
+      await handleCategoryChangeForEdit({ target: { value: selectedCategoryForEdit } });
+      
+      // Exit rearrange mode
+      setRearrangeMode(false);
+      setShowRearrangeConfirm(false);
+    } catch (err) {
+      console.error('Error updating order:', err);
+      alert('Failed to update order. Please try again.');
+    } finally {
+      setSavingOrder(false);
+    }
+  };
+
+  const handleDragStart = (e, index) => {
+    setDraggedItem(index);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragOver = (e, index) => {
+    e.preventDefault();
+    if (draggedItem === null) return;
+    if (index !== draggedItem) {
+      setDragOverIndex(index);
+    }
+  };
+
+  const handleDrop = (e, dropIndex) => {
+    e.preventDefault();
+    if (draggedItem === null || draggedItem === dropIndex) {
+      setDragOverIndex(null);
+      return;
+    }
+
+    // Reorder the array
+    const newItems = [...checklistItemsForEdit];
+    const draggedItemData = newItems[draggedItem];
+    newItems.splice(draggedItem, 1);
+    newItems.splice(dropIndex, 0, draggedItemData);
+
+    setChecklistItemsForEdit(newItems);
+    setDraggedItem(null);
+    setDragOverIndex(null);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedItem(null);
+    setDragOverIndex(null);
   };
 
   // Handlers for customer and branch selection with URL parameter updates
@@ -1540,11 +1744,12 @@ const PreventiveMaintenance = () => {
           <div style={{
             background: 'white',
             borderRadius: '12px',
-            maxWidth: '900px',
-            width: '100%',
-            maxHeight: '90vh',
-            overflow: 'auto',
-            boxShadow: '0 10px 40px rgba(0,0,0,0.2)'
+            width: '900px',
+            height: '85vh',
+            display: 'flex',
+            flexDirection: 'column',
+            boxShadow: '0 10px 40px rgba(0,0,0,0.2)',
+            overflow: 'hidden'
           }}>
             {/* Modal Header */}
             <div style={{
@@ -1582,7 +1787,7 @@ const PreventiveMaintenance = () => {
             </div>
 
             {/* Modal Body */}
-            <div style={{ padding: '24px' }}>
+            <div style={{ padding: '24px', flex: 1, overflow: 'auto' }}>
               {/* Category Selection */}
               <div style={{ marginBottom: '24px' }}>
                 <label style={{
@@ -1621,19 +1826,108 @@ const PreventiveMaintenance = () => {
               </div>
 
               {/* Checklist Items List */}
-              {selectedCategoryForEdit && (
+              {selectedCategoryForEdit && !showCopyChecklist && (
                 <div>
-                  <h3 style={{
-                    margin: '0 0 16px 0',
-                    color: '#2c3e50',
-                    fontSize: '1.2rem',
+                  <div style={{
                     display: 'flex',
+                    justifyContent: 'space-between',
                     alignItems: 'center',
-                    gap: '8px'
+                    marginBottom: '16px'
                   }}>
-                    <ClipboardCheck size={20} color="#667eea" />
-                    Checklist Items
-                  </h3>
+                    <h3 style={{
+                      margin: 0,
+                      color: '#2c3e50',
+                      fontSize: '1.2rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px'
+                    }}>
+                      <ClipboardCheck size={20} color="#667eea" />
+                      Checklist Items
+                    </h3>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      {rearrangeMode && (
+                        <button
+                          onClick={handleCancelRearrange}
+                          style={{
+                            padding: '8px 16px',
+                            background: '#95a5a6',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '6px',
+                            cursor: 'pointer',
+                            fontSize: '0.9rem',
+                            fontWeight: '600',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            transition: 'all 0.2s'
+                          }}
+                          onMouseOver={(e) => e.target.style.background = '#7f8c8d'}
+                          onMouseOut={(e) => e.target.style.background = '#95a5a6'}
+                        >
+                          <X size={16} />
+                          Cancel
+                        </button>
+                      )}
+                      <button
+                        onClick={handleToggleRearrangeMode}
+                        disabled={checklistItemsForEdit.length === 0}
+                        style={{
+                          padding: '8px 16px',
+                          background: rearrangeMode ? '#27ae60' : '#f39c12',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '6px',
+                          cursor: checklistItemsForEdit.length === 0 ? 'not-allowed' : 'pointer',
+                          fontSize: '0.9rem',
+                          fontWeight: '600',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          transition: 'all 0.2s',
+                          opacity: checklistItemsForEdit.length === 0 ? 0.5 : 1
+                        }}
+                        onMouseOver={(e) => {
+                          if (checklistItemsForEdit.length > 0) {
+                            e.target.style.background = rearrangeMode ? '#229954' : '#e67e22';
+                          }
+                        }}
+                        onMouseOut={(e) => {
+                          if (checklistItemsForEdit.length > 0) {
+                            e.target.style.background = rearrangeMode ? '#27ae60' : '#f39c12';
+                          }
+                        }}
+                      >
+                        <GripVertical size={16} />
+                        {rearrangeMode ? 'Confirm' : 'Rearrange'}
+                      </button>
+                      <button
+                        onClick={handleOpenCopyChecklist}
+                        disabled={rearrangeMode}
+                        style={{
+                          padding: '8px 16px',
+                          background: rearrangeMode ? '#bdc3c7' : '#667eea',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '6px',
+                          cursor: rearrangeMode ? 'not-allowed' : 'pointer',
+                          fontSize: '0.9rem',
+                          fontWeight: '600',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          transition: 'all 0.2s',
+                          opacity: rearrangeMode ? 0.5 : 1
+                        }}
+                        onMouseOver={(e) => !rearrangeMode && (e.target.style.background = '#5568d3')}
+                        onMouseOut={(e) => !rearrangeMode && (e.target.style.background = '#667eea')}
+                      >
+                        <Copy size={16} />
+                        Copy from other category
+                      </button>
+                    </div>
+                  </div>
 
                   {loadingChecklist ? (
                     <div style={{ textAlign: 'center', padding: '40px', color: '#7f8c8d' }}>
@@ -1655,18 +1949,26 @@ const PreventiveMaintenance = () => {
                             No checklist items found for this category
                           </div>
                         ) : (
-                          checklistItemsForEdit.map((item) => (
+                          checklistItemsForEdit.map((item, index) => (
                             <div
                               key={item.Checklist_ID}
+                              draggable={rearrangeMode}
+                              onDragStart={(e) => handleDragStart(e, index)}
+                              onDragOver={(e) => handleDragOver(e, index)}
+                              onDrop={(e) => handleDrop(e, index)}
+                              onDragEnd={handleDragEnd}
                               style={{
                                 padding: '12px',
                                 marginBottom: '8px',
-                                border: '2px solid #ecf0f1',
+                                border: `2px solid ${dragOverIndex === index ? '#667eea' : '#ecf0f1'}`,
                                 borderRadius: '6px',
                                 display: 'flex',
                                 justifyContent: 'space-between',
                                 alignItems: 'center',
-                                background: editingItemId === item.Checklist_ID ? '#f0f7ff' : 'white'
+                                background: editingItemId === item.Checklist_ID ? '#f0f7ff' : (draggedItem === index ? '#f0f0f0' : 'white'),
+                                cursor: rearrangeMode ? 'move' : 'default',
+                                transition: 'all 0.2s',
+                                opacity: draggedItem === index ? 0.5 : 1
                               }}
                             >
                               {editingItemId === item.Checklist_ID ? (
@@ -1769,6 +2071,11 @@ const PreventiveMaintenance = () => {
                                 </>
                               ) : (
                                 <>
+                                  {rearrangeMode && (
+                                    <div style={{ marginRight: '12px', color: '#667eea' }}>
+                                      <GripVertical size={20} />
+                                    </div>
+                                  )}
                                   <div style={{ 
                                     display: 'flex', 
                                     gap: '12px', 
@@ -1813,44 +2120,46 @@ const PreventiveMaintenance = () => {
                                       {item.Check_Item}
                                     </div>
                                   </div>
-                                  <div style={{ display: 'flex', gap: '8px' }}>
-                                    <button
-                                      onClick={() => handleStartEdit(item)}
-                                      style={{
-                                        padding: '6px 12px',
-                                        background: '#3498db',
-                                        color: 'white',
-                                        border: 'none',
-                                        borderRadius: '4px',
-                                        cursor: 'pointer',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: '6px',
-                                        fontSize: '0.85rem'
-                                      }}
-                                    >
-                                      <Edit size={14} />
-                                      Edit
-                                    </button>
-                                    <button
-                                      onClick={() => handleDeleteClick(item)}
-                                      style={{
-                                        padding: '6px 12px',
-                                        background: '#e74c3c',
-                                        color: 'white',
-                                        border: 'none',
-                                        borderRadius: '4px',
-                                        cursor: 'pointer',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: '6px',
-                                        fontSize: '0.85rem'
-                                      }}
-                                    >
-                                      <Trash2 size={14} />
-                                      Delete
-                                    </button>
-                                  </div>
+                                  {!rearrangeMode && (
+                                    <div style={{ display: 'flex', gap: '8px' }}>
+                                      <button
+                                        onClick={() => handleStartEdit(item)}
+                                        style={{
+                                          padding: '6px 12px',
+                                          background: '#3498db',
+                                          color: 'white',
+                                          border: 'none',
+                                          borderRadius: '4px',
+                                          cursor: 'pointer',
+                                          display: 'flex',
+                                          alignItems: 'center',
+                                          gap: '6px',
+                                          fontSize: '0.85rem'
+                                        }}
+                                      >
+                                        <Edit size={14} />
+                                        Edit
+                                      </button>
+                                      <button
+                                        onClick={() => handleDeleteClick(item)}
+                                        style={{
+                                          padding: '6px 12px',
+                                          background: '#e74c3c',
+                                          color: 'white',
+                                          border: 'none',
+                                          borderRadius: '4px',
+                                          cursor: 'pointer',
+                                          display: 'flex',
+                                          alignItems: 'center',
+                                          gap: '6px',
+                                          fontSize: '0.85rem'
+                                        }}
+                                      >
+                                        <Trash2 size={14} />
+                                        Delete
+                                      </button>
+                                    </div>
+                                  )}
                                 </>
                               )}
                             </div>
@@ -1859,12 +2168,13 @@ const PreventiveMaintenance = () => {
                       </div>
 
                       {/* Add New Item */}
-                      <div style={{
-                        padding: '16px',
-                        background: '#f8f9fa',
-                        borderRadius: '6px',
-                        border: '2px dashed #ddd'
-                      }}>
+                      {!rearrangeMode && (
+                        <div style={{
+                          padding: '16px',
+                          background: '#f8f9fa',
+                          borderRadius: '6px',
+                          border: '2px dashed #ddd'
+                        }}>
                         <h4 style={{
                           margin: '0 0 12px 0',
                           color: '#2c3e50',
@@ -1955,7 +2265,239 @@ const PreventiveMaintenance = () => {
                           </button>
                         </div>
                       </div>
+                      )}
                     </>
+                  )}
+                </div>
+              )}
+
+              {/* Copy Checklist Section */}
+              {selectedCategoryForEdit && showCopyChecklist && (
+                <div>
+                  <div style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    marginBottom: '16px'
+                  }}>
+                    <h3 style={{
+                      margin: 0,
+                      color: '#2c3e50',
+                      fontSize: '1.2rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px'
+                    }}>
+                      <Copy size={20} color="#667eea" />
+                      Copy Checklist
+                    </h3>
+                    <button
+                      onClick={handleBackToManageChecklist}
+                      style={{
+                        padding: '8px 16px',
+                        background: '#95a5a6',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        fontSize: '0.9rem',
+                        fontWeight: '600',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px'
+                      }}
+                    >
+                      <ArrowLeft size={16} />
+                      Back
+                    </button>
+                  </div>
+
+                  {/* Target Category Display */}
+                  <div style={{
+                    padding: '12px',
+                    background: '#f0f7ff',
+                    borderRadius: '6px',
+                    marginBottom: '20px',
+                    border: '2px solid #667eea'
+                  }}>
+                    <p style={{ margin: 0, fontSize: '0.9rem', color: '#2c3e50' }}>
+                      <strong>Copying to:</strong> {categories.find(c => c.Category_ID === parseInt(selectedCategoryForEdit))?.Category}
+                    </p>
+                  </div>
+
+                  {/* Source Category Selection */}
+                  <div style={{ marginBottom: '20px' }}>
+                    <label style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      marginBottom: '8px',
+                      fontWeight: '600',
+                      color: '#2c3e50',
+                      fontSize: '1rem'
+                    }}>
+                      <Package size={18} color="#667eea" />
+                      Select Source Category
+                    </label>
+                    <select
+                      value={sourceCategoryForCopy}
+                      onChange={handleSourceCategoryChange}
+                      disabled={loadingSourceChecklist}
+                      style={{
+                        width: '100%',
+                        padding: '12px',
+                        border: '2px solid #ddd',
+                        borderRadius: '6px',
+                        fontSize: '1rem',
+                        backgroundColor: 'white',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      <option value="">-- Select a Category to Copy From --</option>
+                      {categories
+                        .filter(cat => cat.Category_ID !== parseInt(selectedCategoryForEdit))
+                        .map((cat) => (
+                          <option key={cat.Category_ID} value={cat.Category_ID}>
+                            {cat.Category}
+                          </option>
+                        ))}
+                    </select>
+                  </div>
+
+                  {/* Source Checklist Items */}
+                  {sourceCategoryForCopy && (
+                    <div>
+                      <h4 style={{
+                        margin: '0 0 12px 0',
+                        color: '#2c3e50',
+                        fontSize: '1rem',
+                        fontWeight: '600'
+                      }}>
+                        Select Items to Copy ({selectedItemsToCopy.length} selected)
+                      </h4>
+
+                      {loadingSourceChecklist ? (
+                        <div style={{ textAlign: 'center', padding: '40px', color: '#7f8c8d' }}>
+                          Loading...
+                        </div>
+                      ) : sourceChecklistItems.length === 0 ? (
+                        <div style={{
+                          padding: '20px',
+                          textAlign: 'center',
+                          color: '#7f8c8d',
+                          fontSize: '0.95rem',
+                          background: '#f8f9fa',
+                          borderRadius: '6px'
+                        }}>
+                          No checklist items found for this category
+                        </div>
+                      ) : (
+                        <>
+                          <div style={{ marginBottom: '16px' }}>
+                            {sourceChecklistItems.map((item) => {
+                              const isSelected = selectedItemsToCopy.find(i => i.Checklist_ID === item.Checklist_ID);
+                              return (
+                                <div
+                                  key={item.Checklist_ID}
+                                  style={{
+                                    padding: '12px',
+                                    marginBottom: '8px',
+                                    border: `2px solid ${isSelected ? '#27ae60' : '#ecf0f1'}`,
+                                    borderRadius: '6px',
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    alignItems: 'center',
+                                    background: isSelected ? '#d4edda' : 'white'
+                                  }}
+                                >
+                                  <div style={{ flex: 1 }}>
+                                    <div style={{
+                                      fontSize: '0.75rem',
+                                      color: '#7f8c8d',
+                                      marginBottom: '4px',
+                                      fontWeight: '600',
+                                      textTransform: 'uppercase'
+                                    }}>
+                                      Long Version
+                                    </div>
+                                    <div style={{ fontSize: '0.95rem', color: '#2c3e50', fontWeight: '500', marginBottom: '8px' }}>
+                                      {item.Check_item_Long || item.Check_Item}
+                                    </div>
+                                    <div style={{
+                                      fontSize: '0.75rem',
+                                      color: '#7f8c8d',
+                                      marginBottom: '4px',
+                                      fontWeight: '600',
+                                      textTransform: 'uppercase'
+                                    }}>
+                                      Short Version
+                                    </div>
+                                    <div style={{ fontSize: '0.9rem', color: '#5a6268' }}>
+                                      {item.Check_Item}
+                                    </div>
+                                  </div>
+                                  <button
+                                    onClick={() => handleToggleItemToCopy(item)}
+                                    style={{
+                                      padding: '8px 16px',
+                                      background: isSelected ? '#27ae60' : '#667eea',
+                                      color: 'white',
+                                      border: 'none',
+                                      borderRadius: '4px',
+                                      cursor: 'pointer',
+                                      fontSize: '0.9rem',
+                                      fontWeight: '600',
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      gap: '6px',
+                                      minWidth: '100px',
+                                      justifyContent: 'center'
+                                    }}
+                                  >
+                                    {isSelected ? (
+                                      <>
+                                        <CheckCircle size={16} />
+                                        Selected
+                                      </>
+                                    ) : (
+                                      <>
+                                        <Copy size={16} />
+                                        Copy
+                                      </>
+                                    )}
+                                  </button>
+                                </div>
+                              );
+                            })}
+                          </div>
+
+                          {/* Confirm Button */}
+                          <div style={{ textAlign: 'center', marginTop: '20px' }}>
+                            <button
+                              onClick={handleConfirmCopyClick}
+                              disabled={selectedItemsToCopy.length === 0}
+                              style={{
+                                padding: '12px 32px',
+                                background: selectedItemsToCopy.length > 0 ? '#27ae60' : '#95a5a6',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '6px',
+                                cursor: selectedItemsToCopy.length > 0 ? 'pointer' : 'not-allowed',
+                                fontSize: '1rem',
+                                fontWeight: '600',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px',
+                                margin: '0 auto'
+                              }}
+                            >
+                              <CheckCircle size={18} />
+                              Confirm Copy ({selectedItemsToCopy.length} items)
+                            </button>
+                          </div>
+                        </>
+                      )}
+                    </div>
                   )}
                 </div>
               )}
@@ -2179,6 +2721,110 @@ const PreventiveMaintenance = () => {
                 }}
               >
                 Yes, Add Item
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Copy Checklist Confirmation Dialog */}
+      {showCopyConfirm && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1003
+        }}>
+          <div style={{
+            background: 'white',
+            borderRadius: '12px',
+            padding: '28px',
+            maxWidth: '550px',
+            width: '90%',
+            boxShadow: '0 10px 40px rgba(0,0,0,0.2)',
+            maxHeight: '80vh',
+            overflow: 'auto'
+          }}>
+            <h3 style={{ margin: '0 0 16px 0', color: '#667eea', fontSize: '1.3rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Copy size={24} />
+              Confirm Copy Checklist Items
+            </h3>
+            <p style={{ margin: '0 0 16px 0', color: '#666', fontSize: '1rem' }}>
+              You are about to copy <strong>{selectedItemsToCopy.length}</strong> item(s) to <strong>{categories.find(c => c.Category_ID === parseInt(selectedCategoryForEdit))?.Category}</strong>
+            </p>
+            
+            <div style={{ 
+              margin: '16px 0 24px 0',
+              maxHeight: '300px',
+              overflow: 'auto',
+              border: '2px solid #ecf0f1',
+              borderRadius: '6px',
+              padding: '12px',
+              background: '#f8f9fa'
+            }}>
+              <h4 style={{ margin: '0 0 12px 0', color: '#2c3e50', fontSize: '0.95rem' }}>
+                Selected Items:
+              </h4>
+              {selectedItemsToCopy.map((item, index) => (
+                <div key={item.Checklist_ID} style={{
+                  padding: '8px',
+                  marginBottom: '8px',
+                  background: 'white',
+                  borderRadius: '4px',
+                  border: '1px solid #ddd'
+                }}>
+                  <div style={{ fontSize: '0.75rem', color: '#7f8c8d', marginBottom: '4px' }}>
+                    #{index + 1}
+                  </div>
+                  <div style={{ fontSize: '0.9rem', color: '#2c3e50', fontWeight: '500' }}>
+                    {item.Check_item_Long || item.Check_Item}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <p style={{ margin: '0 0 24px 0', color: '#667eea', fontSize: '0.9rem', fontStyle: 'italic' }}>
+              ✓ These items will be added to the target category and available for future PM records.
+            </p>
+            
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => setShowCopyConfirm(false)}
+                disabled={copyingItems}
+                style={{
+                  padding: '10px 20px',
+                  background: 'white',
+                  color: '#666',
+                  border: '2px solid #ddd',
+                  borderRadius: '6px',
+                  cursor: copyingItems ? 'not-allowed' : 'pointer',
+                  fontSize: '0.95rem',
+                  fontWeight: '600'
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmCopy}
+                disabled={copyingItems}
+                style={{
+                  padding: '10px 20px',
+                  background: copyingItems ? '#95a5a6' : '#27ae60',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: copyingItems ? 'not-allowed' : 'pointer',
+                  fontSize: '0.95rem',
+                  fontWeight: '600'
+                }}
+              >
+                {copyingItems ? 'Copying...' : 'Yes, Copy Items'}
               </button>
             </div>
           </div>
@@ -2711,6 +3357,77 @@ const PreventiveMaintenance = () => {
               >
                 <Download size={18} />
                 {downloadingPDF ? 'Generating PDF...' : 'Download PDF'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Rearrange Confirmation Dialog */}
+      {showRearrangeConfirm && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1003
+        }}>
+          <div style={{
+            background: 'white',
+            borderRadius: '12px',
+            padding: '28px',
+            maxWidth: '450px',
+            width: '90%',
+            boxShadow: '0 10px 40px rgba(0,0,0,0.2)'
+          }}>
+            <h3 style={{ margin: '0 0 16px 0', color: '#f39c12', fontSize: '1.3rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <GripVertical size={24} />
+              Confirm Rearrangement
+            </h3>
+            <p style={{ margin: '0 0 20px 0', color: '#666', fontSize: '1rem', lineHeight: '1.6' }}>
+              Are you sure you want to save this new order?
+            </p>
+            <p style={{ margin: '0 0 24px 0', color: '#f39c12', fontSize: '0.9rem', fontStyle: 'italic' }}>
+              ✓ This will update the display order for all PM forms, reports, and details pages.
+            </p>
+            
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => setShowRearrangeConfirm(false)}
+                disabled={savingOrder}
+                style={{
+                  padding: '10px 20px',
+                  background: 'white',
+                  color: '#666',
+                  border: '2px solid #ddd',
+                  borderRadius: '6px',
+                  cursor: savingOrder ? 'not-allowed' : 'pointer',
+                  fontSize: '0.95rem',
+                  fontWeight: '600'
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmRearrange}
+                disabled={savingOrder}
+                style={{
+                  padding: '10px 20px',
+                  background: savingOrder ? '#95a5a6' : '#27ae60',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: savingOrder ? 'not-allowed' : 'pointer',
+                  fontSize: '0.95rem',
+                  fontWeight: '600'
+                }}
+              >
+                {savingOrder ? 'Saving...' : 'Yes, Save Order'}
               </button>
             </div>
           </div>

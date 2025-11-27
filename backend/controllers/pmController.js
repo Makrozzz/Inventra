@@ -561,6 +561,48 @@ const deletePM = async (req, res, next) => {
   }
 };
 
+/**
+ * Update checklist items order
+ */
+const updateChecklistOrder = async (req, res, next) => {
+  try {
+    const { orderUpdates } = req.body;
+
+    // Validate input
+    if (!Array.isArray(orderUpdates) || orderUpdates.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'orderUpdates must be a non-empty array'
+      });
+    }
+
+    // Validate each update has required fields
+    for (const update of orderUpdates) {
+      if (!update.Checklist_ID || update.Display_Order === undefined) {
+        return res.status(400).json({
+          success: false,
+          message: 'Each update must have Checklist_ID and Display_Order'
+        });
+      }
+    }
+
+    await PMaintenance.updateChecklistOrder(orderUpdates);
+
+    logger.info(`Checklist order updated: ${orderUpdates.length} items`);
+    res.status(200).json({
+      success: true,
+      message: 'Checklist order updated successfully'
+    });
+  } catch (error) {
+    logger.error('Error in updateChecklistOrder:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to update checklist order',
+      message: error.message
+    });
+  }
+};
+
 module.exports = {
   getAllPM,
   getPMStatistics,
@@ -578,6 +620,7 @@ module.exports = {
   createChecklistItem,
   updateChecklistItem,
   deleteChecklistItem,
+  updateChecklistOrder,
   createCategory,
   getPMReport,
   bulkDownloadPM

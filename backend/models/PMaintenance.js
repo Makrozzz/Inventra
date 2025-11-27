@@ -204,10 +204,14 @@ class PMaintenance {
         SELECT 
           Checklist_ID,
           Category_ID,
-          Check_Item
+          Check_Item,
+          Display_Order
         FROM PM_CHECKLIST
         WHERE Category_ID = ?
-        ORDER BY Checklist_ID
+        ORDER BY 
+          CASE WHEN Display_Order IS NULL THEN 1 ELSE 0 END,
+          Display_Order,
+          Checklist_ID
       `, [categoryId]);
       return rows;
     } catch (error) {
@@ -231,7 +235,10 @@ class PMaintenance {
         FROM PM_RESULT pmr
         LEFT JOIN PM_CHECKLIST pmc ON pmr.Checklist_ID = pmc.Checklist_ID
         WHERE pmr.PM_ID = ?
-        ORDER BY pmc.Checklist_ID
+        ORDER BY 
+          CASE WHEN pmc.Display_Order IS NULL THEN 1 ELSE 0 END,
+          pmc.Display_Order,
+          pmc.Checklist_ID
       `, [pmId]);
       return rows;
     } catch (error) {
@@ -346,7 +353,10 @@ class PMaintenance {
             FROM PM_RESULT pmr
             LEFT JOIN PM_CHECKLIST pmc ON pmr.Checklist_ID = pmc.Checklist_ID
             WHERE pmr.PM_ID = ?
-            ORDER BY pmc.Checklist_ID
+            ORDER BY 
+              CASE WHEN pmc.Display_Order IS NULL THEN 1 ELSE 0 END,
+              pmc.Display_Order,
+              pmc.Checklist_ID
           `, [row.PM_ID]);
 
           return {
@@ -371,10 +381,14 @@ class PMaintenance {
           Checklist_ID,
           Category_ID,
           Check_Item,
-          Check_item_Long
+          Check_item_Long,
+          Display_Order
         FROM PM_CHECKLIST
         WHERE Category_ID = ?
-        ORDER BY Checklist_ID
+        ORDER BY 
+          CASE WHEN Display_Order IS NULL THEN 1 ELSE 0 END,
+          Display_Order,
+          Checklist_ID
       `, [categoryId]);
       return rows;
     } catch (error) {
@@ -601,6 +615,31 @@ class PMaintenance {
     } catch (error) {
       console.error('Error in PMaintenance.deleteChecklistItem:', error);
       throw error;
+    }
+  }
+
+  // Update checklist items order
+  static async updateChecklistOrder(orderUpdates) {
+    const connection = await pool.getConnection();
+    try {
+      await connection.beginTransaction();
+      
+      // Update Display_Order for each checklist item
+      for (const update of orderUpdates) {
+        await connection.execute(
+          'UPDATE PM_CHECKLIST SET Display_Order = ? WHERE Checklist_ID = ?',
+          [update.Display_Order, update.Checklist_ID]
+        );
+      }
+      
+      await connection.commit();
+      return true;
+    } catch (error) {
+      await connection.rollback();
+      console.error('Error in PMaintenance.updateChecklistOrder:', error);
+      throw error;
+    } finally {
+      connection.release();
     }
   }
 
