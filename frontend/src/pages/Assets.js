@@ -88,6 +88,8 @@ const Assets = ({ onDelete }) => {
           { Field: 'Windows', Type: 'varchar(255)', Label: 'Windows Version' },
           { Field: 'Microsoft_Office', Type: 'varchar(255)', Label: 'Microsoft Office' },
           { Field: 'Software', Type: 'text', Label: 'Software' },
+          { Field: 'Peripheral_Type', Type: 'text', Label: 'Peripheral Name' },
+          { Field: 'Peripheral_Serial', Type: 'text', Label: 'Peripheral Serial Code' },
           { Field: 'Recipient_Name', Type: 'varchar(255)', Label: 'Recipient Name' }
         ];
         setColumns(assetColumns);
@@ -413,6 +415,15 @@ const Assets = ({ onDelete }) => {
   
   // Helper function to format cell values
   const formatCellValue = (value, columnName) => {
+    // Special handling for Peripheral columns - format with line breaks
+    if (columnName === 'Peripheral_Type' || columnName === 'Peripheral_Serial') {
+      if (!value || value === '' || value === null || value === undefined) {
+        return 'N/A';
+      }
+      // Value already comes formatted with commas from backend, replace with line breaks
+      return value.split(', ').join('\n');
+    }
+    
     // Special handling for Software column - show 'None' for assets without software
     if (columnName === 'Software') {
       if (!value || value === '' || value === null || value === undefined) {
@@ -957,6 +968,10 @@ const Assets = ({ onDelete }) => {
                             <span className={`status-badge status-${(asset[column.Field] || '').toLowerCase().replace(/\s+/g, '-')}`}>
                               {formatCellValue(asset[column.Field], column.Field)}
                             </span>
+                          ) : column.Field === 'Peripheral_Type' || column.Field === 'Peripheral_Serial' ? (
+                            <div style={{ whiteSpace: 'pre-line' }}>
+                              {formatCellValue(asset[column.Field], column.Field)}
+                            </div>
                           ) : column.Field === 'Project_Title' ? (
                             <span 
                               title={asset[column.Field]}

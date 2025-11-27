@@ -4,7 +4,7 @@
  */
 
 class ColumnConfigService {
-  // Default visible columns (13 columns as currently displayed)
+  // Default visible columns (15 columns with peripherals)
   static defaultColumns = [
     { key: 'customer_name', label: 'Customer Name', visible: true, order: 0 },
     { key: 'branch', label: 'Branch', visible: true, order: 1 },
@@ -18,35 +18,37 @@ class ColumnConfigService {
     { key: 'windows', label: 'Windows', visible: true, order: 9 },
     { key: 'microsoft_office', label: 'Microsoft Office', visible: true, order: 10 },
     { key: 'software', label: 'Software', visible: true, order: 11 },
-    { key: 'recipient_name', label: 'Recipient Name', visible: true, order: 12 }
+    { key: 'peripheral_type', label: 'Peripheral Name', visible: true, order: 12 },
+    { key: 'peripheral_serial', label: 'Peripheral Serial Code', visible: true, order: 13 },
+    { key: 'recipient_name', label: 'Recipient Name', visible: true, order: 14 }
   ];
 
-  // All available columns (29 total)
+  // All available columns (31 total with peripherals)
   static allColumns = [
     // Default visible columns
     ...this.defaultColumns,
     
     // Additional project-related columns
-    { key: 'project_ref_num', label: 'Project Ref Number', visible: false, order: 13 },
-    { key: 'project_title', label: 'Project Title', visible: false, order: 14 },
-    { key: 'warranty', label: 'Warranty', visible: false, order: 15 },
-    { key: 'preventive_maintenance', label: 'Preventive Maintenance', visible: false, order: 16 },
-    { key: 'start_date', label: 'Start Date', visible: false, order: 17 },
-    { key: 'end_date', label: 'End Date', visible: false, order: 18 },
+    { key: 'project_ref_num', label: 'Project Ref Number', visible: false, order: 15 },
+    { key: 'project_title', label: 'Project Title', visible: false, order: 16 },
+    { key: 'warranty', label: 'Warranty', visible: false, order: 17 },
+    { key: 'preventive_maintenance', label: 'Preventive Maintenance', visible: false, order: 18 },
+    { key: 'start_date', label: 'Start Date', visible: false, order: 19 },
+    { key: 'end_date', label: 'End Date', visible: false, order: 20 },
     
     // Additional customer columns
-    { key: 'customer_ref_num', label: 'Customer Ref Number', visible: false, order: 19 },
+    { key: 'customer_ref_num', label: 'Customer Ref Number', visible: false, order: 21 },
     
     // Recipient details
-    { key: 'department', label: 'Department', visible: false, order: 20 },
-    { key: 'position', label: 'Position', visible: false, order: 21 },
+    { key: 'department', label: 'Department', visible: false, order: 22 },
+    { key: 'position', label: 'Position', visible: false, order: 23 },
     
     // Asset pricing
-    { key: 'monthly_prices', label: 'Monthly Price', visible: false, order: 22 },
-    { key: 'software_prices', label: 'Software Prices', visible: false, order: 23 },
+    { key: 'monthly_prices', label: 'Monthly Price', visible: false, order: 24 },
+    { key: 'software_prices', label: 'Software Prices', visible: false, order: 25 },
     
     // Specifications
-    { key: 'specs_attributes', label: 'Specifications', visible: false, order: 24 }
+    { key: 'specs_attributes', label: 'Specifications', visible: false, order: 26 }
   ];
 
   /**
@@ -171,6 +173,8 @@ class ColumnConfigService {
       'windows': 'Windows',
       'microsoft_office': 'Microsoft_Office',
       'software': 'Software',
+      'peripheral_type': 'Peripheral_Type',
+      'peripheral_serial': 'Peripheral_Serial',
       'recipient_name': 'Recipient_Name',
       'project_ref_num': 'Project_Ref_Number',
       'project_title': 'Project_Title',

@@ -81,7 +81,10 @@ class Asset {
           cust.Branch,
           GROUP_CONCAT(DISTINCT s.Software_Name SEPARATOR ', ') AS Software,
           GROUP_CONCAT(DISTINCT s.Price SEPARATOR ', ') AS Software_Prices,
-          GROUP_CONCAT(DISTINCT CONCAT(pt.Peripheral_Type_Name, '|', per.Serial_Code, '|', per.Condition, '|', COALESCE(per.Remarks, '')) SEPARATOR '||') AS Peripheral_Data,
+          (SELECT GROUP_CONCAT(CONCAT(pt2.Peripheral_Type_Name, '|', COALESCE(NULLIF(per2.Serial_Code, ''), 'N/A'), '|', COALESCE(NULLIF(per2.Condition, ''), 'N/A'), '|', COALESCE(NULLIF(per2.Remarks, ''), 'N/A')) ORDER BY per2.Peripheral_ID SEPARATOR '||')
+           FROM PERIPHERAL per2
+           LEFT JOIN PERIPHERAL_TYPE pt2 ON per2.Peripheral_Type_ID = pt2.Peripheral_Type_ID
+           WHERE per2.Asset_ID = a.Asset_ID) AS Peripheral_Data,
           GROUP_CONCAT(DISTINCT CONCAT(spec_names.Attributes_Value, ': ', model_specs.Attributes_Value) SEPARATOR '; ') AS Specs_Attributes
         FROM INVENTORY i
         INNER JOIN ASSET a ON i.Asset_ID = a.Asset_ID
@@ -92,8 +95,6 @@ class Asset {
         LEFT JOIN CUSTOMER cust ON i.Customer_ID = cust.Customer_ID
         LEFT JOIN ASSET_SOFTWARE_BRIDGE asb ON a.Asset_ID = asb.Asset_ID
         LEFT JOIN SOFTWARE s ON asb.Software_ID = s.Software_ID
-        LEFT JOIN PERIPHERAL per ON a.Asset_ID = per.Asset_ID
-        LEFT JOIN PERIPHERAL_TYPE pt ON per.Peripheral_Type_ID = pt.Peripheral_Type_ID
         LEFT JOIN MODEL_SPECS_BRIDGE model_specs ON a.Model_ID = model_specs.Model_ID
         LEFT JOIN SPECS spec_names ON model_specs.Attributes_ID = spec_names.Attributes_ID
         GROUP BY i.Inventory_ID, a.Asset_ID
@@ -116,36 +117,45 @@ class Asset {
           // Format: "Type1|Serial1|Condition1|Remarks1||Type2|Serial2|Condition2|Remarks2"
           const peripherals = row.Peripheral_Data.split('||').filter(p => p.trim());
           
+          // Debug log for first asset to check data format
+          if (row.Asset_ID === rows[0].Asset_ID) {
+            console.log('🔍 Raw Peripheral_Data:', row.Peripheral_Data);
+            console.log('🔍 Split by ||:', peripherals);
+            peripherals.forEach((p, idx) => {
+              const parts = p.split('|');
+              console.log(`🔍 Peripheral ${idx + 1}:`, parts);
+              console.log(`   Type: "${parts[0]}", Serial: "${parts[1]}", Condition: "${parts[2]}", Remarks: "${parts[3]}"`);
+            });
+          }
+          
           // Build formatted lists for each peripheral attribute
           const formattedPeripherals = peripherals.map(p => {
-            const [type, serial, condition, remark] = p.split('|');
+            const parts = p.split('|');
+            const [type, serial, condition, remark] = parts;
+            
             return {
-              type: type || '',
-              serial: serial || '',
-              condition: condition || '',
-              remark: remark || ''
+              type: type?.trim() || '',
+              serial: serial?.trim() || '',
+              condition: condition?.trim() || '',
+              remark: remark?.trim() || ''
             };
           });
           
-          // Separate columns - each shows ONLY its own data
+          // Separate columns - each shows ONLY its own data (keep N/A to maintain alignment)
           processed.Peripheral_Type = formattedPeripherals
             .map(p => p.type)
-            .filter(t => t)
             .join(', ') || null;
           
           processed.Peripheral_Serial = formattedPeripherals
             .map(p => p.serial)
-            .filter(s => s)
             .join(', ') || null;
           
           processed.Peripheral_Condition = formattedPeripherals
             .map(p => p.condition)
-            .filter(c => c)
             .join(', ') || null;
           
           processed.Peripheral_Remarks = formattedPeripherals
             .map(p => p.remark)
-            .filter(r => r)
             .join(', ') || null;
             
           // Combined column: "Type1 (Serial1, Condition1); Type2 (Serial2, Condition2)"
