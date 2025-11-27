@@ -849,57 +849,47 @@ const PreventiveMaintenance = () => {
 
       {/* Statistics Cards */}
       {statistics && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', marginBottom: '30px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '15px', marginBottom: '15px' }}>
           <div className="card" style={{ padding: '20px', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: 'white', border: 'none' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-              <Package size={40} style={{ opacity: 0.9 }} />
-              <div>
-                <div style={{ fontSize: '2rem', fontWeight: '700' }}>{statistics.total}</div>
-                <div style={{ fontSize: '0.9rem', opacity: 0.9 }}>Total PM Records</div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <Package size={32} style={{ opacity: 0.9 }} />
+                <div style={{ fontSize: '1rem', opacity: 0.9, fontWeight: '500' }}>Total PM Records</div>
               </div>
-            </div>
-          </div>
-
-          <div className="card" style={{ padding: '20px', background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)', color: 'white', border: 'none' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-              <AlertTriangle size={40} style={{ opacity: 0.9 }} />
-              <div>
-                <div style={{ fontSize: '2rem', fontWeight: '700' }}>{statistics.overdue}</div>
-                <div style={{ fontSize: '0.9rem', opacity: 0.9 }}>Overdue</div>
-              </div>
+              <div style={{ fontSize: '2rem', fontWeight: '700' }}>{statistics.total}</div>
             </div>
           </div>
 
           <div className="card" style={{ padding: '20px', background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)', color: 'white', border: 'none' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-              <Clock size={40} style={{ opacity: 0.9 }} />
-              <div>
-                <div style={{ fontSize: '2rem', fontWeight: '700' }}>{statistics.upcoming}</div>
-                <div style={{ fontSize: '0.9rem', opacity: 0.9 }}>Upcoming (30 days)</div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <Calendar size={32} style={{ opacity: 0.9 }} />
+                <div style={{ fontSize: '1rem', opacity: 0.9, fontWeight: '500' }}>PM This Year</div>
               </div>
+              <div style={{ fontSize: '2rem', fontWeight: '700' }}>{statistics.thisYear}</div>
             </div>
           </div>
 
           <div className="card" style={{ padding: '20px', background: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)', color: 'white', border: 'none' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-              <CheckCircle size={40} style={{ opacity: 0.9 }} />
-              <div>
-                <div style={{ fontSize: '2rem', fontWeight: '700' }}>{statistics.completed}</div>
-                <div style={{ fontSize: '0.9rem', opacity: 0.9 }}>Completed</div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <Clock size={32} style={{ opacity: 0.9 }} />
+                <div style={{ fontSize: '1rem', opacity: 0.9, fontWeight: '500' }}>PM This Month</div>
               </div>
+              <div style={{ fontSize: '2rem', fontWeight: '700' }}>{statistics.thisMonth}</div>
             </div>
           </div>
         </div>
       )}
 
       {/* Filters */}
-      <div className="card" style={{ marginBottom: '20px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px', paddingBottom: '15px', borderBottom: '2px solid #3498db' }}>
-          <Filter size={24} color="#3498db" />
-          <h3 style={{ margin: 0, color: '#2c3e50', fontSize: '1.2rem' }}>Filter PM Records</h3>
+      <div className="card" style={{ marginBottom: '15px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '15px', paddingBottom: '12px', borderBottom: '2px solid #3498db' }}>
+          <Filter size={22} color="#3498db" />
+          <h3 style={{ margin: 0, color: '#2c3e50', fontSize: '1.1rem' }}>Filter PM Records</h3>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '15px' }}>
           <div>
             <label style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', fontWeight: '600', color: '#2c3e50', fontSize: '0.95rem' }}>
               <Building2 size={18} color="#3498db" />

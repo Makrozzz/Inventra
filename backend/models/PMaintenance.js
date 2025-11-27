@@ -64,50 +64,25 @@ class PMaintenance {
         'SELECT COUNT(*) as total FROM PMAINTENANCE'
       );
 
-      // PM by status
-      const [statusResult] = await pool.execute(`
-        SELECT Status, COUNT(*) as count 
-        FROM PMAINTENANCE 
-        GROUP BY Status
-      `);
-
-      // PM by category
-      const [categoryResult] = await pool.execute(`
-        SELECT c.Category, COUNT(*) as count
-        FROM PMAINTENANCE pm
-        LEFT JOIN ASSET a ON pm.Asset_ID = a.Asset_ID
-        LEFT JOIN CATEGORY c ON a.Category_ID = c.Category_ID
-        GROUP BY c.Category
-      `);
-
-      // Upcoming PM (next 30 days)
-      const [upcomingResult] = await pool.execute(`
+      // PM this year (based on PM_Date)
+      const [thisYearResult] = await pool.execute(`
         SELECT COUNT(*) as count
         FROM PMAINTENANCE
-        WHERE PM_Date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 30 DAY)
+        WHERE YEAR(PM_Date) = YEAR(CURDATE())
       `);
 
-      // Overdue PM
-      const [overdueResult] = await pool.execute(`
+      // PM this month (based on PM_Date)
+      const [thisMonthResult] = await pool.execute(`
         SELECT COUNT(*) as count
         FROM PMAINTENANCE
-        WHERE PM_Date < CURDATE() AND Status != 'Completed'
-      `);
-
-      // Completed PM
-      const [completedResult] = await pool.execute(`
-        SELECT COUNT(*) as count
-        FROM PMAINTENANCE
-        WHERE Status = 'Completed'
+        WHERE YEAR(PM_Date) = YEAR(CURDATE())
+        AND MONTH(PM_Date) = MONTH(CURDATE())
       `);
 
       return {
         total: totalResult[0].total,
-        byStatus: statusResult,
-        byCategory: categoryResult,
-        upcoming: upcomingResult[0].count,
-        overdue: overdueResult[0].count,
-        completed: completedResult[0].count
+        thisYear: thisYearResult[0].count,
+        thisMonth: thisMonthResult[0].count
       };
     } catch (error) {
       console.error('Error in PMaintenance.getStatistics:', error);
