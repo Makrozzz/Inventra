@@ -8,7 +8,8 @@ import {
   Settings,
   Activity,
   LogOut,
-  User
+  User,
+  Users
 } from 'lucide-react';
 
 const Sidebar = ({ onLogout }) => {
@@ -33,6 +34,7 @@ const Sidebar = ({ onLogout }) => {
     { path: '/projects', icon: FolderOpen, label: 'Projects' },
     { path: '/assets', icon: Package, label: 'Assets' },
     { path: '/maintenance', icon: Wrench, label: 'Preventive Maintenance' },
+    { path: '/solution-principal', icon: Users, label: 'Solution Principal' },
     { path: '/settings', icon: Settings, label: 'Account Settings' },
     { path: '/audit-log', icon: Activity, label: 'Audit Log' }
   ];
