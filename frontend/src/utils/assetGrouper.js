@@ -93,21 +93,47 @@ class AssetGrouper {
 
   /**
    * Extract peripheral data from row
+   * Handles comma-separated peripherals: "Mouse, Keyboard" with "M001, K002"
+   * Returns array of peripheral objects
    */
   static extractPeripheral(row) {
     if (!this.hasPeripheralData(row)) {
-      return null;
+      return [];
     }
 
-    const peripheral = {};
+    // Handle comma-separated peripherals
+    const peripheralNames = row.peripheral_name ? 
+      String(row.peripheral_name).split(',').map(s => s.trim()).filter(s => s) : [];
+    const serialCodes = row.serial_code ? 
+      String(row.serial_code).split(',').map(s => s.trim()).filter(s => s) : [];
     
-    this.PERIPHERAL_FIELDS.forEach(field => {
-      if (row[field] !== undefined && row[field] !== null && String(row[field]).trim()) {
-        peripheral[field] = row[field];
-      }
-    });
+    // If no peripheral names or serial codes, return empty array
+    if (peripheralNames.length === 0 && serialCodes.length === 0) {
+      return [];
+    }
 
-    return Object.keys(peripheral).length > 0 ? peripheral : null;
+    // Create peripheral objects - match by index
+    const peripherals = [];
+    const maxLength = Math.max(peripheralNames.length, serialCodes.length);
+    
+    for (let i = 0; i < maxLength; i++) {
+      const peripheral = {};
+      
+      if (i < peripheralNames.length && peripheralNames[i]) {
+        peripheral.peripheral_name = peripheralNames[i];
+      }
+      
+      if (i < serialCodes.length && serialCodes[i]) {
+        peripheral.serial_code = serialCodes[i];
+      }
+      
+      // Only add if at least one field exists
+      if (Object.keys(peripheral).length > 0) {
+        peripherals.push(peripheral);
+      }
+    }
+
+    return peripherals;
   }
 
   /**
@@ -146,18 +172,20 @@ class AssetGrouper {
       if (!assetGroups.has(assetKey)) {
         // First occurrence of this asset
         const coreData = this.extractCoreAssetData(row);
-        const peripheral = this.extractPeripheral(row);
+        const peripherals = this.extractPeripheral(row); // Now returns array
         
         assetGroups.set(assetKey, {
           ...coreData,
-          peripherals: peripheral ? [{ ...peripheral, _sourceRow: rowIndex + 1 }] : [],
+          peripherals: peripherals.map(p => ({ ...p, _sourceRow: rowIndex + 1 })),
           _sourceRows: [rowIndex + 1],
           _assetKey: assetKey
         });
+        
+        groupingInfo.totalPeripherals += peripherals.length;
       } else {
-        // Duplicate asset - add peripheral if exists
+        // Duplicate asset - add peripherals if exist
         const existingAsset = assetGroups.get(assetKey);
-        const peripheral = this.extractPeripheral(row);
+        const peripherals = this.extractPeripheral(row); // Now returns array
         
         // Check for conflicts in core data
         const conflicts = this.detectConflicts(existingAsset, row, rowIndex + 1);
@@ -165,14 +193,14 @@ class AssetGrouper {
           groupingInfo.conflicts.push(...conflicts);
         }
         
-        // Add peripheral if present
-        if (peripheral) {
+        // Add all peripherals from this row
+        peripherals.forEach(peripheral => {
           existingAsset.peripherals.push({
             ...peripheral,
             _sourceRow: rowIndex + 1
           });
           groupingInfo.totalPeripherals++;
-        }
+        });
         
         existingAsset._sourceRows.push(rowIndex + 1);
         groupingInfo.rowsGrouped++;

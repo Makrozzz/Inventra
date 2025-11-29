@@ -133,6 +133,7 @@ class PeripheralImporter {
   /**
    * Extract peripheral data from a CSV row
    * Handles both single peripheral and multiple peripherals (from grouping)
+   * Also splits comma-separated peripheral names and serial codes
    * @param {Object} row - CSV row data
    * @returns {Array} Array of peripheral objects
    */
@@ -141,22 +142,74 @@ class PeripheralImporter {
     
     // Check if row has grouped peripherals array
     if (row.peripherals && Array.isArray(row.peripherals)) {
-      return row.peripherals.map(p => ({
-        peripheral_name: p.peripheral_name,
-        serial_code: p.serial_code || p.serial_code_name,
-        condition: p.condition || 'Good',
-        remarks: p.remarks || ''
-      }));
+      // Process each peripheral, splitting comma-separated values
+      row.peripherals.forEach(p => {
+        // Split comma-separated peripheral names and serial codes
+        const peripheralNames = p.peripheral_name ? 
+          String(p.peripheral_name).split(',').map(s => s.trim()).filter(s => s) : [];
+        const serialCodes = p.serial_code || p.serial_code_name ? 
+          String(p.serial_code || p.serial_code_name).split(',').map(s => s.trim()).filter(s => s) : [];
+        
+        // If single peripheral (no commas), add as-is
+        if (peripheralNames.length <= 1 && serialCodes.length <= 1) {
+          peripherals.push({
+            peripheral_name: p.peripheral_name,
+            serial_code: p.serial_code || p.serial_code_name,
+            condition: p.condition || 'Good',
+            remarks: p.remarks || ''
+          });
+        } else {
+          // Split into multiple peripherals
+          const maxLength = Math.max(peripheralNames.length, serialCodes.length);
+          for (let i = 0; i < maxLength; i++) {
+            const peripheral = {
+              condition: p.condition || 'Good',
+              remarks: p.remarks || ''
+            };
+            
+            if (i < peripheralNames.length && peripheralNames[i]) {
+              peripheral.peripheral_name = peripheralNames[i];
+            }
+            
+            if (i < serialCodes.length && serialCodes[i]) {
+              peripheral.serial_code = serialCodes[i];
+            }
+            
+            if (peripheral.peripheral_name) {
+              peripherals.push(peripheral);
+            }
+          }
+        }
+      });
+      
+      return peripherals;
     }
     
-    // Check for single peripheral in row
+    // Check for single peripheral in row - also handle comma-separated values
     if (row.peripheral_name) {
-      peripherals.push({
-        peripheral_name: row.peripheral_name,
-        serial_code: row.serial_code || row.serial_code_name,
-        condition: row.condition || row.peripheral_condition || 'Good',
-        remarks: row.remarks || row.peripheral_remarks || ''
-      });
+      const peripheralNames = String(row.peripheral_name).split(',').map(s => s.trim()).filter(s => s);
+      const serialCodes = row.serial_code || row.serial_code_name ? 
+        String(row.serial_code || row.serial_code_name).split(',').map(s => s.trim()).filter(s => s) : [];
+      
+      const maxLength = Math.max(peripheralNames.length, serialCodes.length);
+      for (let i = 0; i < maxLength; i++) {
+        const peripheral = {
+          condition: row.condition || row.peripheral_condition || 'Good',
+          remarks: row.remarks || row.peripheral_remarks || ''
+        };
+        
+        if (i < peripheralNames.length && peripheralNames[i]) {
+          peripheral.peripheral_name = peripheralNames[i];
+        }
+        
+        if (i < serialCodes.length && serialCodes[i]) {
+          peripheral.serial_code = serialCodes[i];
+        }
+        
+        if (peripheral.peripheral_name) {
+          peripherals.push(peripheral);
+        }
+      }
     }
     
     return peripherals;
