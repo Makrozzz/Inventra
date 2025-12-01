@@ -18,7 +18,9 @@ class PeripheralImporter {
       success: 0,
       failed: 0,
       skipped: 0,
+      duplicates: 0,
       errors: [],
+      warnings: [],
       details: []
     };
     
@@ -53,6 +55,26 @@ class PeripheralImporter {
         for (const peripheral of peripherals) {
           try {
             console.log(`   Creating peripheral: ${peripheral.peripheral_name} (${peripheral.serial_code || 'No serial'})`);
+            
+            // Check for duplicate peripheral
+            const isDuplicate = await this.checkDuplicatePeripheral(
+              assetId,
+              peripheral.peripheral_name,
+              peripheral.serial_code
+            );
+            
+            if (isDuplicate) {
+              console.log(`   ⚠️  Duplicate peripheral detected: ${peripheral.peripheral_name} with serial ${peripheral.serial_code || 'N/A'} - Skipping`);
+              results.duplicates++;
+              results.warnings.push({
+                assetSerial,
+                assetId,
+                peripheral: peripheral.peripheral_name,
+                serialCode: peripheral.serial_code || 'N/A',
+                message: `Peripheral '${peripheral.peripheral_name}' with serial code '${peripheral.serial_code || 'N/A'}' already exists for this asset`
+              });
+              continue; // Skip this peripheral and continue with others
+            }
             
             const peripheralId = await Asset.createPeripheral(
               assetId,
@@ -103,6 +125,7 @@ class PeripheralImporter {
     console.log(`   ✅ Success: ${results.success}`);
     console.log(`   ❌ Failed: ${results.failed}`);
     console.log(`   ⏭️  Skipped: ${results.skipped}`);
+    console.log(`   ⚠️  Duplicates: ${results.duplicates}`);
     
     return results;
   }
@@ -110,6 +133,7 @@ class PeripheralImporter {
   /**
    * Extract peripheral data from a CSV row
    * Handles both single peripheral and multiple peripherals (from grouping)
+   * Also splits comma-separated peripheral names and serial codes
    * @param {Object} row - CSV row data
    * @returns {Array} Array of peripheral objects
    */
@@ -118,22 +142,74 @@ class PeripheralImporter {
     
     // Check if row has grouped peripherals array
     if (row.peripherals && Array.isArray(row.peripherals)) {
-      return row.peripherals.map(p => ({
-        peripheral_name: p.peripheral_name,
-        serial_code: p.serial_code || p.serial_code_name,
-        condition: p.condition || 'Good',
-        remarks: p.remarks || ''
-      }));
+      // Process each peripheral, splitting comma-separated values
+      row.peripherals.forEach(p => {
+        // Split comma-separated peripheral names and serial codes
+        const peripheralNames = p.peripheral_name ? 
+          String(p.peripheral_name).split(',').map(s => s.trim()).filter(s => s) : [];
+        const serialCodes = p.serial_code || p.serial_code_name ? 
+          String(p.serial_code || p.serial_code_name).split(',').map(s => s.trim()).filter(s => s) : [];
+        
+        // If single peripheral (no commas), add as-is
+        if (peripheralNames.length <= 1 && serialCodes.length <= 1) {
+          peripherals.push({
+            peripheral_name: p.peripheral_name,
+            serial_code: p.serial_code || p.serial_code_name,
+            condition: p.condition || 'Good',
+            remarks: p.remarks || ''
+          });
+        } else {
+          // Split into multiple peripherals
+          const maxLength = Math.max(peripheralNames.length, serialCodes.length);
+          for (let i = 0; i < maxLength; i++) {
+            const peripheral = {
+              condition: p.condition || 'Good',
+              remarks: p.remarks || ''
+            };
+            
+            if (i < peripheralNames.length && peripheralNames[i]) {
+              peripheral.peripheral_name = peripheralNames[i];
+            }
+            
+            if (i < serialCodes.length && serialCodes[i]) {
+              peripheral.serial_code = serialCodes[i];
+            }
+            
+            if (peripheral.peripheral_name) {
+              peripherals.push(peripheral);
+            }
+          }
+        }
+      });
+      
+      return peripherals;
     }
     
-    // Check for single peripheral in row
+    // Check for single peripheral in row - also handle comma-separated values
     if (row.peripheral_name) {
-      peripherals.push({
-        peripheral_name: row.peripheral_name,
-        serial_code: row.serial_code || row.serial_code_name,
-        condition: row.condition || row.peripheral_condition || 'Good',
-        remarks: row.remarks || row.peripheral_remarks || ''
-      });
+      const peripheralNames = String(row.peripheral_name).split(',').map(s => s.trim()).filter(s => s);
+      const serialCodes = row.serial_code || row.serial_code_name ? 
+        String(row.serial_code || row.serial_code_name).split(',').map(s => s.trim()).filter(s => s) : [];
+      
+      const maxLength = Math.max(peripheralNames.length, serialCodes.length);
+      for (let i = 0; i < maxLength; i++) {
+        const peripheral = {
+          condition: row.condition || row.peripheral_condition || 'Good',
+          remarks: row.remarks || row.peripheral_remarks || ''
+        };
+        
+        if (i < peripheralNames.length && peripheralNames[i]) {
+          peripheral.peripheral_name = peripheralNames[i];
+        }
+        
+        if (i < serialCodes.length && serialCodes[i]) {
+          peripheral.serial_code = serialCodes[i];
+        }
+        
+        if (peripheral.peripheral_name) {
+          peripherals.push(peripheral);
+        }
+      }
     }
     
     return peripherals;
@@ -142,19 +218,34 @@ class PeripheralImporter {
   /**
    * Check for duplicate peripherals before adding
    * @param {Number} assetId - Asset ID
+   * @param {String} peripheralTypeName - Peripheral type name
    * @param {String} serialCode - Peripheral serial code
    * @returns {Boolean} True if duplicate exists
    */
-  static async checkDuplicatePeripheral(assetId, serialCode) {
-    if (!serialCode) return false;
-    
+  static async checkDuplicatePeripheral(assetId, peripheralTypeName, serialCode) {
     try {
-      // This would require a new method in Asset model
-      // For now, we'll allow duplicates to be handled by database constraints
-      return false;
+      const { pool } = require('../config/database');
+      
+      // Check if peripheral with same type and serial code already exists for this asset
+      // Match by peripheral type name (case-insensitive) and serial code
+      const [existing] = await pool.execute(
+        `SELECT p.Peripheral_ID 
+         FROM PERIPHERAL p
+         JOIN PERIPHERAL_TYPE pt ON p.Peripheral_Type_ID = pt.Peripheral_Type_ID
+         WHERE p.Asset_ID = ? 
+         AND LOWER(pt.Peripheral_Type_Name) = LOWER(?)
+         AND (
+           (p.Serial_Code IS NULL AND ? IS NULL) OR
+           (p.Serial_Code = ?)
+         )
+         LIMIT 1`,
+        [assetId, peripheralTypeName, serialCode || null, serialCode || null]
+      );
+      
+      return existing.length > 0;
     } catch (error) {
       console.error('Error checking duplicate peripheral:', error.message);
-      return false;
+      return false; // On error, allow the insert attempt (will be caught by error handler)
     }
   }
   

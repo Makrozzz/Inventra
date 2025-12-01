@@ -81,7 +81,10 @@ class Asset {
           cust.Branch,
           GROUP_CONCAT(DISTINCT s.Software_Name SEPARATOR ', ') AS Software,
           GROUP_CONCAT(DISTINCT s.Price SEPARATOR ', ') AS Software_Prices,
-          GROUP_CONCAT(DISTINCT CONCAT(pt.Peripheral_Type_Name, '|', per.Serial_Code, '|', per.Condition, '|', COALESCE(per.Remarks, '')) SEPARATOR '||') AS Peripheral_Data,
+          (SELECT GROUP_CONCAT(CONCAT(pt2.Peripheral_Type_Name, '|', COALESCE(NULLIF(per2.Serial_Code, ''), 'N/A'), '|', COALESCE(NULLIF(per2.Condition, ''), 'N/A'), '|', COALESCE(NULLIF(per2.Remarks, ''), 'N/A')) ORDER BY per2.Peripheral_ID SEPARATOR '||')
+           FROM PERIPHERAL per2
+           LEFT JOIN PERIPHERAL_TYPE pt2 ON per2.Peripheral_Type_ID = pt2.Peripheral_Type_ID
+           WHERE per2.Asset_ID = a.Asset_ID) AS Peripheral_Data,
           GROUP_CONCAT(DISTINCT CONCAT(spec_names.Attributes_Value, ': ', model_specs.Attributes_Value) SEPARATOR '; ') AS Specs_Attributes
         FROM INVENTORY i
         INNER JOIN ASSET a ON i.Asset_ID = a.Asset_ID
@@ -92,8 +95,6 @@ class Asset {
         LEFT JOIN CUSTOMER cust ON i.Customer_ID = cust.Customer_ID
         LEFT JOIN ASSET_SOFTWARE_BRIDGE asb ON a.Asset_ID = asb.Asset_ID
         LEFT JOIN SOFTWARE s ON asb.Software_ID = s.Software_ID
-        LEFT JOIN PERIPHERAL per ON a.Asset_ID = per.Asset_ID
-        LEFT JOIN PERIPHERAL_TYPE pt ON per.Peripheral_Type_ID = pt.Peripheral_Type_ID
         LEFT JOIN MODEL_SPECS_BRIDGE model_specs ON a.Model_ID = model_specs.Model_ID
         LEFT JOIN SPECS spec_names ON model_specs.Attributes_ID = spec_names.Attributes_ID
         GROUP BY i.Inventory_ID, a.Asset_ID
@@ -116,36 +117,45 @@ class Asset {
           // Format: "Type1|Serial1|Condition1|Remarks1||Type2|Serial2|Condition2|Remarks2"
           const peripherals = row.Peripheral_Data.split('||').filter(p => p.trim());
           
+          // Debug log for first asset to check data format
+          if (row.Asset_ID === rows[0].Asset_ID) {
+            console.log('🔍 Raw Peripheral_Data:', row.Peripheral_Data);
+            console.log('🔍 Split by ||:', peripherals);
+            peripherals.forEach((p, idx) => {
+              const parts = p.split('|');
+              console.log(`🔍 Peripheral ${idx + 1}:`, parts);
+              console.log(`   Type: "${parts[0]}", Serial: "${parts[1]}", Condition: "${parts[2]}", Remarks: "${parts[3]}"`);
+            });
+          }
+          
           // Build formatted lists for each peripheral attribute
           const formattedPeripherals = peripherals.map(p => {
-            const [type, serial, condition, remark] = p.split('|');
+            const parts = p.split('|');
+            const [type, serial, condition, remark] = parts;
+            
             return {
-              type: type || '',
-              serial: serial || '',
-              condition: condition || '',
-              remark: remark || ''
+              type: type?.trim() || '',
+              serial: serial?.trim() || '',
+              condition: condition?.trim() || '',
+              remark: remark?.trim() || ''
             };
           });
           
-          // Separate columns - each shows ONLY its own data
+          // Separate columns - each shows ONLY its own data (keep N/A to maintain alignment)
           processed.Peripheral_Type = formattedPeripherals
             .map(p => p.type)
-            .filter(t => t)
             .join(', ') || null;
           
           processed.Peripheral_Serial = formattedPeripherals
             .map(p => p.serial)
-            .filter(s => s)
             .join(', ') || null;
           
           processed.Peripheral_Condition = formattedPeripherals
             .map(p => p.condition)
-            .filter(c => c)
             .join(', ') || null;
           
           processed.Peripheral_Remarks = formattedPeripherals
             .map(p => p.remark)
-            .filter(r => r)
             .join(', ') || null;
             
           // Combined column: "Type1 (Serial1, Condition1); Type2 (Serial2, Condition2)"
@@ -322,7 +332,6 @@ class Asset {
           this.Windows,
           this.Microsoft_Office,
           this.Monthly_Prices,
-          this.Monthly_Prices,
           this.Asset_ID
         ]
       );
@@ -416,27 +425,33 @@ class Asset {
   }
 
   // Helper method to update model information properly
-  static async updateModelInfo(modelName, currentModelId) {
+  static async updateModelInfo(modelName, currentModelId, categoryId = null) {
     try {
       if (!modelName) return currentModelId;
 
-      // If we have a current model ID, update that model's name
-      if (currentModelId) {
-        console.log('Updating existing model:', { modelName, currentModelId });
-        
-        await pool.execute(
-          'UPDATE MODEL SET Model_Name = ? WHERE Model_ID = ?',
-          [modelName, currentModelId]
-        );
-        return currentModelId;
+      // Don't update the existing model's name - instead find or create the model by name
+      // This ensures we don't modify shared model records
+      const cleanModelName = modelName.trim();
+      console.log('Finding or creating model for asset:', { modelName: cleanModelName, categoryId });
+
+      // Find existing model with this name (case-insensitive)
+      const [existing] = await pool.execute(
+        'SELECT Model_ID, Category_ID FROM MODEL WHERE LOWER(Model_Name) = LOWER(?)',
+        [cleanModelName]
+      );
+      
+      if (existing.length > 0) {
+        console.log('Found existing model ID:', existing[0].Model_ID, 'with Category_ID:', existing[0].Category_ID);
+        return existing[0].Model_ID;
       }
 
-      // If no current model ID, create new model
-      console.log('Creating new model:', { modelName });
+      // If model doesn't exist, create new one with category link
+      console.log('Creating new model:', { modelName: cleanModelName, categoryId });
       const [result] = await pool.execute(
-        'INSERT INTO MODEL (Model_Name) VALUES (?)',
-        [modelName]
+        'INSERT INTO MODEL (Model_Name, Category_ID) VALUES (?, ?)',
+        [cleanModelName, categoryId]
       );
+      console.log('Created new model ID:', result.insertId, 'linked to Category_ID:', categoryId);
       return result.insertId;
     } catch (error) {
       console.error('Error in updateModelInfo:', error);
@@ -760,13 +775,64 @@ class Asset {
   // Helper method to create or get recipient
   static async createRecipient(recipientName, department, position = null) {
     try {
+      // Ensure we have valid values
+      const cleanName = recipientName ? recipientName.trim() : null;
+      const cleanDept = (department && department.trim() !== '') ? department.trim() : 'N/A';
+      const cleanPos = (position && position.trim() !== '' && position !== 'null') ? position.trim() : 'N/A';
+      
+      if (!cleanName) {
+        throw new Error('Recipient name is required');
+      }
+      
+      console.log(`🔍 Creating/finding recipient: Name="${cleanName}", Dept="${cleanDept}", Position="${cleanPos}"`);
+      
+      // First try to find existing recipient with same name and department
+      const [existing] = await pool.execute(
+        'SELECT Recipients_ID, Recipient_Name, Department, Position FROM RECIPIENTS WHERE Recipient_Name = ? AND Department = ?',
+        [cleanName, cleanDept]
+      );
+      
+      if (existing.length > 0) {
+        console.log(`✅ Found existing recipient: ID=${existing[0].Recipients_ID}, Name="${existing[0].Recipient_Name}", Dept="${existing[0].Department}"`);
+        return existing[0].Recipients_ID;
+      }
+      
+      // Create new recipient
+      console.log(`📝 Inserting new recipient into database...`);
       const [result] = await pool.execute(
         'INSERT INTO RECIPIENTS (Recipient_Name, Department, Position) VALUES (?, ?, ?)',
-        [recipientName, department, position]
+        [cleanName, cleanDept, cleanPos]
       );
+      
+      console.log(`✅ Created new recipient: ID=${result.insertId}, Name="${cleanName}", Dept="${cleanDept}", Position="${cleanPos}"`);
+      
+      // Verify insertion
+      const [verification] = await pool.execute(
+        'SELECT Recipients_ID FROM RECIPIENTS WHERE Recipients_ID = ?',
+        [result.insertId]
+      );
+      
+      if (verification.length === 0) {
+        throw new Error(`Failed to verify recipient creation: ID ${result.insertId} not found`);
+      }
+      
       return result.insertId;
     } catch (error) {
-      console.error('Error in createRecipient:', error);
+      // Handle duplicate key error
+      if (error.code === 'ER_DUP_ENTRY') {
+        console.log('⚠️  Duplicate recipient detected, fetching existing...');
+        const [existing] = await pool.execute(
+          'SELECT Recipients_ID FROM RECIPIENTS WHERE Recipient_Name = ?',
+          [recipientName]
+        );
+        if (existing.length > 0) {
+          console.log(`✅ Retrieved existing recipient: ID=${existing[0].Recipients_ID}`);
+          return existing[0].Recipients_ID;
+        }
+      }
+      console.error('❌ Error in createRecipient:', error);
+      console.error('Error code:', error.code);
+      console.error('Error message:', error.message);
       throw error;
     }
   }
@@ -821,35 +887,55 @@ class Asset {
     }
   }
 
-  // Helper method to get or create model - ENHANCED with hybrid functionality
-  static async getOrCreateModel(modelName) {
+  // Helper method to get or create model - ENHANCED with hybrid functionality and category linking
+  static async getOrCreateModel(modelName, categoryId = null) {
     try {
       if (!modelName || typeof modelName !== 'string' || modelName.trim() === '') {
         throw new Error('Model name is required and must be a non-empty string');
       }
 
       const cleanModelName = modelName.trim();
-      console.log(`Getting or creating model: "${cleanModelName}"`);
+      console.log(`Getting or creating model: "${cleanModelName}" with Category_ID: ${categoryId}`);
 
       // First try to find existing model (case-insensitive)
       const [existing] = await pool.execute(
-        'SELECT Model_ID, Model_Name FROM MODEL WHERE LOWER(Model_Name) = LOWER(?)',
+        'SELECT Model_ID, Model_Name, Category_ID FROM MODEL WHERE LOWER(Model_Name) = LOWER(?)',
         [cleanModelName]
       );
       
       if (existing.length > 0) {
-        console.log(`Found existing model: ID=${existing[0].Model_ID}, Name="${existing[0].Model_Name}"`);
+        console.log(`Found existing model: ID=${existing[0].Model_ID}, Name="${existing[0].Model_Name}", Category_ID=${existing[0].Category_ID}`);
+        
+        // If category is provided and existing model has no category, update it
+        if (categoryId && !existing[0].Category_ID) {
+          await pool.execute(
+            'UPDATE MODEL SET Category_ID = ? WHERE Model_ID = ?',
+            [categoryId, existing[0].Model_ID]
+          );
+          console.log(`✅ Updated model ${existing[0].Model_ID} with Category_ID: ${categoryId}`);
+        }
+        
         return existing[0].Model_ID;
       }
       
-      // Create new model
+      // Create new model with category link
       const [result] = await pool.execute(
-        'INSERT INTO MODEL (Model_Name) VALUES (?)',
-        [cleanModelName]
+        'INSERT INTO MODEL (Model_Name, Category_ID) VALUES (?, ?)',
+        [cleanModelName, categoryId]
       );
       
       const newModelId = result.insertId;
-      console.log(`✅ Created new model: ID=${newModelId}, Name="${cleanModelName}"`);
+      console.log(`✅ Created new model: ID=${newModelId}, Name="${cleanModelName}", Category_ID=${categoryId}`);
+      
+      // Verify the category was saved
+      const [verification] = await pool.execute(
+        'SELECT Model_ID, Model_Name, Category_ID FROM MODEL WHERE Model_ID = ?',
+        [newModelId]
+      );
+      if (verification.length > 0) {
+        console.log(`✅ Verification: Model ${newModelId} has Category_ID=${verification[0].Category_ID} in database`);
+      }
+      
       return newModelId;
     } catch (error) {
       // Handle duplicate key error (race condition)
@@ -874,12 +960,20 @@ class Asset {
   // Helper method to create peripheral - ENHANCED with hybrid functionality
   static async createPeripheral(assetId, peripheralTypeName, serialCode, condition, remarks) {
     try {
+      console.log(`🔄 createPeripheral called with:`, {
+        assetId,
+        peripheralTypeName,
+        serialCode,
+        condition,
+        remarks
+      });
+      
       if (!peripheralTypeName || typeof peripheralTypeName !== 'string' || peripheralTypeName.trim() === '') {
         throw new Error('Peripheral type name is required and must be a non-empty string');
       }
 
       const cleanPeripheralTypeName = peripheralTypeName.trim();
-      console.log(`Creating peripheral: "${cleanPeripheralTypeName}" for Asset_ID: ${assetId}`);
+      console.log(`Creating peripheral: "${cleanPeripheralTypeName}" for Asset_ID: ${assetId} with serial: ${serialCode || 'NULL'}`);
 
       // Get or create peripheral type (case-insensitive)
       let peripheralTypeId;

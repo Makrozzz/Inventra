@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { Search, Check, X, RotateCcw, GripVertical, Eye, EyeOff, Lightbulb } from 'lucide-react';
 import ColumnConfigService from '../services/columnConfigService';
 
 /**
@@ -15,7 +16,9 @@ const ColumnFilterPopup = ({ isOpen, onClose, columns, onApply }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [draggedIndex, setDraggedIndex] = useState(null);
   const [dragOverIndex, setDragOverIndex] = useState(null);
+  const [dragPosition, setDragPosition] = useState(null); // 'top' or 'bottom'
   const popupRef = useRef(null);
+  const listRef = useRef(null);
 
   // Initialize local state when popup opens
   useEffect(() => {
@@ -60,6 +63,22 @@ const ColumnFilterPopup = ({ isOpen, onClose, columns, onApply }) => {
     
     if (draggedIndex !== index) {
       setDragOverIndex(index);
+      
+      // Determine if hovering over top or bottom third of the item (more sensitive)
+      const rect = e.currentTarget.getBoundingClientRect();
+      const relativeY = e.clientY - rect.top;
+      const threshold = rect.height * 0.35; // 35% from top/bottom for more sensitive detection
+      
+      let position;
+      if (relativeY < threshold) {
+        position = 'top';
+      } else if (relativeY > rect.height - threshold) {
+        position = 'bottom';
+      } else {
+        position = 'bottom'; // Default to bottom for middle area
+      }
+      
+      setDragPosition(position);
     }
   };
 
@@ -68,6 +87,7 @@ const ColumnFilterPopup = ({ isOpen, onClose, columns, onApply }) => {
     e.target.style.opacity = '1';
     setDraggedIndex(null);
     setDragOverIndex(null);
+    setDragPosition(null);
   };
 
   // Handle drop
@@ -76,19 +96,31 @@ const ColumnFilterPopup = ({ isOpen, onClose, columns, onApply }) => {
     e.stopPropagation();
 
     if (draggedIndex === null || draggedIndex === dropIndex) {
+      setDragPosition(null);
       return;
+    }
+
+    // Adjust drop index based on position (top or bottom)
+    let finalDropIndex = dropIndex;
+    if (dragPosition === 'bottom' && draggedIndex < dropIndex) {
+      finalDropIndex = dropIndex;
+    } else if (dragPosition === 'bottom' && draggedIndex > dropIndex) {
+      finalDropIndex = dropIndex + 1;
+    } else if (dragPosition === 'top' && draggedIndex > dropIndex) {
+      finalDropIndex = dropIndex;
     }
 
     // Reorder columns
     const reordered = ColumnConfigService.reorderColumns(
       localColumns,
       draggedIndex,
-      dropIndex
+      finalDropIndex
     );
     
     setLocalColumns(reordered);
     setDraggedIndex(null);
     setDragOverIndex(null);
+    setDragPosition(null);
   };
 
   // Toggle column visibility
@@ -141,12 +173,13 @@ const ColumnFilterPopup = ({ isOpen, onClose, columns, onApply }) => {
             onClick={handleCancel}
             aria-label="Close"
           >
-            ×
+            <X size={20} />
           </button>
         </div>
 
         {/* Search bar */}
         <div className="column-filter-search">
+          <Search size={16} className="column-filter-search-icon" />
           <input
             type="text"
             placeholder="Search columns..."
@@ -154,32 +187,37 @@ const ColumnFilterPopup = ({ isOpen, onClose, columns, onApply }) => {
             onChange={(e) => setSearchTerm(e.target.value)}
             className="column-filter-search-input"
           />
-          <span className="column-filter-search-icon">🔍</span>
         </div>
 
         {/* Action buttons */}
         <div className="column-filter-actions">
           <button onClick={handleSelectAll} className="column-filter-action-btn">
-            ✓ Select All
+            <Eye size={14} style={{ marginRight: '6px' }} />
+            Select All
           </button>
           <button onClick={handleDeselectAll} className="column-filter-action-btn">
-            ✗ Deselect All
+            <EyeOff size={14} style={{ marginRight: '6px' }} />
+            Deselect All
           </button>
           <button onClick={handleReset} className="column-filter-action-btn column-filter-reset-btn">
-            ↻ Reset to Default
+            <RotateCcw size={14} style={{ marginRight: '6px' }} />
+            Reset to Default
           </button>
         </div>
 
         {/* Column list */}
         <div className="column-filter-list-container">
           <div className="column-filter-list-header">
-            <span className="column-filter-drag-hint">💡 Drag to reorder</span>
+            <span className="column-filter-drag-hint">
+              <Lightbulb size={14} style={{ marginRight: '6px' }} />
+              Drag to reorder
+            </span>
             <span className="column-filter-visible-count">
               {visibleCount} of {localColumns.length} visible
             </span>
           </div>
 
-          <div className="column-filter-list">
+          <div className="column-filter-list" ref={listRef}>
             {filteredColumns.length === 0 ? (
               <div className="column-filter-no-results">
                 No columns match "{searchTerm}"
@@ -194,6 +232,10 @@ const ColumnFilterPopup = ({ isOpen, onClose, columns, onApply }) => {
                     draggedIndex === index ? 'column-filter-item-dragging' : ''
                   } ${
                     dragOverIndex === index ? 'column-filter-item-drag-over' : ''
+                  } ${
+                    dragOverIndex === index && dragPosition === 'top' ? 'column-filter-item-drag-over-top' : ''
+                  } ${
+                    dragOverIndex === index && dragPosition === 'bottom' ? 'column-filter-item-drag-over-bottom' : ''
                   }`}
                   draggable
                   onDragStart={(e) => handleDragStart(e, index)}
@@ -203,7 +245,7 @@ const ColumnFilterPopup = ({ isOpen, onClose, columns, onApply }) => {
                 >
                   {/* Drag handle */}
                   <span className="column-filter-drag-handle" title="Drag to reorder">
-                    ⋮⋮
+                    <GripVertical size={16} />
                   </span>
 
                   {/* Checkbox */}

@@ -12,7 +12,7 @@ const ImportPreview = ({ parsedData, validationResults, onValidationComplete }) 
 
   // Define expected database fields and their display names
   const expectedFields = {
-    'project_reference_num': 'Project Reference',
+    'project_ref_num': 'Project Reference',
     'serial_number': 'Serial Number',
     'tag_id': 'Tag ID',
     'item_name': 'Item Name',
@@ -26,7 +26,7 @@ const ImportPreview = ({ parsedData, validationResults, onValidationComplete }) 
     'customer_reference_number': 'Customer Reference'
   };
 
-  const requiredFields = ['project_reference_num', 'serial_number', 'tag_id', 'item_name'];
+  const requiredFields = ['project_ref_num', 'serial_number', 'tag_id', 'item_name'];
 
   useEffect(() => {
     if (parsedData && parsedData.length > 0) {

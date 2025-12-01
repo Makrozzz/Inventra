@@ -236,6 +236,43 @@ class ApiService {
     }
   }
 
+  async validateImportAssets(assets) {
+    try {
+      console.log('📡 API: Calling validate-import with', assets.length, 'assets');
+      console.log('📡 API: First asset:', assets[0]);
+      
+      const url = `${this.baseURL}/assets/validate-import`;
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ assets })
+      });
+
+      console.log('📡 API: Response status:', response.status);
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null);
+        console.error('📡 API: Error response data:', errorData);
+        console.error('📡 API: Full error:', {
+          status: response.status,
+          statusText: response.statusText,
+          errorData
+        });
+        throw new Error(errorData?.message || errorData?.error || `HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log('📡 API: Validation response:', data);
+      return data;
+    } catch (error) {
+      console.error('❌ API: Validation Error:', error);
+      console.error('❌ API: Error stack:', error.stack);
+      throw error;
+    }
+  }
+
   async bulkImportAssets(assets) {
     try {
       const url = `${this.baseURL}/assets/bulk-import`;

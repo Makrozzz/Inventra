@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Download, CheckCircle, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Download, CheckCircle, AlertCircle, AlertTriangle } from 'lucide-react';
 import CSVUploader from '../components/CSVUploader';
 import ImportPreview from '../components/ImportPreview';
 import ImportConfirmationDialog from '../components/ImportConfirmationDialog';
 import HeaderMappingConfirmation from '../components/HeaderMappingConfirmation';
 import AssetGroupingPreview from '../components/AssetGroupingPreview';
+import NewOptionsDialog from '../components/NewOptionsDialog';
 import HeaderMapper from '../utils/headerMapper';
 import AssetGrouper from '../utils/assetGrouper';
 import apiService from '../services/apiService';
@@ -26,6 +27,8 @@ const CSVImport = () => {
   const [groupedData, setGroupedData] = useState(null);
   const [validationResults, setValidationResults] = useState(null);
   const [validationSummary, setValidationSummary] = useState(null);
+  const [newOptions, setNewOptions] = useState(null);
+  const [showNewOptionsDialog, setShowNewOptionsDialog] = useState(false);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [importing, setImporting] = useState(false);
   const [importResults, setImportResults] = useState(null);
@@ -142,8 +145,13 @@ const CSVImport = () => {
   const validateData = async (data, isGroupedData = false) => {
     const validationResults = [];
     
-    // Define validation rules
-    const requiredFields = ['project_reference_num', 'serial_number', 'tag_id', 'item_name'];
+    // Define validation rules - using standard field names from HeaderMapper
+    const requiredFields = [
+      { key: 'project_ref_num', alternatives: ['project_reference_num'], label: 'project reference number' },
+      { key: 'serial_number', alternatives: [], label: 'serial number' },
+      { key: 'tag_id', alternatives: [], label: 'tag ID' },
+      { key: 'item_name', alternatives: [], label: 'item name' }
+    ];
     const validStatuses = ['Active', 'Inactive', 'Maintenance'];
     
     // Track unique values for uniqueness validation (only if not grouped data)
@@ -154,12 +162,13 @@ const CSVImport = () => {
       const row = data[i];
       const errors = [];
 
-      // Check required fields
+      // Check required fields (accept both primary and alternative field names)
       requiredFields.forEach(field => {
-        if (!row[field] || String(row[field]).trim() === '') {
+        const value = row[field.key] || field.alternatives.find(alt => row[alt]);
+        if (!value || String(value).trim() === '') {
           errors.push({
-            field,
-            message: `${field} is required`
+            field: field.key,
+            message: `${field.label} is required`
           });
         }
       });
@@ -306,47 +315,22 @@ const CSVImport = () => {
       
     } catch (error) {
       console.error('Import failed:', error);
+      // If error is about duplicates or no new data, treat as partial success
+      const isDuplicateError = error.message?.includes('already exist') || error.message?.includes('duplicate');
+      
       setImportResults({
-        success: false,
-        error: error.message,
+        success: isDuplicateError,
+        error: isDuplicateError ? null : error.message,
         imported: 0,
-        failed: parsedData?.length || 0
+        failed: isDuplicateError ? 0 : (parsedData?.length || 0),
+        duplicates: isDuplicateError ? (parsedData?.length || 0) : 0,
+        warnings: isDuplicateError ? [{ message: error.message }] : []
       });
       setShowConfirmDialog(false);
       setCurrentStep(3);
     } finally {
       setImporting(false);
     }
-  };
-
-  const downloadTemplate = () => {
-    const templateData = [
-      {
-        project_reference_num: 'QT240000000015729',
-        customer_name: 'NADMA',
-        customer_reference_number: 'M24050',
-        branch: 'Putrajaya',
-        serial_number: 'SN-001',
-        tag_id: 'TAG-001',
-        item_name: 'Desktop Computer',
-        category: 'Desktop',
-        model: 'Dell OptiPlex 3090',
-        status: 'Active',
-        recipient_name: 'John Doe',
-        department_name: 'IT Department'
-      }
-    ];
-
-    const csv = Papa.unparse(templateData);
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'asset-import-template.csv';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
   };
 
   const resetImport = () => {
@@ -356,6 +340,43 @@ const CSVImport = () => {
     setValidationResults(null);
     setValidationSummary(null);
     setImportResults(null);
+    setNewOptions(null);
+    setShowNewOptionsDialog(false);
+  };
+
+  const handleProceedToImport = async () => {
+    try {
+      setProcessing(true);
+      console.log('🔍 Validating import data...', parsedData);
+      
+      // Validate and check for new options
+      const validationResult = await apiService.validateImportAssets(parsedData);
+      console.log('✅ Validation result:', validationResult);
+      
+      if (validationResult.success && validationResult.hasNewOptions) {
+        console.log('📦 New options detected:', validationResult.newOptions);
+        setNewOptions(validationResult.newOptions);
+        setShowNewOptionsDialog(true);
+      } else {
+        console.log('ℹ️ No new options detected, proceeding to confirmation');
+        setShowConfirmDialog(true);
+      }
+    } catch (error) {
+      console.error('❌ Validation error:', error);
+      // Proceed anyway if validation fails
+      setShowConfirmDialog(true);
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  const handleNewOptionsConfirm = () => {
+    setShowNewOptionsDialog(false);
+    setShowConfirmDialog(true);
+  };
+
+  const handleNewOptionsCancel = () => {
+    setShowNewOptionsDialog(false);
   };
 
   const goToAssets = () => {
@@ -642,12 +663,6 @@ const CSVImport = () => {
           </button>
           <h1 className="page-title">CSV Bulk Import</h1>
         </div>
-        <div className="header-actions">
-          <button className="btn btn-outline" onClick={downloadTemplate}>
-            <Download size={16} />
-            Download Template
-          </button>
-        </div>
       </div>
 
       <div className="progress-indicator">
@@ -703,14 +718,16 @@ const CSVImport = () => {
               <div style={{ marginTop: '24px', textAlign: 'center' }}>
                 <button 
                   className="btn btn-primary"
-                  onClick={() => setShowConfirmDialog(true)}
+                  onClick={handleProceedToImport}
+                  disabled={processing}
                   style={{ marginRight: '12px' }}
                 >
-                  Proceed to Import
+                  {processing ? 'Validating...' : 'Proceed to Import'}
                 </button>
                 <button 
                   className="btn btn-secondary"
                   onClick={resetImport}
+                  disabled={processing}
                 >
                   Upload Different File
                 </button>
@@ -731,12 +748,18 @@ const CSVImport = () => {
               )}
               
               <h2 className={`result-title ${importResults.success ? 'success' : 'error'}`}>
-                {importResults.success ? 'Import Completed Successfully!' : 'Import Failed'}
+                {importResults.success 
+                  ? (importResults.imported > 0 
+                      ? 'Import Completed Successfully!' 
+                      : 'Import Completed - No New Assets Added')
+                  : 'Import Failed'}
               </h2>
               
               <p className="result-message">
                 {importResults.success 
-                  ? 'Your asset data has been imported and is now available in the system.'
+                  ? (importResults.imported > 0 
+                      ? 'Your asset data has been imported and is now available in the system.'
+                      : 'All assets in the file already exist in the system or were skipped due to duplicates.')
                   : `Import failed: ${importResults.error || 'Unknown error occurred'}`
                 }
               </p>
@@ -747,10 +770,52 @@ const CSVImport = () => {
                     <div className="stat-number">{importResults.imported || 0}</div>
                     <div className="stat-label">Imported</div>
                   </div>
-                  <div className="stat-item">
-                    <div className="stat-number">{importResults.failed || 0}</div>
-                    <div className="stat-label">Failed</div>
+                  {importResults.duplicates > 0 && (
+                    <div className="stat-item">
+                      <div className="stat-number" style={{ color: '#ff9800' }}>{importResults.duplicates || 0}</div>
+                      <div className="stat-label">Duplicates Skipped</div>
+                    </div>
+                  )}
+                  {importResults.skipped > 0 && (
+                    <div className="stat-item">
+                      <div className="stat-number" style={{ color: '#9e9e9e' }}>{importResults.skipped || 0}</div>
+                      <div className="stat-label">Skipped</div>
+                    </div>
+                  )}
+                  {importResults.failed > 0 && (
+                    <div className="stat-item">
+                      <div className="stat-number" style={{ color: '#f44336' }}>{importResults.failed || 0}</div>
+                      <div className="stat-label">Failed</div>
+                    </div>
+                  )}
+                </div>
+              )}
+              
+              {importResults.warnings && importResults.warnings.length > 0 && (
+                <div style={{ 
+                  marginTop: '20px', 
+                  padding: '15px', 
+                  backgroundColor: '#fff3e0', 
+                  borderRadius: '8px',
+                  textAlign: 'left',
+                  maxHeight: '200px',
+                  overflowY: 'auto',
+                  border: '1px solid #ffe0b2'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
+                    <AlertTriangle size={20} style={{ color: '#ff9800' }} />
+                    <h4 style={{ margin: 0, color: '#ff9800' }}>Warnings ({importResults.warnings.length})</h4>
                   </div>
+                  {importResults.warnings.slice(0, 10).map((warning, idx) => (
+                    <div key={idx} style={{ fontSize: '12px', marginBottom: '8px', color: '#666', paddingLeft: '28px' }}>
+                      {warning.message || JSON.stringify(warning)}
+                    </div>
+                  ))}
+                  {importResults.warnings.length > 10 && (
+                    <div style={{ fontSize: '12px', color: '#999', marginTop: '10px', paddingLeft: '28px' }}>
+                      ... and {importResults.warnings.length - 10} more warnings
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -781,6 +846,14 @@ const CSVImport = () => {
           groupingResult={groupingPreview}
           onConfirm={handleGroupingConfirm}
           onCancel={handleGroupingCancel}
+        />
+      )}
+
+      {showNewOptionsDialog && newOptions && (
+        <NewOptionsDialog
+          newOptions={newOptions}
+          onConfirm={handleNewOptionsConfirm}
+          onCancel={handleNewOptionsCancel}
         />
       )}
 

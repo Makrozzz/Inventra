@@ -16,6 +16,7 @@ import AuditLog from './pages/AuditLog';
 import SolutionPrincipal from './pages/SolutionPrincipal';
 import AddAsset from './pages/AddAsset';
 import EditAsset from './pages/EditAsset';
+import CSVImport from './pages/CSVImport';
 import DatabaseTest from './components/DatabaseTest';
 import apiService from './services/apiService';
 
@@ -96,6 +97,7 @@ function App() {
             <Route path="/projects/edit/:id" element={<EditProject />} />
             <Route path="/projects/:id" element={<ProjectDetail />} />
             <Route path="/assets" element={<Assets onDelete={deleteAsset} />} />
+            <Route path="/assets/import" element={<CSVImport />} />
             <Route path="/asset-detail/:assetId" element={<AssetDetail />} />
             <Route path="/maintenance" element={<PreventiveMaintenance assets={assets} />} />
             <Route path="/maintenance/detail/:pmId" element={<PMDetail />} />

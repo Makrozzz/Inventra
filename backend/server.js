@@ -102,17 +102,27 @@ const startServer = async () => {
   try {
     // Try to initialize database connection (but don't fail if it doesn't work)
     await initializeDatabase();
+    
+    // Start server regardless of database connection status
+    const server = app.listen(PORT, '0.0.0.0', () => {
+      logger.info(`🚀 Inventra Backend Server running on port ${PORT}`);
+      logger.info(`📍 Environment: ${process.env.NODE_ENV}`);
+      logger.info(`🌐 CORS enabled for: ${process.env.CORS_ORIGIN}`);
+      logger.info(`🌍 Server accessible on all network interfaces (0.0.0.0)`);
+    });
+    
+    server.on('error', (error) => {
+      logger.error('Server error:', error);
+      if (error.code === 'EADDRINUSE') {
+        logger.error(`Port ${PORT} is already in use. Please free the port or use a different one.`);
+      }
+      process.exit(1);
+    });
+    
   } catch (error) {
+    logger.error('Failed to start server:', error);
     logger.warn('Database initialization failed, but server will continue:', error.message);
   }
-  
-  // Start server regardless of database connection status
-  app.listen(PORT, '0.0.0.0', () => {
-    logger.info(`🚀 Inventra Backend Server running on port ${PORT}`);
-    logger.info(`📍 Environment: ${process.env.NODE_ENV}`);
-    logger.info(`🌐 CORS enabled for: ${process.env.CORS_ORIGIN}`);
-    logger.info(`🌍 Server accessible on all network interfaces (0.0.0.0)`);
-  });
 };
 
 startServer();

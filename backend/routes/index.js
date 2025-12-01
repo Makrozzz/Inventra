@@ -14,6 +14,7 @@ const registerRoutes = require('./register');
 const profileRoutes = require('./profile');
 const optionsRoutes = require('./options');
 const historyLogRoutes = require('./historyLog');
+const recipientRoutes = require('./recipients');
 
 // Mount routes
 router.use('/assets', assetRoutes);
@@ -28,5 +29,6 @@ router.use('/register', registerRoutes);
 router.use('/profile', profileRoutes);
 router.use('/options', optionsRoutes);
 router.use('/history-log', historyLogRoutes);
+router.use('/recipients', recipientRoutes);
 
 module.exports = router;

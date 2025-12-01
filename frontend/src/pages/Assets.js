@@ -88,6 +88,8 @@ const Assets = ({ onDelete }) => {
           { Field: 'Windows', Type: 'varchar(255)', Label: 'Windows Version' },
           { Field: 'Microsoft_Office', Type: 'varchar(255)', Label: 'Microsoft Office' },
           { Field: 'Software', Type: 'text', Label: 'Software' },
+          { Field: 'Peripheral_Type', Type: 'text', Label: 'Peripheral Name' },
+          { Field: 'Peripheral_Serial', Type: 'text', Label: 'Peripheral Serial Code' },
           { Field: 'Recipient_Name', Type: 'varchar(255)', Label: 'Recipient Name' }
         ];
         setColumns(assetColumns);
@@ -413,7 +415,37 @@ const Assets = ({ onDelete }) => {
   
   // Helper function to format cell values
   const formatCellValue = (value, columnName) => {
+    // Special handling for Peripheral columns - format with line breaks
+    if (columnName === 'Peripheral_Type' || columnName === 'Peripheral_Serial') {
+      if (!value || value === '' || value === null || value === undefined) {
+        return 'N/A';
+      }
+      // Value already comes formatted with commas from backend, replace with line breaks
+      return value.split(', ').join('\n');
+    }
+    
+    // Special handling for Software column - show 'None' for assets without software
+    if (columnName === 'Software') {
+      if (!value || value === '' || value === null || value === undefined) {
+        return 'None';
+      }
+      return value;
+    }
+    
     if (value === null || value === undefined) return 'N/A';
+    
+    // Format date columns to show only date (YYYY-MM-DD)
+    if (columnName === 'Start_Date' || columnName === 'End_Date') {
+      try {
+        const date = new Date(value);
+        if (!isNaN(date.getTime())) {
+          return date.toLocaleDateString('en-CA'); // en-CA gives YYYY-MM-DD format
+        }
+      } catch (e) {
+        return value;
+      }
+    }
+    
     if (typeof value === 'string' && value.length > 50) {
       return value.substring(0, 50) + '...';
     }
@@ -433,7 +465,14 @@ const Assets = ({ onDelete }) => {
     
     // Create rows with all asset data (not just filtered)
     const rows = allAssets.map(asset => 
-      displayColumns.map(col => asset[col.Field] || 'N/A')
+      displayColumns.map(col => {
+        const value = asset[col.Field];
+        // Special handling for Software: empty means no software, show 'None'
+        if (col.Field === 'Software') {
+          return value || 'None';
+        }
+        return value || 'N/A';
+      })
     );
     
     const csvContent = [headers, ...rows]
@@ -541,8 +580,8 @@ const Assets = ({ onDelete }) => {
       {/* Full Width Asset Table Section */}
       <div style={{ padding: '0 20px', width: '100%', boxSizing: 'border-box' }}>
         <div className="card" style={{ width: '100%' }}>
-        <div className="search-bar" style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-          <div style={{ position: 'relative', flex: 1 }}>
+        <div className="search-bar" style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+          <div style={{ position: 'relative', flex: 1, minWidth: '200px' }}>
             <Search size={16} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#666' }} />
             <input
               type="text"
@@ -555,7 +594,7 @@ const Assets = ({ onDelete }) => {
           
           {/* Bulk Action Buttons */}
           {selectedAssets.length > 0 && (
-            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
               <button 
                 onClick={handleBulkView}
                 disabled={selectedAssets.length !== 1}
@@ -647,7 +686,8 @@ const Assets = ({ onDelete }) => {
               gap: '8px',
               transition: 'all 0.2s ease',
               boxShadow: '0 2px 8px rgba(102, 126, 234, 0.3)',
-              whiteSpace: 'nowrap'
+              whiteSpace: 'nowrap',
+              marginLeft: 'auto'
             }}
             onMouseOver={(e) => {
               e.currentTarget.style.transform = 'translateY(-2px)';
@@ -928,6 +968,10 @@ const Assets = ({ onDelete }) => {
                             <span className={`status-badge status-${(asset[column.Field] || '').toLowerCase().replace(/\s+/g, '-')}`}>
                               {formatCellValue(asset[column.Field], column.Field)}
                             </span>
+                          ) : column.Field === 'Peripheral_Type' || column.Field === 'Peripheral_Serial' ? (
+                            <div style={{ whiteSpace: 'pre-line' }}>
+                              {formatCellValue(asset[column.Field], column.Field)}
+                            </div>
                           ) : column.Field === 'Project_Title' ? (
                             <span 
                               title={asset[column.Field]}

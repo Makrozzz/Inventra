@@ -1801,6 +1801,18 @@ input[type="checkbox"] {
   background: #f0f4ff;
 }
 
+.column-filter-item-drag-over-top {
+  border-top: 3px solid #667eea;
+  border-top-style: solid;
+  box-shadow: 0 -2px 8px rgba(102, 126, 234, 0.3);
+}
+
+.column-filter-item-drag-over-bottom {
+  border-bottom: 3px solid #667eea;
+  border-bottom-style: solid;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+}
+
 /* Drag handle */
 .column-filter-drag-handle {
   color: #adb5bd;
