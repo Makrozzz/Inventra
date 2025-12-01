@@ -775,13 +775,64 @@ class Asset {
   // Helper method to create or get recipient
   static async createRecipient(recipientName, department, position = null) {
     try {
+      // Ensure we have valid values
+      const cleanName = recipientName ? recipientName.trim() : null;
+      const cleanDept = (department && department.trim() !== '') ? department.trim() : 'N/A';
+      const cleanPos = (position && position.trim() !== '' && position !== 'null') ? position.trim() : 'N/A';
+      
+      if (!cleanName) {
+        throw new Error('Recipient name is required');
+      }
+      
+      console.log(`🔍 Creating/finding recipient: Name="${cleanName}", Dept="${cleanDept}", Position="${cleanPos}"`);
+      
+      // First try to find existing recipient with same name and department
+      const [existing] = await pool.execute(
+        'SELECT Recipients_ID, Recipient_Name, Department, Position FROM RECIPIENTS WHERE Recipient_Name = ? AND Department = ?',
+        [cleanName, cleanDept]
+      );
+      
+      if (existing.length > 0) {
+        console.log(`✅ Found existing recipient: ID=${existing[0].Recipients_ID}, Name="${existing[0].Recipient_Name}", Dept="${existing[0].Department}"`);
+        return existing[0].Recipients_ID;
+      }
+      
+      // Create new recipient
+      console.log(`📝 Inserting new recipient into database...`);
       const [result] = await pool.execute(
         'INSERT INTO RECIPIENTS (Recipient_Name, Department, Position) VALUES (?, ?, ?)',
-        [recipientName, department, position]
+        [cleanName, cleanDept, cleanPos]
       );
+      
+      console.log(`✅ Created new recipient: ID=${result.insertId}, Name="${cleanName}", Dept="${cleanDept}", Position="${cleanPos}"`);
+      
+      // Verify insertion
+      const [verification] = await pool.execute(
+        'SELECT Recipients_ID FROM RECIPIENTS WHERE Recipients_ID = ?',
+        [result.insertId]
+      );
+      
+      if (verification.length === 0) {
+        throw new Error(`Failed to verify recipient creation: ID ${result.insertId} not found`);
+      }
+      
       return result.insertId;
     } catch (error) {
-      console.error('Error in createRecipient:', error);
+      // Handle duplicate key error
+      if (error.code === 'ER_DUP_ENTRY') {
+        console.log('⚠️  Duplicate recipient detected, fetching existing...');
+        const [existing] = await pool.execute(
+          'SELECT Recipients_ID FROM RECIPIENTS WHERE Recipient_Name = ?',
+          [recipientName]
+        );
+        if (existing.length > 0) {
+          console.log(`✅ Retrieved existing recipient: ID=${existing[0].Recipients_ID}`);
+          return existing[0].Recipients_ID;
+        }
+      }
+      console.error('❌ Error in createRecipient:', error);
+      console.error('Error code:', error.code);
+      console.error('Error message:', error.message);
       throw error;
     }
   }
@@ -875,6 +926,16 @@ class Asset {
       
       const newModelId = result.insertId;
       console.log(`✅ Created new model: ID=${newModelId}, Name="${cleanModelName}", Category_ID=${categoryId}`);
+      
+      // Verify the category was saved
+      const [verification] = await pool.execute(
+        'SELECT Model_ID, Model_Name, Category_ID FROM MODEL WHERE Model_ID = ?',
+        [newModelId]
+      );
+      if (verification.length > 0) {
+        console.log(`✅ Verification: Model ${newModelId} has Category_ID=${verification[0].Category_ID} in database`);
+      }
+      
       return newModelId;
     } catch (error) {
       // Handle duplicate key error (race condition)
@@ -899,12 +960,20 @@ class Asset {
   // Helper method to create peripheral - ENHANCED with hybrid functionality
   static async createPeripheral(assetId, peripheralTypeName, serialCode, condition, remarks) {
     try {
+      console.log(`🔄 createPeripheral called with:`, {
+        assetId,
+        peripheralTypeName,
+        serialCode,
+        condition,
+        remarks
+      });
+      
       if (!peripheralTypeName || typeof peripheralTypeName !== 'string' || peripheralTypeName.trim() === '') {
         throw new Error('Peripheral type name is required and must be a non-empty string');
       }
 
       const cleanPeripheralTypeName = peripheralTypeName.trim();
-      console.log(`Creating peripheral: "${cleanPeripheralTypeName}" for Asset_ID: ${assetId}`);
+      console.log(`Creating peripheral: "${cleanPeripheralTypeName}" for Asset_ID: ${assetId} with serial: ${serialCode || 'NULL'}`);
 
       // Get or create peripheral type (case-insensitive)
       let peripheralTypeId;

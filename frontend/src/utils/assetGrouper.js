@@ -97,7 +97,15 @@ class AssetGrouper {
    * Returns array of peripheral objects
    */
   static extractPeripheral(row) {
+    console.log('🔍 extractPeripheral called with row:', {
+      peripheral_name: row.peripheral_name,
+      serial_code: row.serial_code,
+      serial_code_name: row.serial_code_name,
+      all_keys: Object.keys(row).filter(k => k.toLowerCase().includes('serial') || k.toLowerCase().includes('peripheral'))
+    });
+    
     if (!this.hasPeripheralData(row)) {
+      console.log('❌ No peripheral data found in row');
       return [];
     }
 
@@ -106,6 +114,11 @@ class AssetGrouper {
       String(row.peripheral_name).split(',').map(s => s.trim()).filter(s => s) : [];
     const serialCodes = row.serial_code ? 
       String(row.serial_code).split(',').map(s => s.trim()).filter(s => s) : [];
+    
+    console.log('📊 Extracted arrays:', {
+      peripheralNames,
+      serialCodes
+    });
     
     // If no peripheral names or serial codes, return empty array
     if (peripheralNames.length === 0 && serialCodes.length === 0) {
@@ -133,6 +146,7 @@ class AssetGrouper {
       }
     }
 
+    console.log('✅ Extracted peripherals:', peripherals);
     return peripherals;
   }
 

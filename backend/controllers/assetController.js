@@ -183,13 +183,19 @@ const createAssetWithDetails = async (req, res, next) => {
     console.log('Creating recipient...');
     // Step 1: Get or create recipient
     let recipientId = null;
-    if (completeData.recipient_name && completeData.department_name) {
+    if (completeData.recipient_name) {
+      if (!completeData.department_name) {
+        console.log('   ℹ️  No department provided, using default');
+        completeData.department_name = 'N/A';
+      }
       recipientId = await Asset.createRecipient(
         completeData.recipient_name,
         completeData.department_name,
         completeData.position || null
       );
       console.log('Recipient created with ID:', recipientId);
+    } else {
+      console.log('   ℹ️  No recipient data provided (recipient_name:', completeData.recipient_name, ', department:', completeData.department_name, ')');
     }
 
     console.log('Creating/getting category...');
@@ -201,11 +207,11 @@ const createAssetWithDetails = async (req, res, next) => {
     }
 
     console.log('Creating/getting model...');
-    // Step 3: Get or create model
+    // Step 3: Get or create model (with category link)
     let modelId = null;
     if (completeData.model) {
-      modelId = await Asset.getOrCreateModel(completeData.model);
-      console.log('Model ID:', modelId);
+      modelId = await Asset.getOrCreateModel(completeData.model, categoryId);
+      console.log('Model ID:', modelId, '(linked to Category ID:', categoryId, ')');
     }
 
     console.log('Creating asset record...');
@@ -256,7 +262,15 @@ const createAssetWithDetails = async (req, res, next) => {
               continue; // Skip this peripheral
             }
             
-            console.log(`Creating peripheral: ${peripheral.peripheral_name} with serial: ${peripheral.serial_code || 'N/A'}`);
+            console.log(`🔧 Creating peripheral with data:`, {
+              peripheral_name: peripheral.peripheral_name,
+              serial_code: peripheral.serial_code,
+              serial_code_name: peripheral.serial_code_name,
+              condition: peripheral.condition,
+              remarks: peripheral.remarks,
+              'serial_code || serial_code_name': peripheral.serial_code || peripheral.serial_code_name
+            });
+            
             const peripheralId = await Asset.createPeripheral(
               newAsset.Asset_ID,
               peripheral.peripheral_name,
@@ -344,12 +358,24 @@ const createAssetWithDetails = async (req, res, next) => {
       []
     );
 
-    console.log('Sending success response...');
+    console.log('Sending success response with asset data:', {
+      Asset_ID: newAsset.Asset_ID,
+      Serial_Number: completeAsset?.Asset_Serial_Number,
+      Peripherals_Count: completeAsset?.Peripherals?.length || 0
+    });
     res.status(201).json({
       success: true,
+      message: `Asset ${completeData.serial_number} created successfully with ${peripheralIds.length} peripherals`,
       data: {
         ...completeAsset,
         asset_id: newAsset.Asset_ID,
+        serial_number: completeAsset?.Asset_Serial_Number || completeData.serial_number,
+        tag_id: completeAsset?.Asset_Tag_ID || completeData.tag_id,
+        item_name: completeAsset?.Item_Name || completeData.item_name,
+        category: completeAsset?.Category || completeData.category,
+        model: completeAsset?.Model || completeData.model,
+        recipient_name: completeAsset?.Recipient_Name || completeData.recipient_name,
+        peripherals_created: peripheralIds.length,
         pmid: null, // PM records are created manually only
         inventory_id: inventoryId,
         peripheral_ids: peripheralIds
@@ -829,20 +855,34 @@ const processNewAssets = async (assets) => {
 
       // Get or create recipient
       let recipientId = null;
-      if (assetData.recipient_name && assetData.department) {
+      console.log(`   📋 Recipient data check:`, {
+        recipient_name: assetData.recipient_name,
+        department: assetData.department,
+        department_name: assetData.department_name,
+        position: assetData.position
+      });
+      
+      if (assetData.recipient_name && assetData.recipient_name.trim() !== '') {
         try {
+          const department = assetData.department_name || assetData.department || 'N/A';
+          const position = assetData.position || 'N/A';
+          
+          console.log(`   👤 Creating recipient with: Name="${assetData.recipient_name}", Dept="${department}", Position="${position}"`);
+          
           recipientId = await Asset.createRecipient(
-            assetData.recipient_name,
-            assetData.department,
-            assetData.position || null
+            assetData.recipient_name.trim(),
+            department,
+            position
           );
-          console.log(`   👤 Created recipient: ${assetData.recipient_name} (ID: ${recipientId})`);
+          
+          console.log(`   ✅ Recipient assigned: ID=${recipientId}, Name="${assetData.recipient_name}"`);
         } catch (recipientError) {
-          console.log(`   ⚠️  Failed to create recipient: ${recipientError.message}`);
+          console.error(`   ❌ Failed to create recipient:`, recipientError);
+          console.error(`   Error details:`, recipientError.message);
           // Continue without recipient - asset can be created without one
         }
       } else {
-        console.log(`   ℹ️  No recipient data provided (recipient_name: ${assetData.recipient_name}, department: ${assetData.department})`);
+        console.log(`   ⏭️  No recipient name provided, skipping recipient creation`);
       }
 
       // Get or create category (auto-creates new if not exists)
@@ -896,8 +936,20 @@ const processNewAssets = async (assets) => {
         Monthly_Prices: assetData.monthly_prices || null
       };
 
+      console.log(`   📦 Creating asset with data:`, {
+        Serial: assetToCreate.Asset_Serial_Number,
+        Recipients_ID: assetToCreate.Recipients_ID,
+        Category_ID: assetToCreate.Category_ID,
+        Model_ID: assetToCreate.Model_ID
+      });
+
       const newAsset = await Asset.create(assetToCreate);
-      console.log(`   ✅ Asset created with ID: ${newAsset.Asset_ID}, Recipients_ID: ${recipientId}`);
+      console.log(`   ✅ Asset created: ID=${newAsset.Asset_ID}, Recipients_ID=${newAsset.Recipients_ID}`);
+      
+      // Verify recipient was saved
+      if (recipientId && !newAsset.Recipients_ID) {
+        console.error(`   ⚠️  WARNING: Recipient ID ${recipientId} was not saved to asset!`);
+      }
 
       // Link software to asset via bridge table
       if (softwareToLink) {
@@ -911,6 +963,7 @@ const processNewAssets = async (assets) => {
 
       // Create peripherals if provided - split comma-separated values
       if (assetData.peripherals && Array.isArray(assetData.peripherals)) {
+        console.log(`   🔧 Creating ${assetData.peripherals.length} peripheral(s)...`);
         for (const peripheral of assetData.peripherals) {
           // Split comma-separated peripheral names and serial codes
           const peripheralNames = peripheral.peripheral_name ? 
@@ -920,19 +973,27 @@ const processNewAssets = async (assets) => {
           
           // If single peripheral (no commas), add as-is
           if (peripheralNames.length <= 1 && serialCodes.length <= 1) {
-            if (peripheral.peripheral_name && peripheral.serial_code) {
-              await Asset.addPeripheral(newAsset.Asset_ID, {
-                peripheral_name: peripheral.peripheral_name,
-                serial_code: peripheral.serial_code,
-                condition: peripheral.condition || 'Good',
-                remarks: peripheral.remarks || null
-              });
+            if (peripheral.peripheral_name) {
+              try {
+                const peripheralId = await Asset.createPeripheral(
+                  newAsset.Asset_ID,
+                  peripheral.peripheral_name,
+                  peripheral.serial_code || null,
+                  peripheral.condition || 'Good',
+                  peripheral.remarks || null
+                );
+                console.log(`   ✅ Created peripheral: ${peripheral.peripheral_name} (ID: ${peripheralId}, Serial: ${peripheral.serial_code || 'N/A'})`);
+              } catch (pError) {
+                console.log(`   ⚠️  Failed to create peripheral ${peripheral.peripheral_name}: ${pError.message}`);
+              }
             }
           } else {
             // Split into multiple peripherals
             const maxLength = Math.max(peripheralNames.length, serialCodes.length);
             for (let i = 0; i < maxLength; i++) {
               const newPeripheral = {
+                peripheral_name: null,
+                serial_code: null,
                 condition: peripheral.condition || 'Good',
                 remarks: peripheral.remarks || null
               };
@@ -945,8 +1006,19 @@ const processNewAssets = async (assets) => {
                 newPeripheral.serial_code = serialCodes[i];
               }
               
-              if (newPeripheral.peripheral_name && newPeripheral.serial_code) {
-                await Asset.addPeripheral(newAsset.Asset_ID, newPeripheral);
+              if (newPeripheral.peripheral_name) {
+                try {
+                  const peripheralId = await Asset.createPeripheral(
+                    newAsset.Asset_ID,
+                    newPeripheral.peripheral_name,
+                    newPeripheral.serial_code || null,
+                    newPeripheral.condition,
+                    newPeripheral.remarks
+                  );
+                  console.log(`   ✅ Created peripheral: ${newPeripheral.peripheral_name} (ID: ${peripheralId}, Serial: ${newPeripheral.serial_code || 'N/A'})`);
+                } catch (pError) {
+                  console.log(`   ⚠️  Failed to create peripheral ${newPeripheral.peripheral_name}: ${pError.message}`);
+                }
               }
             }
           }
@@ -1235,6 +1307,54 @@ const bulkImportAssets = async (req, res, next) => {
     console.log(`Import Mode: ${importMode || 'auto'}`);
     console.log(`${'='.repeat(60)}\n`);
 
+    // Convert flat peripheral fields to peripherals array if needed
+    console.log('🔄 Converting flat peripheral fields to array structure...');
+    assets.forEach((asset, idx) => {
+      if (!asset.peripherals && (asset.peripheral_name || asset.serial_code)) {
+        console.log(`  Asset ${idx + 1} (${asset.serial_number}): Converting flat fields to peripherals array`);
+        
+        // Split comma-separated values
+        const peripheralNames = asset.peripheral_name ? 
+          String(asset.peripheral_name).split(',').map(s => s.trim()).filter(s => s && s.toLowerCase() !== 'n/a' && s.toLowerCase() !== 'none') : [];
+        const serialCodes = asset.serial_code ? 
+          String(asset.serial_code).split(',').map(s => s.trim()).filter(s => s && s.toLowerCase() !== 'n/a' && s.toLowerCase() !== 'none') : [];
+        
+        // Only create peripherals array if we have valid data
+        if (peripheralNames.length > 0 || serialCodes.length > 0) {
+          // Create peripherals array
+          asset.peripherals = [];
+          const maxLength = Math.max(peripheralNames.length, serialCodes.length);
+          
+          for (let i = 0; i < maxLength; i++) {
+            const peripheral = {};
+            
+            if (i < peripheralNames.length && peripheralNames[i]) {
+              peripheral.peripheral_name = peripheralNames[i];
+            }
+            
+            if (i < serialCodes.length && serialCodes[i]) {
+              peripheral.serial_code = serialCodes[i];
+            }
+            
+            // Only add if we have at least a peripheral name
+            if (peripheral.peripheral_name) {
+              asset.peripherals.push(peripheral);
+              console.log(`    → Peripheral ${i + 1}: ${peripheral.peripheral_name || 'N/A'} (${peripheral.serial_code || 'N/A'})`);
+            }
+          }
+          
+          console.log(`    ✅ Created peripherals array with ${asset.peripherals.length} items`);
+        } else {
+          console.log(`    ⏭️  Skipping - no valid peripheral data (all N/A or None)`);
+        }
+        
+        // Remove flat fields to avoid confusion
+        delete asset.peripheral_name;
+        delete asset.serial_code;
+      }
+    });
+    console.log('✅ Peripheral field conversion complete\n');
+
     const ImportModeDetector = require('../utils/importModeDetector');
     const PeripheralImporter = require('../utils/peripheralImporter');
 
@@ -1371,10 +1491,36 @@ const bulkImportAssets = async (req, res, next) => {
           // Check for duplicate tag ID (you'd need to implement this check in Asset model)
           // For now, we'll skip this check but it should be added
 
+          // Convert flat peripheral fields to array if needed
+          if (!assetData.peripherals && (assetData.peripheral_name || assetData.serial_code)) {
+            console.log(`Converting flat peripheral fields for ${assetData.serial_number}...`);
+            const peripheralNames = assetData.peripheral_name ? 
+              String(assetData.peripheral_name).split(',').map(s => s.trim()).filter(s => s && s.toLowerCase() !== 'n/a' && s.toLowerCase() !== 'none') : [];
+            const serialCodes = assetData.serial_code ? 
+              String(assetData.serial_code).split(',').map(s => s.trim()).filter(s => s && s.toLowerCase() !== 'n/a' && s.toLowerCase() !== 'none') : [];
+            
+            assetData.peripherals = [];
+            const maxLength = Math.max(peripheralNames.length, serialCodes.length);
+            for (let i = 0; i < maxLength; i++) {
+              const peripheral = {};
+              if (i < peripheralNames.length && peripheralNames[i]) {
+                peripheral.peripheral_name = peripheralNames[i];
+              }
+              if (i < serialCodes.length && serialCodes[i]) {
+                peripheral.serial_code = serialCodes[i];
+              }
+              if (peripheral.peripheral_name) {
+                assetData.peripherals.push(peripheral);
+              }
+            }
+            console.log(`✅ Converted to ${assetData.peripherals.length} peripherals`);
+          }
+
           // Process peripherals - split comma-separated values into individual peripherals
           let processedPeripherals = [];
           if (assetData.peripherals && Array.isArray(assetData.peripherals)) {
             console.log(`Processing ${assetData.peripherals.length} peripheral entries for ${assetData.serial_number}...`);
+            console.log(`📦 Original assetData.peripherals:`, JSON.stringify(assetData.peripherals, null, 2));
             
             assetData.peripherals.forEach((peripheral, idx) => {
               // Check if peripheral has comma-separated values
