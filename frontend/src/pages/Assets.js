@@ -47,6 +47,12 @@ const Assets = ({ onDelete }) => {
   const [selectedAssets, setSelectedAssets] = useState([]);
   const [selectAll, setSelectAll] = useState(false);
 
+  // Column resize state
+  const [columnWidths, setColumnWidths] = useState({});
+  const [resizingColumn, setResizingColumn] = useState(null);
+  const [startX, setStartX] = useState(0);
+  const [startWidth, setStartWidth] = useState(0);
+
   // Load column configuration on mount
   useEffect(() => {
     const savedConfig = ColumnConfigService.loadConfig();
@@ -363,6 +369,43 @@ const Assets = ({ onDelete }) => {
   const clearColumnFilters = () => {
     setColumnFilters({});
   };
+
+  // Column resize handlers
+  const handleMouseDown = (e, columnField) => {
+    e.preventDefault();
+    setResizingColumn(columnField);
+    setStartX(e.clientX);
+    setStartWidth(columnWidths[columnField] || 150);
+  };
+
+  const handleMouseMove = (e) => {
+    if (!resizingColumn) return;
+    
+    const diff = e.clientX - startX;
+    const newWidth = Math.max(80, startWidth + diff); // Minimum width of 80px
+    
+    setColumnWidths(prev => ({
+      ...prev,
+      [resizingColumn]: newWidth
+    }));
+  };
+
+  const handleMouseUp = () => {
+    setResizingColumn(null);
+  };
+
+  // Add event listeners for column resizing
+  useEffect(() => {
+    if (resizingColumn) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+      
+      return () => {
+        document.removeEventListener('mousemove', handleMouseMove);
+        document.removeEventListener('mouseup', handleMouseUp);
+      };
+    }
+  }, [resizingColumn, startX, startWidth]);
   
   // Define which columns to hide (typically internal/system columns)
   const hiddenColumns = [
@@ -757,8 +800,16 @@ const Assets = ({ onDelete }) => {
                       />
                     </div>
                   </th>
-                  {displayColumns.map(column => (
-                    <th key={column.Field} style={{ position: 'relative' }}>
+                  {displayColumns.map((column, columnIndex) => (
+                    <th 
+                      key={column.Field} 
+                      style={{ 
+                        position: 'relative',
+                        width: columnWidths[column.Field] || 'auto',
+                        minWidth: columnWidths[column.Field] || '150px',
+                        maxWidth: columnWidths[column.Field] || 'none'
+                      }}
+                    >
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
                         <span>{formatColumnName(column)}</span>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
@@ -801,6 +852,36 @@ const Assets = ({ onDelete }) => {
                           />
                         </div>
                       </div>
+                      
+                      {/* Resize Handle - Only show if not the last column */}
+                      {columnIndex < displayColumns.length - 1 && (
+                        <div
+                          onMouseDown={(e) => handleMouseDown(e, column.Field)}
+                          style={{
+                            position: 'absolute',
+                            right: 0,
+                            top: 0,
+                            bottom: 0,
+                            width: '8px',
+                            cursor: 'col-resize',
+                            backgroundColor: resizingColumn === column.Field ? '#667eea' : 'transparent',
+                            transition: 'background-color 0.2s',
+                            zIndex: 10,
+                            userSelect: 'none'
+                          }}
+                          onMouseEnter={(e) => {
+                            if (!resizingColumn) {
+                              e.currentTarget.style.backgroundColor = 'rgba(102, 126, 234, 0.3)';
+                            }
+                          }}
+                          onMouseLeave={(e) => {
+                            if (!resizingColumn) {
+                              e.currentTarget.style.backgroundColor = 'transparent';
+                            }
+                          }}
+                          title="Drag to resize column"
+                        />
+                      )}
                       
                       {/* Filter Popup */}
                       {activeFilterPopup === column.Field && (
@@ -884,7 +965,7 @@ const Assets = ({ onDelete }) => {
                   ))}
                 </tr>
               </thead>
-              <tbody>
+              <tbody style={{ userSelect: resizingColumn ? 'none' : 'auto' }}>
                 {paginatedAssets.length > 0 ? paginatedAssets.map((asset, index) => {
                   // Debug log for each asset
                   if (index === 0) {
@@ -963,7 +1044,16 @@ const Assets = ({ onDelete }) => {
                         </div>
                       </td>
                       {displayColumns.map(column => (
-                        <td key={column.Field}>
+                        <td 
+                          key={column.Field}
+                          style={{
+                            width: columnWidths[column.Field] || 'auto',
+                            minWidth: columnWidths[column.Field] || '150px',
+                            maxWidth: columnWidths[column.Field] || 'none',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis'
+                          }}
+                        >
                           {(column.Field === 'Status' || column.Field === 'assetStatus' || column.Field === 'Asset_Status') ? (
                             <span className={`status-badge status-${(asset[column.Field] || '').toLowerCase().replace(/\s+/g, '-')}`}>
                               {formatCellValue(asset[column.Field], column.Field)}
@@ -1223,6 +1313,17 @@ const Assets = ({ onDelete }) => {
       <style>{`
         @keyframes spin {
           to { transform: rotate(360deg); }
+        }
+        
+        /* Disable text selection while resizing */
+        body.resizing-column {
+          user-select: none;
+          cursor: col-resize !important;
+        }
+        
+        /* Column resize cursor */
+        th {
+          position: relative;
         }
       `}</style>
     </div>
