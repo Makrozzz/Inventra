@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "description": "Frontend for Inventra Asset Management System",
+  "homepage": "https://inventra.ivms2006.com",
   "dependencies": {
     "html2pdf.js": "^0.12.1",
     "jspdf": "^3.0.3",

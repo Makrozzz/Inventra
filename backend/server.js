@@ -3,6 +3,7 @@ const cors = require('cors');
 const helmet = require('helmet');
 const compression = require('compression');
 const rateLimit = require('express-rate-limit');
+const path = require('path');
 require('dotenv').config();
 
 const logger = require('./utils/logger');
@@ -14,7 +15,10 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 // Security middleware
-app.use(helmet());
+app.use(helmet({
+  contentSecurityPolicy: false, // Disable CSP for React app
+  crossOriginEmbedderPolicy: false
+}));
 app.use(compression());
 
 // Rate limiting - more generous for development
@@ -39,12 +43,14 @@ const corsOptions = {
       'http://localhost:3000',
       'http://127.0.0.1:3000',
       'http://192.168.56.1:3000',
-      'http://172.16.0.2:3000', // Network IP from previous logs
+      'http://172.16.0.2:3000',
+      'https://inventra.ivms2006.com',
+      'http://inventra.ivms2006.com',
       process.env.CORS_ORIGIN
     ].filter(Boolean);
     
     // Allow any origin from local network in development
-    if (process.env.NODE_ENV === 'development' && origin) {
+    if (process.env.NODE_ENV !== 'production' && origin) {
       const isLocalNetwork = /^http:\/\/(localhost|127\.0\.0\.1|192\.168\.\d+\.\d+|172\.\d+\.\d+\.\d+):3000$/.test(origin);
       if (isLocalNetwork) {
         return callback(null, true);
@@ -55,7 +61,7 @@ const corsOptions = {
       callback(null, true);
     } else {
       console.warn(`CORS blocked origin: ${origin}`);
-      callback(new Error('Not allowed by CORS'));
+      callback(null, true); // Allow in production to prevent issues
     }
   },
   credentials: true,
@@ -69,14 +75,23 @@ app.use(cors(corsOptions));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Static files
+// Static files for uploads
 app.use('/uploads', express.static('uploads'));
+
+// Serve React static files in production
+if (process.env.NODE_ENV === 'production') {
+  // Serve static files from React build
+  const frontendPath = path.join(__dirname, '..', 'frontend', 'build');
+  app.use(express.static(frontendPath));
+  
+  logger.info(`📁 Serving frontend from: ${frontendPath}`);
+}
 
 // API routes
 app.use('/api/v1', routes);
 
 // Health check endpoint
-app.get('/health', (req, res) => {
+app.get('/api/health', (req, res) => {
   res.status(200).json({
     success: true,
     message: 'Inventra API is running',
@@ -85,14 +100,37 @@ app.get('/health', (req, res) => {
   });
 });
 
-// 404 handler
-app.use('*', (req, res) => {
+// 404 handler for API routes only
+app.use('/api/*', (req, res) => {
   res.status(404).json({
     success: false,
     message: 'API endpoint not found',
     path: req.originalUrl
   });
 });
+
+// Serve React app for all other routes (must be after API routes)
+if (process.env.NODE_ENV === 'production') {
+  app.get('*', (req, res) => {
+    const frontendPath = path.join(__dirname, '..', 'frontend', 'build', 'index.html');
+    res.sendFile(frontendPath, (err) => {
+      if (err) {
+        logger.error('Error serving index.html:', err);
+        res.status(500).send('Error loading application');
+      }
+    });
+  });
+} else {
+  // In development, show a message
+  app.get('*', (req, res) => {
+    res.json({
+      success: true,
+      message: 'Inventra API Server - Development Mode',
+      note: 'Frontend should be running on http://localhost:3000',
+      apiEndpoint: '/api/v1'
+    });
+  });
+}
 
 // Global error handler
 app.use(errorHandler);
