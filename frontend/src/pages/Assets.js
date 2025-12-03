@@ -1058,6 +1058,28 @@ const Assets = ({ onDelete }) => {
                             <span className={`status-badge status-${(asset[column.Field] || '').toLowerCase().replace(/\s+/g, '-')}`}>
                               {formatCellValue(asset[column.Field], column.Field)}
                             </span>
+                          ) : column.Field === 'Model' ? (
+                            <Link
+                              to="/models"
+                              style={{
+                                color: '#667eea',
+                                textDecoration: 'none',
+                                fontWeight: '500',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s'
+                              }}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.textDecoration = 'underline';
+                                e.currentTarget.style.color = '#5a67d8';
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.textDecoration = 'none';
+                                e.currentTarget.style.color = '#667eea';
+                              }}
+                              title="View all models"
+                            >
+                              {formatCellValue(asset[column.Field], column.Field)}
+                            </Link>
                           ) : column.Field === 'Peripheral_Type' || column.Field === 'Peripheral_Serial' ? (
                             <div style={{ whiteSpace: 'pre-line' }}>
                               {formatCellValue(asset[column.Field], column.Field)}

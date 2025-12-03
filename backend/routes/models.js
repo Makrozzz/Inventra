@@ -7,7 +7,8 @@ const {
   searchModels,
   createModel,
   updateModel,
-  deleteModel
+  deleteModel,
+  getModelSpecs
 } = require('../controllers/modelController');
 
 // Import middleware (if authentication is implemented)
@@ -19,6 +20,13 @@ const {
  * @access  Public (or Private if auth is implemented)
  */
 router.get('/', getAllModels);
+
+/**
+ * @route   GET /api/v1/models/:id/specs
+ * @desc    Get specifications for a specific model
+ * @access  Public
+ */
+router.get('/:id/specs', getModelSpecs);
 
 /**
  * @route   GET /api/v1/models/search

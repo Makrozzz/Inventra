@@ -8,34 +8,23 @@ const getAllModels = async (req, res, next) => {
   try {
     const [models] = await pool.execute(`
       SELECT 
-        Model_ID as id,
-        Model_Name as name,
-        Model_ID,
-        Model_Name
-      FROM MODEL 
-      ORDER BY Model_Name ASC
+        m.Model_ID,
+        m.Model_Name,
+        m.Category_ID,
+        c.Category as Category_Name
+      FROM MODEL m
+      LEFT JOIN CATEGORY c ON m.Category_ID = c.Category_ID
+      ORDER BY m.Model_Name ASC
     `);
 
-    res.status(200).json({
-      success: true,
-      data: models
-    });
+    res.status(200).json(models);
   } catch (error) {
     logger.error('Error in getAllModels:', error);
     console.error('Error fetching models:', error);
     
-    // Return fallback models if database query fails
-    const fallbackModels = [
-      { id: 1, name: 'Dell OptiPlex All-in-One Plus 7420', Model_ID: 1, Model_Name: 'Dell OptiPlex All-in-One Plus 7420' },
-      { id: 2, name: 'HP Color LaserJet Enterprise MFP M480f', Model_ID: 2, Model_Name: 'HP Color LaserJet Enterprise MFP M480f' },
-      { id: 3, name: 'Lenovo ThinkPad X1 Carbon', Model_ID: 3, Model_Name: 'Lenovo ThinkPad X1 Carbon' },
-      { id: 4, name: 'Dell PowerEdge R740', Model_ID: 4, Model_Name: 'Dell PowerEdge R740' }
-    ];
-    
-    res.status(200).json({
-      success: true,
-      data: fallbackModels,
-      fallback: true
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch models'
     });
   }
 };
@@ -361,11 +350,42 @@ const deleteModel = async (req, res, next) => {
   }
 };
 
+/**
+ * Get specifications for a specific model
+ */
+const getModelSpecs = async (req, res, next) => {
+  try {
+    const modelId = req.params.id;
+    
+    const [specs] = await pool.execute(`
+      SELECT 
+        msb.Attributes_ID,
+        msb.Attributes_Value,
+        s.Attributes_Value as Attributes_Name
+      FROM MODEL_SPECS_BRIDGE msb
+      INNER JOIN SPECS s ON msb.Attributes_ID = s.Attributes_ID
+      WHERE msb.Model_ID = ?
+      ORDER BY s.Attributes_Value ASC
+    `, [modelId]);
+
+    res.status(200).json(specs);
+  } catch (error) {
+    logger.error('Error in getModelSpecs:', error);
+    console.error('Error fetching model specs:', error);
+    
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch model specifications'
+    });
+  }
+};
+
 module.exports = {
   getAllModels,
   getOrCreateModel,
   searchModels,
   createModel,
   updateModel,
-  deleteModel
+  deleteModel,
+  getModelSpecs
 };
