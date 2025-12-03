@@ -5,6 +5,7 @@ import {
   Calendar, CheckCircle, AlertCircle, Info, Monitor, Mouse, 
   Keyboard, Cable, Shield, Eye, ClipboardList
 } from 'lucide-react';
+import { API_URL } from '../config/api';
 
 const AssetDetail = () => {
   const { assetId } = useParams();
@@ -28,7 +29,7 @@ const AssetDetail = () => {
       console.log('🔄 Fetching asset detail for ID:', assetId);
 
       // Fetch complete asset information from backend
-      const response = await fetch(`http://localhost:5000/api/v1/assets/detail/${assetId}`);
+      const response = await fetch(`${API_URL}/assets/detail/${assetId}`);
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -63,7 +64,7 @@ const AssetDetail = () => {
       setLoadingPM(true);
       
       // Fetch PM records for this asset
-      const response = await fetch(`http://localhost:5000/api/v1/pm/asset/${assetId}`);
+      const response = await fetch(`${API_URL}/pm/asset/${assetId}`);
       
       if (response.ok) {
         const data = await response.json();

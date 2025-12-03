@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { User, Lock } from 'lucide-react';
+import { API_URL } from '../config/api';
 import { PublicClientApplication } from '@azure/msal-browser';
 import apiService from '../services/apiService';
 
@@ -39,7 +40,7 @@ const Login = ({ onLogin }) => {
   const handleMicrosoftLogin = async () => {
     try {
       // For development, use the dev-token endpoint as fallback
-      const response = await fetch('http://localhost:5000/api/v1/auth/dev-token', {
+      const response = await fetch('${API_URL}/auth/dev-token', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -192,3 +193,4 @@ const styles = {
 };
 
 export default Login;
+

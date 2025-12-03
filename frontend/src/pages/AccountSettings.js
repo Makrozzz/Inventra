@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { User, Mail, Lock, Bell, Shield, Palette, Save, Eye, EyeOff, CheckCircle, Users, Plus, X, Edit } from 'lucide-react';
+import { API_URL } from '../config/api';
 
 const AccountSettings = () => {
   const [activeTab, setActiveTab] = useState('profile');
@@ -80,7 +81,7 @@ const AccountSettings = () => {
   const fetchUserProfile = async () => {
     try {
       const token = localStorage.getItem('authToken');
-      const response = await fetch('http://localhost:5000/api/v1/auth/profile', {
+      const response = await fetch('${API_URL}/auth/profile', {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -114,7 +115,7 @@ const AccountSettings = () => {
     setLoadingUsers(true);
     try {
       const token = localStorage.getItem('authToken');
-      const response = await fetch('http://localhost:5000/api/v1/auth/users', {
+      const response = await fetch('${API_URL}/auth/users', {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -140,7 +141,7 @@ const AccountSettings = () => {
 
     try {
       const token = localStorage.getItem('authToken');
-      const response = await fetch('http://localhost:5000/api/v1/auth/profile', {
+      const response = await fetch('${API_URL}/auth/profile', {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -185,7 +186,7 @@ const AccountSettings = () => {
 
     try {
       const token = localStorage.getItem('authToken');
-      const response = await fetch('http://localhost:5000/api/v1/auth/change-password', {
+      const response = await fetch('${API_URL}/auth/change-password', {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -235,7 +236,7 @@ const AccountSettings = () => {
 
     try {
       const token = localStorage.getItem('authToken');
-      const response = await fetch('http://localhost:5000/api/v1/auth/users', {
+      const response = await fetch('${API_URL}/auth/users', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -300,7 +301,7 @@ const AccountSettings = () => {
 
     try {
       const token = localStorage.getItem('authToken');
-      const response = await fetch(`http://localhost:5000/api/v1/auth/users/${editUserData.userId}`, {
+      const response = await fetch(`${API_URL}/auth/users/${editUserData.userId}`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,

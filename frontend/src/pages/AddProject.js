@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Save, ArrowLeft, Calendar, FileText, User, Shield, Wrench, Building2, MapPin, X } from 'lucide-react';
+import { API_URL } from '../config/api';
 
 const AddProject = () => {
   const navigate = useNavigate();
@@ -50,7 +51,7 @@ const AddProject = () => {
       
       console.log('Submitting project data:', payload);
       
-      const response = await fetch('http://localhost:5000/api/v1/projects', {
+      const response = await fetch(`${API_URL}/projects`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

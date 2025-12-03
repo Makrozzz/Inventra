@@ -5,6 +5,7 @@ import Pagination from '../components/Pagination';
 import apiService from '../services/apiService';
 import ColumnFilterPopup from '../components/ColumnFilterPopup';
 import ColumnConfigService from '../services/columnConfigService';
+import { API_URL } from '../config/api';
 
 const Assets = ({ onDelete }) => {
   const navigate = useNavigate();
@@ -60,7 +61,7 @@ const Assets = ({ onDelete }) => {
       setError(null);
         
         // Use direct fetch with correct API endpoint
-        const response = await fetch('http://localhost:5000/api/v1/assets');
+        const response = await fetch(`${API_URL}/assets`);
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }

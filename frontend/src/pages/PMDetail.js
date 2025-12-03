@@ -5,6 +5,7 @@ import {
   Wrench, AlertTriangle, ClipboardCheck, Download
 } from 'lucide-react';
 import PMReportDownload from '../components/PMReportDownload';
+import { API_URL } from '../config/api';
 
 const PMDetail = () => {
   const { pmId } = useParams();
@@ -24,7 +25,7 @@ const PMDetail = () => {
       setLoading(true);
       setError(null);
 
-      const response = await fetch(`http://localhost:5000/api/v1/pm/detail/${pmId}`);
+      const response = await fetch(`${API_URL}/pm/detail/${pmId}`);
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -70,7 +71,7 @@ const PMDetail = () => {
   const handleConfirmDelete = async () => {
     setDeleting(true);
     try {
-      const response = await fetch(`http://localhost:5000/api/v1/pm/${pmId}`, {
+      const response = await fetch(`${API_URL}/pm/${pmId}`, {
         method: 'DELETE'
       });
 

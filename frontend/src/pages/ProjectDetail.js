@@ -4,6 +4,7 @@ import {
   ArrowLeft, Building2, MapPin, FileText, Calendar, Shield, 
   Wrench, User, Package, Eye, Edit, Trash2, Printer, Monitor, Search 
 } from 'lucide-react';
+import { API_URL } from '../config/api';
 
 const ProjectDetail = () => {
   const { id } = useParams();
@@ -33,13 +34,13 @@ const ProjectDetail = () => {
       setLoading(true);
       
       // Fetch project details
-      const projectResponse = await fetch(`http://localhost:5000/api/v1/projects/${id}`);
+      const projectResponse = await fetch(`${API_URL}/projects/${id}`);
       if (!projectResponse.ok) throw new Error('Failed to fetch project');
       const projectData = await projectResponse.json();
       setProject(projectData);
 
       // Fetch branches for this project from inventory
-      const inventoryResponse = await fetch(`http://localhost:5000/api/v1/inventory/project/${id}`);
+      const inventoryResponse = await fetch(`${API_URL}/inventory/project/${id}`);
       if (inventoryResponse.ok) {
         const inventoryData = await inventoryResponse.json();
         
@@ -61,7 +62,7 @@ const ProjectDetail = () => {
 
   const fetchAllProjectAssets = async () => {
     try {
-      const inventoryResponse = await fetch(`http://localhost:5000/api/v1/inventory/project/${id}`);
+      const inventoryResponse = await fetch(`${API_URL}/inventory/project/${id}`);
       if (!inventoryResponse.ok) throw new Error('Failed to fetch assets');
       
       const inventoryData = await inventoryResponse.json();
@@ -77,7 +78,7 @@ const ProjectDetail = () => {
 
   const fetchAssetsByBranch = async (branch) => {
     try {
-      const inventoryResponse = await fetch(`http://localhost:5000/api/v1/inventory/project/${id}`);
+      const inventoryResponse = await fetch(`${API_URL}/inventory/project/${id}`);
       if (!inventoryResponse.ok) throw new Error('Failed to fetch assets');
       
       const inventoryData = await inventoryResponse.json();
@@ -102,8 +103,8 @@ const ProjectDetail = () => {
   const handleDeleteAsset = async (assetId) => {
     if (window.confirm('Are you sure you want to delete this asset?')) {
       try {
-        const response = await fetch(`http://localhost:5000/api/v1/assets/${assetId}`, {
-          method: 'DELETE'
+        const response = await fetch(`${API_URL}/assets/${assetId}`, {
+          method: 'DELETE',
         });
         
         if (response.ok) {

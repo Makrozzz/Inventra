@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { User, Lock, Mail, UserCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { API_URL } from '../config/api';
 
 const Register = ({ onRegister }) => {
     const navigate = useNavigate();
@@ -28,7 +29,7 @@ const Register = ({ onRegister }) => {
         }
 
         try {
-            const res = await fetch('http://localhost:5000/api/v1/register', {
+            const res = await fetch(`${API_URL}/register`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(formData),

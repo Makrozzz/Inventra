@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Save, ArrowLeft, Calendar, FileText, User, Shield, Wrench, Building2, MapPin, X, Plus, Trash2, Edit2 } from 'lucide-react';
+import { API_URL } from '../config/api';
 
 const EditProject = () => {
   const { id } = useParams();
@@ -40,7 +41,7 @@ const EditProject = () => {
       setLoading(true);
       
       // Fetch project details
-      const projectResponse = await fetch(`http://localhost:5000/api/v1/projects/${id}`);
+      const projectResponse = await fetch(`${API_URL}/projects/${id}`);
       if (!projectResponse.ok) throw new Error('Failed to fetch project');
       const projectData = await projectResponse.json();
       
@@ -64,7 +65,7 @@ const EditProject = () => {
       }
 
       // Fetch branches from inventory
-      const inventoryResponse = await fetch(`http://localhost:5000/api/v1/inventory/project/${id}`);
+      const inventoryResponse = await fetch(`${API_URL}/inventory/project/${id}`);
       if (inventoryResponse.ok) {
         const inventoryData = await inventoryResponse.json();
         const uniqueBranches = [...new Set(inventoryData.map(item => item.Branch))];
@@ -94,7 +95,7 @@ const EditProject = () => {
       console.log('Updating project data:', project);
       
       // Update project details
-      const response = await fetch(`http://localhost:5000/api/v1/projects/${id}`, {
+      const response = await fetch(`${API_URL}/projects/${id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -116,7 +117,7 @@ const EditProject = () => {
       // Update branches if they were modified
       if (branchesModified) {
         console.log('Updating branches:', branches);
-        const branchResponse = await fetch(`http://localhost:5000/api/v1/projects/${id}/branches`, {
+        const branchResponse = await fetch(`${API_URL}/projects/${id}/branches`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',

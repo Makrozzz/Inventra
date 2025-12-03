@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Save, ArrowLeft, Package, Building2, MapPin, Plus, Trash2, User, Wrench, Hash } from 'lucide-react';
+import { API_URL } from '../config/api';
 import apiService from '../services/apiService';
 import SearchableDropdown from '../components/SearchableDropdown';
 import ConfirmationModal from '../components/ConfirmationModal';
@@ -390,7 +391,7 @@ const AddAsset = () => {
 
   const fetchWindowsOptions = async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/v1/options/windows');
+      const response = await fetch('${API_URL}/options/windows');
       const result = await response.json();
       const optionsData = result.data || [];
       setWindowsOptions(optionsData);
@@ -404,7 +405,7 @@ const AddAsset = () => {
 
   const fetchOfficeOptions = async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/v1/options/office');
+      const response = await fetch('${API_URL}/options/office');
       const result = await response.json();
       const optionsData = result.data || [];
       setOfficeOptions(optionsData);
@@ -418,7 +419,7 @@ const AddAsset = () => {
 
   const fetchAntivirusOptions = async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/v1/options/antivirus');
+      const response = await fetch('${API_URL}/options/antivirus');
       const result = await response.json();
       const optionsData = result.data || [];
       setAntivirusOptions(optionsData);
@@ -432,7 +433,7 @@ const AddAsset = () => {
 
   const fetchSoftwareOptions = async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/v1/options/software');
+      const response = await fetch('${API_URL}/options/software');
       const result = await response.json();
       const optionsData = result.data || [];
       setSoftwareOptions(optionsData);
@@ -509,7 +510,7 @@ const AddAsset = () => {
         requestBody = { value: newOptionValue.trim() };
       }
 
-      const response = await fetch(`http://localhost:5000/api/v1${endpoint}`, {
+      const response = await fetch(`${API_URL}${endpoint}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

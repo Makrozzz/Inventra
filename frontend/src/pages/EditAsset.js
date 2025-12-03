@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Save, ArrowLeft, AlertCircle, CheckCircle, X, Plus, Package, Building2, ClipboardList, Edit3 } from 'lucide-react';
+import { API_URL } from '../config/api';
 
 const EditAsset = () => {
   const navigate = useNavigate();
@@ -74,7 +75,7 @@ const EditAsset = () => {
       
       console.log('🔄 Fetching asset data for editing, ID:', id);
       
-      const response = await fetch(`http://localhost:5000/api/v1/assets/detail/${id}`);
+      const response = await fetch(`${API_URL}/assets/detail/${id}`);
       
       if (!response.ok) {
         throw new Error(`Failed to fetch asset: ${response.status}`);
@@ -177,35 +178,35 @@ const EditAsset = () => {
   const fetchDropdownOptions = async () => {
     try {
       // Fetch Windows versions
-      const windowsRes = await fetch('http://localhost:5000/api/v1/options/windows');
+      const windowsRes = await fetch('${API_URL}/options/windows');
       if (windowsRes.ok) {
         const windowsData = await windowsRes.json();
         setWindowsOptions(windowsData.data || []);
       }
 
       // Fetch Office versions
-      const officeRes = await fetch('http://localhost:5000/api/v1/options/office');
+      const officeRes = await fetch('${API_URL}/options/office');
       if (officeRes.ok) {
         const officeData = await officeRes.json();
         setOfficeOptions(officeData.data || []);
       }
 
       // Fetch Antivirus options
-      const antivirusRes = await fetch('http://localhost:5000/api/v1/options/antivirus');
+      const antivirusRes = await fetch('${API_URL}/options/antivirus');
       if (antivirusRes.ok) {
         const antivirusData = await antivirusRes.json();
         setAntivirusOptions(antivirusData.data || []);
       }
 
       // Fetch Software options
-      const softwareRes = await fetch('http://localhost:5000/api/v1/options/software');
+      const softwareRes = await fetch('${API_URL}/options/software');
       if (softwareRes.ok) {
         const softwareData = await softwareRes.json();
         setSoftwareOptions(softwareData.data || []);
       }
 
       // Fetch Model options
-      const modelRes = await fetch('http://localhost:5000/api/v1/models');
+      const modelRes = await fetch('${API_URL}/models');
       if (modelRes.ok) {
         const modelData = await modelRes.json();
         // Extract model names from the response
@@ -214,7 +215,7 @@ const EditAsset = () => {
       }
       
       // Fetch Peripheral Types
-      const peripheralTypesRes = await fetch('http://localhost:5000/api/v1/peripherals/types');
+      const peripheralTypesRes = await fetch('${API_URL}/peripherals/types');
       if (peripheralTypesRes.ok) {
         const peripheralTypesData = await peripheralTypesRes.json();
         // Extract peripheral type names from the response
@@ -256,13 +257,13 @@ const EditAsset = () => {
       
       // Use different endpoint for model and peripheral
       if (modalType === 'model') {
-        endpoint = `http://localhost:5000/api/v1/models`;
+        endpoint = `${API_URL}/models`;
         body = JSON.stringify({ name: newOptionValue.trim() });
       } else if (modalType === 'peripheral') {
-        endpoint = `http://localhost:5000/api/v1/peripherals/types`;
+        endpoint = `${API_URL}/peripherals/types`;
         body = JSON.stringify({ name: newOptionValue.trim() });
       } else {
-        endpoint = `http://localhost:5000/api/v1/options/${modalType}`;
+        endpoint = `${API_URL}/options/${modalType}`;
         body = JSON.stringify({ value: newOptionValue.trim() });
       }
 
@@ -332,7 +333,7 @@ const EditAsset = () => {
         )
       };
       
-      const response = await fetch(`http://localhost:5000/api/v1/assets/id/${id}`, {
+      const response = await fetch(`${API_URL}/assets/id/${id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -1669,3 +1670,4 @@ const EditAsset = () => {
 };
 
 export default EditAsset;
+

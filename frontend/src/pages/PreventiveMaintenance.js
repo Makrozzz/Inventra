@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Calendar, Clock, CheckCircle, AlertTriangle, Wrench, Filter, Building2, MapPin, Package, FileText, X, ClipboardCheck, Edit, Trash2, Plus, Save, Search, Download, ChevronRight, ChevronLeft, Copy, ArrowLeft, GripVertical } from 'lucide-react';
+import { API_URL } from '../config/api';
 
 const PreventiveMaintenance = () => {
   const navigate = useNavigate();
@@ -118,7 +119,7 @@ const PreventiveMaintenance = () => {
 
   const fetchStatistics = async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/v1/pm/statistics');
+      const response = await fetch('${API_URL}/pm/statistics');
       if (!response.ok) throw new Error('Failed to fetch statistics');
       const data = await response.json();
       setStatistics(data.data);
@@ -130,7 +131,7 @@ const PreventiveMaintenance = () => {
   const fetchCustomers = async () => {
     try {
       setLoading(true);
-      const response = await fetch('http://localhost:5000/api/v1/pm/customers');
+      const response = await fetch('${API_URL}/pm/customers');
       if (!response.ok) throw new Error('Failed to fetch customers');
       const data = await response.json();
       setCustomers(data);
@@ -144,7 +145,7 @@ const PreventiveMaintenance = () => {
 
   const fetchBranches = async (customerId) => {
     try {
-      const response = await fetch(`http://localhost:5000/api/v1/pm/customers/${customerId}/branches`);
+      const response = await fetch(`${API_URL}/pm/customers/${customerId}/branches`);
       if (!response.ok) throw new Error('Failed to fetch branches');
       const data = await response.json();
       setBranches(data);
@@ -156,7 +157,7 @@ const PreventiveMaintenance = () => {
   const fetchPMRecords = async (customerId, branch) => {
     try {
       setLoading(true);
-      const response = await fetch(`http://localhost:5000/api/v1/pm/filter?customerId=${customerId}&branch=${encodeURIComponent(branch)}`);
+      const response = await fetch(`${API_URL}/pm/filter?customerId=${customerId}&branch=${encodeURIComponent(branch)}`);
       if (!response.ok) throw new Error('Failed to fetch PM records');
       const data = await response.json();
       console.log('PM Records with Checklist:', data);
@@ -290,7 +291,7 @@ const PreventiveMaintenance = () => {
     
     try {
       // Fetch all categories
-      const response = await fetch('http://localhost:5000/api/v1/pm/categories');
+      const response = await fetch('${API_URL}/pm/categories');
       if (!response.ok) throw new Error('Failed to fetch categories');
       const data = await response.json();
       setCategories(data);
@@ -313,7 +314,7 @@ const PreventiveMaintenance = () => {
     
     setLoadingChecklist(true);
     try {
-      const response = await fetch(`http://localhost:5000/api/v1/pm/all-checklist/${categoryId}`);
+      const response = await fetch(`${API_URL}/pm/all-checklist/${categoryId}`);
       if (!response.ok) throw new Error('Failed to fetch checklist items');
       const data = await response.json();
       setChecklistItemsForEdit(data);
@@ -351,7 +352,7 @@ const PreventiveMaintenance = () => {
     setLoadingChecklist(true);
     
     try {
-      const response = await fetch(`http://localhost:5000/api/v1/pm/checklist/${pendingEdit.id}`, {
+      const response = await fetch(`${API_URL}/pm/checklist/${pendingEdit.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
@@ -388,7 +389,7 @@ const PreventiveMaintenance = () => {
     setLoadingChecklist(true);
     
     try {
-      const response = await fetch(`http://localhost:5000/api/v1/pm/checklist/${itemToDelete.Checklist_ID}`, {
+      const response = await fetch(`${API_URL}/pm/checklist/${itemToDelete.Checklist_ID}`, {
         method: 'DELETE'
       });
 
@@ -429,7 +430,7 @@ const PreventiveMaintenance = () => {
     setLoadingChecklist(true);
     
     try {
-      const response = await fetch('http://localhost:5000/api/v1/pm/checklist', {
+      const response = await fetch('${API_URL}/pm/checklist', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -491,7 +492,7 @@ const PreventiveMaintenance = () => {
     
     try {
       setLoadingSourceChecklist(true);
-      const response = await fetch(`http://localhost:5000/api/v1/pm/all-checklist/${categoryId}`);
+      const response = await fetch(`${API_URL}/pm/all-checklist/${categoryId}`);
       if (!response.ok) throw new Error('Failed to fetch source checklist');
       const data = await response.json();
       setSourceChecklistItems(data);
@@ -529,7 +530,7 @@ const PreventiveMaintenance = () => {
       
       // Copy each selected item
       for (const item of selectedItemsToCopy) {
-        const response = await fetch('http://localhost:5000/api/v1/pm/checklist', {
+        const response = await fetch('${API_URL}/pm/checklist', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -591,7 +592,7 @@ const PreventiveMaintenance = () => {
         Display_Order: index + 1
       }));
       
-      const response = await fetch('http://localhost:5000/api/v1/pm/checklist-order', {
+      const response = await fetch('${API_URL}/pm/checklist-order', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -689,7 +690,7 @@ const PreventiveMaintenance = () => {
     
     // Fetch checklist items for this asset's category
     try {
-      const response = await fetch(`http://localhost:5000/api/v1/pm/all-checklist/${asset.Category_ID}`);
+      const response = await fetch(`${API_URL}/pm/all-checklist/${asset.Category_ID}`);
       if (!response.ok) throw new Error('Failed to fetch checklist');
       const data = await response.json();
       setChecklistItems(data);
@@ -754,7 +755,7 @@ const PreventiveMaintenance = () => {
       const token = localStorage.getItem('authToken');
       
       // Submit PM record
-      const response = await fetch('http://localhost:5000/api/v1/pm', {
+      const response = await fetch('${API_URL}/pm', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -3326,7 +3327,7 @@ const PreventiveMaintenance = () => {
                     
                     // Call backend API to generate PDF
                     const token = localStorage.getItem('authToken');
-                    const response = await fetch('http://localhost:5000/api/v1/pm/bulk-download', {
+                    const response = await fetch('${API_URL}/pm/bulk-download', {
                       method: 'POST',
                       headers: {
                         'Authorization': `Bearer ${token}`,

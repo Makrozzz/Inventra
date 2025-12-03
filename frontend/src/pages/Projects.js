@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, Filter, Plus, Eye, Edit, Trash2, Users, Calendar, Package, Award, Shield, Wrench, Clock, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
+import { API_URL } from '../config/api';
 
 const Projects = () => {
   const navigate = useNavigate();
@@ -17,7 +18,7 @@ const Projects = () => {
     
     try {
       // Use direct fetch with correct API endpoint
-      const response = await fetch('http://localhost:5000/api/v1/projects');
+      const response = await fetch(`${API_URL}/projects`);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
@@ -88,7 +89,7 @@ const Projects = () => {
 
     setDeleting(true);
     try {
-      const response = await fetch(`http://localhost:5000/api/v1/projects/${deleteConfirm.project.Project_ID}`, {
+      const response = await fetch(`${API_URL}/projects/${deleteConfirm.project.Project_ID}`, {
         method: 'DELETE',
       });
 
