@@ -81,7 +81,7 @@ const AccountSettings = () => {
   const fetchUserProfile = async () => {
     try {
       const token = localStorage.getItem('authToken');
-      const response = await fetch('${API_URL}/auth/profile', {
+      const response = await fetch(`${API_URL}/auth/profile`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -115,7 +115,7 @@ const AccountSettings = () => {
     setLoadingUsers(true);
     try {
       const token = localStorage.getItem('authToken');
-      const response = await fetch('${API_URL}/auth/users', {
+      const response = await fetch(`${API_URL}/auth/users`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -141,7 +141,7 @@ const AccountSettings = () => {
 
     try {
       const token = localStorage.getItem('authToken');
-      const response = await fetch('${API_URL}/auth/profile', {
+      const response = await fetch(`${API_URL}/auth/profile`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -186,7 +186,7 @@ const AccountSettings = () => {
 
     try {
       const token = localStorage.getItem('authToken');
-      const response = await fetch('${API_URL}/auth/change-password', {
+      const response = await fetch(`${API_URL}/auth/change-password`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -236,7 +236,7 @@ const AccountSettings = () => {
 
     try {
       const token = localStorage.getItem('authToken');
-      const response = await fetch('${API_URL}/auth/users', {
+      const response = await fetch(`${API_URL}/auth/users`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -715,8 +715,8 @@ const AccountSettings = () => {
 
           {activeTab === 'users' && (
             <div className="card">
-              {profileData.role.toLowerCase() !== 'admin' ? (
-                // Non-admin view - restricted access
+              {profileData.role.toLowerCase() === 'staff' ? (
+                // Staff view - restricted access
                 <div>
                   <h2 style={{ margin: 0, marginBottom: '20px' }}>User Management</h2>
                   <div style={{
