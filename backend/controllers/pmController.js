@@ -422,9 +422,10 @@ const getPMReport = async (req, res, next) => {
     // Convert relative path to absolute path for res.download()
     const absolutePath = path.join(__dirname, '../', filepath);
 
-    // Set proper headers for PDF download
+    // Set proper headers for PDF download with encoded filename
+    const encodedFilename = encodeURIComponent(filename);
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"; filename*=UTF-8''${encodedFilename}`);
 
     // Send file for download
     res.download(absolutePath, filename, (err) => {
@@ -512,9 +513,10 @@ const bulkDownloadPM = async (req, res, next) => {
 
     logger.info(`✅ Bulk PDF generated successfully: ${filename}`);
 
-    // Set proper headers for PDF download
+    // Set proper headers for PDF download with encoded filename
+    const encodedFilename = encodeURIComponent(filename);
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"; filename*=UTF-8''${encodedFilename}`);
 
     // Send file for download and delete after sending
     res.download(absolutePath, filename, (err) => {
@@ -647,9 +649,10 @@ const getBlankPMReport = async (req, res, next) => {
     // Convert relative path to absolute path for res.download()
     const absolutePath = path.join(__dirname, '../', result.filepath);
 
-    // Set proper headers for PDF download
+    // Set proper headers for PDF download with encoded filename
+    const encodedFilename = encodeURIComponent(result.filename);
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename="${result.filename}"`);
+    res.setHeader('Content-Disposition', `attachment; filename="${result.filename}"; filename*=UTF-8''${encodedFilename}`);
 
     // Send file for download and delete after sending
     res.download(absolutePath, result.filename, (err) => {
