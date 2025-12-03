@@ -119,7 +119,7 @@ const PreventiveMaintenance = () => {
 
   const fetchStatistics = async () => {
     try {
-      const response = await fetch('${API_URL}/pm/statistics');
+      const response = await fetch(`${API_URL}/pm/statistics`);
       if (!response.ok) throw new Error('Failed to fetch statistics');
       const data = await response.json();
       setStatistics(data.data);
@@ -430,7 +430,7 @@ const PreventiveMaintenance = () => {
     setLoadingChecklist(true);
     
     try {
-      const response = await fetch('${API_URL}/pm/checklist', {
+      const response = await fetch(`${API_URL}/pm/checklist`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
