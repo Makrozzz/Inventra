@@ -12,7 +12,9 @@ const DatabaseTest = () => {
       try {
         // Test 1: Health check
         console.log('Testing health endpoint...');
-        const healthResponse = await fetch('http://localhost:5000/health');
+        const apiUrl = process.env.REACT_APP_API_URL || `${window.location.origin}/api/v1`;
+        const healthUrl = apiUrl.replace('/api/v1', '/api/health');
+        const healthResponse = await fetch(healthUrl);
         const healthData = await healthResponse.json();
         results.health = { success: true, data: healthData };
       } catch (error) {

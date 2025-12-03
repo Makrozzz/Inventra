@@ -25,8 +25,9 @@ const PMReportDownload = ({ pmId, assetSerialNumber, customerName, variant = 'de
       setDownloading(true);
       setError(null);
 
-      // Fetch PDF from backend
-      const response = await fetch(`http://localhost:5000/api/v1/pm/${pmId}/report`, {
+      // Fetch PDF from backend - use environment variable or current origin
+      const apiUrl = process.env.REACT_APP_API_URL || `${window.location.origin}/api/v1`;
+      const response = await fetch(`${apiUrl}/pm/${pmId}/report`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/pdf',
