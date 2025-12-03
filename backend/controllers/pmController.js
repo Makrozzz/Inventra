@@ -422,6 +422,10 @@ const getPMReport = async (req, res, next) => {
     // Convert relative path to absolute path for res.download()
     const absolutePath = path.join(__dirname, '../', filepath);
 
+    // Set proper headers for PDF download
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+
     // Send file for download
     res.download(absolutePath, filename, (err) => {
       if (err) {
@@ -507,6 +511,10 @@ const bulkDownloadPM = async (req, res, next) => {
     const filename = result.filename;
 
     logger.info(`✅ Bulk PDF generated successfully: ${filename}`);
+
+    // Set proper headers for PDF download
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
 
     // Send file for download and delete after sending
     res.download(absolutePath, filename, (err) => {
@@ -638,6 +646,10 @@ const getBlankPMReport = async (req, res, next) => {
 
     // Convert relative path to absolute path for res.download()
     const absolutePath = path.join(__dirname, '../', result.filepath);
+
+    // Set proper headers for PDF download
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${result.filename}"`);
 
     // Send file for download and delete after sending
     res.download(absolutePath, result.filename, (err) => {
