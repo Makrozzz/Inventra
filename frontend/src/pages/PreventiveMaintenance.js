@@ -131,7 +131,7 @@ const PreventiveMaintenance = () => {
   const fetchCustomers = async () => {
     try {
       setLoading(true);
-      const response = await fetch('${API_URL}/pm/customers');
+      const response = await fetch(`${API_URL}/pm/customers`);
       if (!response.ok) throw new Error('Failed to fetch customers');
       const data = await response.json();
       setCustomers(data);
@@ -291,7 +291,7 @@ const PreventiveMaintenance = () => {
     
     try {
       // Fetch all categories
-      const response = await fetch('${API_URL}/pm/categories');
+      const response = await fetch(`${API_URL}/pm/categories`);
       if (!response.ok) throw new Error('Failed to fetch categories');
       const data = await response.json();
       setCategories(data);
@@ -530,7 +530,7 @@ const PreventiveMaintenance = () => {
       
       // Copy each selected item
       for (const item of selectedItemsToCopy) {
-        const response = await fetch('${API_URL}/pm/checklist', {
+        const response = await fetch(`${API_URL}/pm/checklist`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -592,7 +592,7 @@ const PreventiveMaintenance = () => {
         Display_Order: index + 1
       }));
       
-      const response = await fetch('${API_URL}/pm/checklist-order', {
+      const response = await fetch(`${API_URL}/pm/checklist-order`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -755,7 +755,7 @@ const PreventiveMaintenance = () => {
       const token = localStorage.getItem('authToken');
       
       // Submit PM record
-      const response = await fetch('${API_URL}/pm', {
+      const response = await fetch(`${API_URL}/pm`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -3327,7 +3327,7 @@ const PreventiveMaintenance = () => {
                     
                     // Call backend API to generate PDF
                     const token = localStorage.getItem('authToken');
-                    const response = await fetch('${API_URL}/pm/bulk-download', {
+                    const response = await fetch(`${API_URL}/pm/bulk-download`, {
                       method: 'POST',
                       headers: {
                         'Authorization': `Bearer ${token}`,
