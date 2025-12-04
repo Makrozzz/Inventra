@@ -10,6 +10,7 @@ const ModelSpecifications = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('All');
 
   useEffect(() => {
     fetchModelsWithSpecs();
@@ -40,11 +41,16 @@ const ModelSpecifications = () => {
     navigate(`/models/${modelId}/add-specs`);
   };
 
-  // Filter models based on search term
-  const filteredModels = models.filter(model => 
-    model.Model_Name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    model.Category_Name?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Get unique categories
+  const categories = ['All', ...new Set(models.map(m => m.Category_Name).filter(Boolean))];
+
+  // Filter models based on search term and category
+  const filteredModels = models.filter(model => {
+    const matchesSearch = model.Model_Name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         model.Category_Name?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesCategory = selectedCategory === 'All' || model.Category_Name === selectedCategory;
+    return matchesSearch && matchesCategory;
+  });
 
   return (
     <div style={{ padding: '0' }}>
@@ -126,6 +132,58 @@ const ModelSpecifications = () => {
               boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)'
             }}
           />
+        </div>
+      </div>
+
+      {/* Category Filter */}
+      <div style={{ padding: '0 32px 24px' }}>
+        <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
+          <span style={{ 
+            fontSize: '14px', 
+            fontWeight: '600', 
+            color: '#6b7280',
+            marginRight: '8px'
+          }}>
+            Filter by Category:
+          </span>
+          {categories.map((category) => (
+            <button
+              key={category}
+              onClick={() => setSelectedCategory(category)}
+              style={{
+                padding: '8px 16px',
+                fontSize: '14px',
+                fontWeight: '500',
+                border: selectedCategory === category ? '2px solid #667eea' : '2px solid #e5e7eb',
+                borderRadius: '10px',
+                background: selectedCategory === category 
+                  ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' 
+                  : 'white',
+                color: selectedCategory === category ? 'white' : '#374151',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                boxShadow: selectedCategory === category 
+                  ? '0 4px 12px rgba(102, 126, 234, 0.3)' 
+                  : '0 2px 4px rgba(0, 0, 0, 0.05)'
+              }}
+              onMouseOver={(e) => {
+                if (selectedCategory !== category) {
+                  e.currentTarget.style.borderColor = '#667eea';
+                  e.currentTarget.style.transform = 'translateY(-2px)';
+                  e.currentTarget.style.boxShadow = '0 4px 8px rgba(102, 126, 234, 0.15)';
+                }
+              }}
+              onMouseOut={(e) => {
+                if (selectedCategory !== category) {
+                  e.currentTarget.style.borderColor = '#e5e7eb';
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.05)';
+                }
+              }}
+            >
+              {category}
+            </button>
+          ))}
         </div>
       </div>
 

@@ -822,14 +822,13 @@ const Assets = ({ onDelete }) => {
                               transition: 'all 0.2s',
                               display: 'flex',
                               alignItems: 'center',
-                              gap: '6px'
+                              gap: '6px',
+                              flex: 1
                             }}
                             onMouseEnter={(e) => {
-                              e.currentTarget.style.textDecoration = 'underline';
-                              e.currentTarget.style.opacity = '0.9';
+                              e.currentTarget.style.opacity = '0.85';
                             }}
                             onMouseLeave={(e) => {
-                              e.currentTarget.style.textDecoration = 'none';
                               e.currentTarget.style.opacity = '1';
                             }}
                             title="View all models with specifications"
@@ -1090,19 +1089,17 @@ const Assets = ({ onDelete }) => {
                               <Link
                                 to={`/models/${asset.Model_ID}/add-specs`}
                                 style={{
-                                  color: '#667eea',
+                                  color: 'inherit',
                                   textDecoration: 'none',
                                   fontWeight: '500',
                                   cursor: 'pointer',
                                   transition: 'all 0.2s'
                                 }}
                                 onMouseEnter={(e) => {
-                                  e.currentTarget.style.textDecoration = 'underline';
-                                  e.currentTarget.style.color = '#5a67d8';
+                                  e.currentTarget.style.color = '#667eea';
                                 }}
                                 onMouseLeave={(e) => {
-                                  e.currentTarget.style.textDecoration = 'none';
-                                  e.currentTarget.style.color = '#667eea';
+                                  e.currentTarget.style.color = 'inherit';
                                 }}
                                 title={`Add/Edit specifications for ${asset.Model || 'this model'}`}
                               >

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Plus, Trash2, Save, AlertCircle, CheckCircle, Cpu } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Save, AlertCircle, CheckCircle, Cpu, Edit2 } from 'lucide-react';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api/v1';
 
@@ -10,6 +10,8 @@ const AddModelSpecs = () => {
   
   const [model, setModel] = useState(null);
   const [existingSpecs, setExistingSpecs] = useState([]);
+  const [editingSpec, setEditingSpec] = useState(null);
+  const [editValue, setEditValue] = useState('');
   const [specifications, setSpecifications] = useState([
     { attributeName: '', attributeValue: '' }
   ]);
@@ -129,6 +131,50 @@ const AddModelSpecs = () => {
     } catch (err) {
       console.error('Error deleting specification:', err);
       setError(err.message || 'Failed to delete specification');
+    }
+  };
+
+  const handleEditSpec = (spec) => {
+    setEditingSpec(spec.Attributes_ID);
+    setEditValue(spec.Attributes_Value);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingSpec(null);
+    setEditValue('');
+  };
+
+  const handleSaveEdit = async (attributeId) => {
+    if (!editValue.trim()) {
+      setError('Specification value cannot be empty');
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API_URL}/models/${modelId}/specs/${attributeId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ attributeValue: editValue.trim() })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update specification');
+      }
+
+      setSuccess('Specification updated successfully');
+      setEditingSpec(null);
+      setEditValue('');
+      await fetchModelDetails();
+      
+      // Clear success message after 3 seconds
+      setTimeout(() => {
+        setSuccess(null);
+      }, 3000);
+    } catch (err) {
+      console.error('Error updating specification:', err);
+      setError(err.message || 'Failed to update specification');
     }
   };
 
@@ -524,35 +570,116 @@ const AddModelSpecs = () => {
                         }}>
                           {spec.Attribute_Name || spec.Attributes_Name}:
                         </span>
-                        <span style={{
-                          fontSize: '14px',
-                          color: '#374151',
-                          fontWeight: '500',
-                          wordBreak: 'break-word',
-                          flex: 1
-                        }}>
-                          {spec.Attributes_Value}
-                        </span>
+                        {editingSpec === spec.Attributes_ID ? (
+                          <input
+                            type="text"
+                            value={editValue}
+                            onChange={(e) => setEditValue(e.target.value)}
+                            style={{
+                              flex: 1,
+                              fontSize: '14px',
+                              padding: '6px 10px',
+                              border: '2px solid #667eea',
+                              borderRadius: '6px',
+                              outline: 'none',
+                              fontWeight: '500'
+                            }}
+                            autoFocus
+                          />
+                        ) : (
+                          <span style={{
+                            fontSize: '14px',
+                            color: '#374151',
+                            fontWeight: '500',
+                            wordBreak: 'break-word',
+                            flex: 1
+                          }}>
+                            {spec.Attributes_Value}
+                          </span>
+                        )}
                       </div>
                     </div>
-                    <button
-                      onClick={() => handleDeleteExistingSpec(spec.Attributes_ID)}
-                      style={{
-                        background: '#fee2e2',
-                        border: 'none',
-                        borderRadius: '8px',
-                        padding: '8px',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        transition: 'all 0.2s'
-                      }}
-                      onMouseOver={(e) => e.currentTarget.style.background = '#fecaca'}
-                      onMouseOut={(e) => e.currentTarget.style.background = '#fee2e2'}
-                      title="Delete specification"
-                    >
-                      <Trash2 size={16} color="#dc2626" />
-                    </button>
+                    <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
+                      {editingSpec === spec.Attributes_ID ? (
+                        <>
+                          <button
+                            onClick={() => handleSaveEdit(spec.Attributes_ID)}
+                            style={{
+                              background: '#d1fae5',
+                              border: 'none',
+                              borderRadius: '8px',
+                              padding: '8px',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              transition: 'all 0.2s'
+                            }}
+                            onMouseOver={(e) => e.currentTarget.style.background = '#a7f3d0'}
+                            onMouseOut={(e) => e.currentTarget.style.background = '#d1fae5'}
+                            title="Save changes"
+                          >
+                            <Save size={16} color="#059669" />
+                          </button>
+                          <button
+                            onClick={handleCancelEdit}
+                            style={{
+                              background: '#f3f4f6',
+                              border: 'none',
+                              borderRadius: '8px',
+                              padding: '8px',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              transition: 'all 0.2s'
+                            }}
+                            onMouseOver={(e) => e.currentTarget.style.background = '#e5e7eb'}
+                            onMouseOut={(e) => e.currentTarget.style.background = '#f3f4f6'}
+                            title="Cancel"
+                          >
+                            <AlertCircle size={16} color="#6b7280" />
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <button
+                            onClick={() => handleEditSpec(spec)}
+                            style={{
+                              background: '#dbeafe',
+                              border: 'none',
+                              borderRadius: '8px',
+                              padding: '8px',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              transition: 'all 0.2s'
+                            }}
+                            onMouseOver={(e) => e.currentTarget.style.background = '#bfdbfe'}
+                            onMouseOut={(e) => e.currentTarget.style.background = '#dbeafe'}
+                            title="Edit specification"
+                          >
+                            <Edit2 size={16} color="#2563eb" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteExistingSpec(spec.Attributes_ID)}
+                            style={{
+                              background: '#fee2e2',
+                              border: 'none',
+                              borderRadius: '8px',
+                              padding: '8px',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              transition: 'all 0.2s'
+                            }}
+                            onMouseOver={(e) => e.currentTarget.style.background = '#fecaca'}
+                            onMouseOut={(e) => e.currentTarget.style.background = '#fee2e2'}
+                            title="Delete specification"
+                          >
+                            <Trash2 size={16} color="#dc2626" />
+                          </button>
+                        </>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
