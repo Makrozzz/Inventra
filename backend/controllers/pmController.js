@@ -419,15 +419,21 @@ const getPMReport = async (req, res, next) => {
       logger.info(`✅ PDF generated successfully: ${filename}`);
     }
 
-    // Convert relative path to absolute path for res.download()
+    // Convert relative path to absolute path
     const absolutePath = path.join(__dirname, '../', filepath);
 
     // Log filename for debugging
     logger.info(`📥 Downloading PM report: ${filename}`);
     logger.info(`📂 File path: ${absolutePath}`);
 
-    // Send file for download (res.download handles Content-Type and Content-Disposition)
-    res.download(absolutePath, filename, (err) => {
+    // Set explicit headers before sending file
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Content-Transfer-Encoding', 'binary');
+    res.setHeader('Cache-Control', 'no-cache');
+
+    // Send file
+    res.sendFile(absolutePath, (err) => {
       if (err) {
         logger.error('❌ Error sending PDF file:', err);
         if (!res.headersSent) {
@@ -514,8 +520,14 @@ const bulkDownloadPM = async (req, res, next) => {
     logger.info(`📥 Downloading bulk PDF: ${filename}`);
     logger.info(`📂 File path: ${absolutePath}`);
 
-    // Send file for download and delete after sending
-    res.download(absolutePath, filename, (err) => {
+    // Set explicit headers before sending file
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Content-Transfer-Encoding', 'binary');
+    res.setHeader('Cache-Control', 'no-cache');
+
+    // Send file and delete after sending
+    res.sendFile(absolutePath, (err) => {
       if (err) {
         logger.error('❌ Error sending bulk PDF file:', err);
         if (!res.headersSent) {
@@ -642,15 +654,21 @@ const getBlankPMReport = async (req, res, next) => {
       });
     }
 
-    // Convert relative path to absolute path for res.download()
+    // Convert relative path to absolute path
     const absolutePath = path.join(__dirname, '../', result.filepath);
 
     // Log filename for debugging
     logger.info(`📥 Downloading blank PM form: ${result.filename}`);
     logger.info(`📂 File path: ${absolutePath}`);
 
-    // Send file for download and delete after sending
-    res.download(absolutePath, result.filename, (err) => {
+    // Set explicit headers before sending file
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${result.filename}"`);
+    res.setHeader('Content-Transfer-Encoding', 'binary');
+    res.setHeader('Cache-Control', 'no-cache');
+
+    // Send file and delete after sending
+    res.sendFile(absolutePath, (err) => {
       if (err) {
         logger.error('❌ Error sending blank PDF file:', err);
         if (!res.headersSent) {
