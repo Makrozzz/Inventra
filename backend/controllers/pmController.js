@@ -422,12 +422,11 @@ const getPMReport = async (req, res, next) => {
     // Convert relative path to absolute path for res.download()
     const absolutePath = path.join(__dirname, '../', filepath);
 
-    // Set proper headers for PDF download with encoded filename
-    const encodedFilename = encodeURIComponent(filename);
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename="${filename}"; filename*=UTF-8''${encodedFilename}`);
+    // Log filename for debugging
+    logger.info(`📥 Downloading PM report: ${filename}`);
+    logger.info(`📂 File path: ${absolutePath}`);
 
-    // Send file for download
+    // Send file for download (res.download handles Content-Type and Content-Disposition)
     res.download(absolutePath, filename, (err) => {
       if (err) {
         logger.error('❌ Error sending PDF file:', err);
@@ -512,11 +511,8 @@ const bulkDownloadPM = async (req, res, next) => {
     const filename = result.filename;
 
     logger.info(`✅ Bulk PDF generated successfully: ${filename}`);
-
-    // Set proper headers for PDF download with encoded filename
-    const encodedFilename = encodeURIComponent(filename);
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename="${filename}"; filename*=UTF-8''${encodedFilename}`);
+    logger.info(`📥 Downloading bulk PDF: ${filename}`);
+    logger.info(`📂 File path: ${absolutePath}`);
 
     // Send file for download and delete after sending
     res.download(absolutePath, filename, (err) => {
@@ -649,10 +645,9 @@ const getBlankPMReport = async (req, res, next) => {
     // Convert relative path to absolute path for res.download()
     const absolutePath = path.join(__dirname, '../', result.filepath);
 
-    // Set proper headers for PDF download with encoded filename
-    const encodedFilename = encodeURIComponent(result.filename);
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename="${result.filename}"; filename*=UTF-8''${encodedFilename}`);
+    // Log filename for debugging
+    logger.info(`📥 Downloading blank PM form: ${result.filename}`);
+    logger.info(`📂 File path: ${absolutePath}`);
 
     // Send file for download and delete after sending
     res.download(absolutePath, result.filename, (err) => {
