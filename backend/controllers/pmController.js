@@ -456,22 +456,40 @@ const getPMReport = async (req, res, next) => {
       });
     }
 
+    // Verify file is not empty (0 bytes)
+    const stats = fs.statSync(absolutePath);
+    if (stats.size === 0) {
+      logger.error(`❌ PDF file is empty (0 bytes): ${absolutePath}`);
+      return res.status(500).json({
+        error: 'PDF file is corrupted',
+        message: 'The PDF file was generated but is empty'
+      });
+    }
+
     // Log filename for debugging
-    logger.info(`📥 Downloading PM report: ${filename}`);
+    logger.info(`📥 Downloading PM report: ${filename} (${stats.size} bytes)`);
     logger.info(`📂 File path: ${absolutePath}`);
 
-    // Use simple download method (let Express handle headers)
-    res.download(absolutePath, filename, (err) => {
-      if (err) {
-        logger.error('❌ Error sending PDF file:', err);
-        if (!res.headersSent) {
-          res.status(500).json({
-            error: 'Failed to download PDF',
-            message: err.message
-          });
-        }
-      } else {
-        logger.info(`📥 PDF downloaded successfully: ${filename}`);
+    // Set proper headers manually to ensure correct MIME type
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Length', stats.size);
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    
+    // Stream the file
+    const fileStream = fs.createReadStream(absolutePath);
+    fileStream.pipe(res);
+    
+    fileStream.on('end', () => {
+      logger.info(`📥 PDF streamed successfully: ${filename}`);
+    });
+    
+    fileStream.on('error', (err) => {
+      logger.error('❌ Error streaming PDF file:', err);
+      if (!res.headersSent) {
+        res.status(500).json({
+          error: 'Failed to download PDF',
+          message: err.message
+        });
       }
     });
 
