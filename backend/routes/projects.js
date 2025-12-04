@@ -14,6 +14,12 @@ router.get('/reference/:refNum', projectController.getProjectByReference);
 // GET /api/projects/branches/:customerName - Get branches by customer name
 router.get('/branches/:customerName', projectController.getBranchesByCustomer);
 
+// GET /api/projects/branches-by-ref/:customerRefNumber - Get branches by customer reference number
+router.get('/branches-by-ref/:customerRefNumber', projectController.getBranchesByCustomerRef);
+
+// GET /api/projects/branches-by-project/:projectRefNumber - Get branches for a specific project
+router.get('/branches-by-project/:projectRefNumber', projectController.getBranchesByProjectRef);
+
 // GET /api/projects/:id - Get project by ID
 router.get('/:id', projectController.getProjectById);
 

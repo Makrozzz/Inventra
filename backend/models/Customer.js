@@ -149,6 +149,72 @@ class Customer {
   }
 
   /**
+   * Get branches by Customer Reference Number
+   */
+  static async findBranchesByCustomerRef(customerRefNumber) {
+    try {
+      console.log('🔍 Customer.findBranchesByCustomerRef called with:', customerRefNumber);
+      
+      const [rows] = await pool.execute(`
+        SELECT DISTINCT
+          Customer_ID,
+          Customer_Ref_Number,
+          Customer_Name,
+          Branch
+        FROM CUSTOMER
+        WHERE Customer_Ref_Number = ?
+        ORDER BY Branch
+      `, [customerRefNumber]);
+      
+      console.log(`📊 Found ${rows.length} branches for customer ref "${customerRefNumber}":`, rows);
+      
+      return rows.map(row => ({
+        Customer_ID: row.Customer_ID,
+        Customer_Ref_Number: row.Customer_Ref_Number,
+        Customer_Name: row.Customer_Name,
+        Branch: row.Branch
+      }));
+    } catch (error) {
+      console.error('Error in Customer.findBranchesByCustomerRef:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get branches for a specific project by project reference number
+   */
+  static async findBranchesByProjectRef(projectRefNumber) {
+    try {
+      console.log('🔍 Customer.findBranchesByProjectRef called with:', projectRefNumber);
+      
+      const [rows] = await pool.execute(`
+        SELECT DISTINCT
+          c.Customer_ID,
+          c.Customer_Ref_Number,
+          c.Customer_Name,
+          c.Branch
+        FROM CUSTOMER c
+        INNER JOIN INVENTORY i ON c.Customer_ID = i.Customer_ID
+        INNER JOIN PROJECT p ON i.Project_ID = p.Project_ID
+        WHERE p.Project_Ref_Number = ?
+        ORDER BY c.Branch
+      `, [projectRefNumber]);
+      
+      console.log(`📊 Found ${rows.length} branches for project "${projectRefNumber}":`, rows);
+      
+      return rows.map(row => ({
+        Customer_ID: row.Customer_ID,
+        Customer_Ref_Number: row.Customer_Ref_Number,
+        Customer_Name: row.Customer_Name,
+        Branch: row.Branch
+      }));
+    } catch (error) {
+      console.error('Error in Customer.findBranchesByProjectRef:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Delete customer by ID
    */
   static async delete(id) {

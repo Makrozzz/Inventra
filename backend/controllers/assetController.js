@@ -492,6 +492,59 @@ const updateAssetById = async (req, res, next) => {
       }
     }
 
+    // Handle Customer and Branch update (these are in INVENTORY table via CUSTOMER)
+    if (updateData.Customer_Name !== undefined || updateData.Branch !== undefined) {
+      try {
+        console.log('Updating customer/branch information');
+        
+        // Get the current inventory record for this asset
+        const [inventoryRows] = await pool.execute(
+          'SELECT Inventory_ID, Customer_ID FROM INVENTORY WHERE Asset_ID = ? LIMIT 1',
+          [id]
+        );
+        
+        if (inventoryRows.length > 0) {
+          const inventoryRecord = inventoryRows[0];
+          
+          // Get or create customer record
+          const customerName = updateData.Customer_Name || existingAsset.Customer_Name;
+          const branch = updateData.Branch || existingAsset.Branch;
+          
+          if (customerName && branch) {
+            // Check if customer exists with this name and branch
+            const [customerRows] = await pool.execute(
+              'SELECT Customer_ID FROM CUSTOMER WHERE Customer_Name = ? AND Branch = ?',
+              [customerName, branch]
+            );
+            
+            let customerId;
+            if (customerRows.length > 0) {
+              customerId = customerRows[0].Customer_ID;
+              console.log('Found existing customer ID:', customerId);
+            } else {
+              // Create new customer record
+              const [insertResult] = await pool.execute(
+                'INSERT INTO CUSTOMER (Customer_Name, Branch) VALUES (?, ?)',
+                [customerName, branch]
+              );
+              customerId = insertResult.insertId;
+              console.log('Created new customer with ID:', customerId);
+            }
+            
+            // Update inventory record with new customer ID
+            await pool.execute(
+              'UPDATE INVENTORY SET Customer_ID = ? WHERE Inventory_ID = ?',
+              [customerId, inventoryRecord.Inventory_ID]
+            );
+            console.log('Updated inventory record with Customer_ID:', customerId);
+          }
+        }
+      } catch (error) {
+        console.error('Error updating customer/branch:', error);
+        console.warn('Could not update customer/branch information:', error.message);
+      }
+    }
+
     // Handle Peripherals update
     let peripheralsUpdated = false;
     if (updateData.peripherals && Array.isArray(updateData.peripherals)) {

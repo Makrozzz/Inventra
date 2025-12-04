@@ -817,7 +817,33 @@ const Assets = ({ onDelete }) => {
                       }}
                     >
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
-                        <span>{formatColumnName(column)}</span>
+                        {column.Field === 'Model' ? (
+                          <Link
+                            to="/models/specs"
+                            style={{
+                              color: 'white',
+                              textDecoration: 'none',
+                              fontWeight: '600',
+                              cursor: 'pointer',
+                              transition: 'all 0.2s',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              flex: 1
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.opacity = '0.85';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.opacity = '1';
+                            }}
+                            title="View all models with specifications"
+                          >
+                            {formatColumnName(column)}
+                          </Link>
+                        ) : (
+                          <span>{formatColumnName(column)}</span>
+                        )}
                         <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                           {columnFilters[column.Field] && (
                             <span 
@@ -1065,27 +1091,29 @@ const Assets = ({ onDelete }) => {
                               {formatCellValue(asset[column.Field], column.Field)}
                             </span>
                           ) : column.Field === 'Model' ? (
-                            <Link
-                              to="/models"
-                              style={{
-                                color: '#667eea',
-                                textDecoration: 'none',
-                                fontWeight: '500',
-                                cursor: 'pointer',
-                                transition: 'all 0.2s'
-                              }}
-                              onMouseEnter={(e) => {
-                                e.currentTarget.style.textDecoration = 'underline';
-                                e.currentTarget.style.color = '#5a67d8';
-                              }}
-                              onMouseLeave={(e) => {
-                                e.currentTarget.style.textDecoration = 'none';
-                                e.currentTarget.style.color = '#667eea';
-                              }}
-                              title="View all models"
-                            >
-                              {formatCellValue(asset[column.Field], column.Field)}
-                            </Link>
+                            asset.Model_ID ? (
+                              <Link
+                                to={`/models/${asset.Model_ID}/add-specs`}
+                                style={{
+                                  color: 'inherit',
+                                  textDecoration: 'none',
+                                  fontWeight: '500',
+                                  cursor: 'pointer',
+                                  transition: 'all 0.2s'
+                                }}
+                                onMouseEnter={(e) => {
+                                  e.currentTarget.style.color = '#667eea';
+                                }}
+                                onMouseLeave={(e) => {
+                                  e.currentTarget.style.color = 'inherit';
+                                }}
+                                title={`Add/Edit specifications for ${asset.Model || 'this model'}`}
+                              >
+                                {formatCellValue(asset[column.Field], column.Field)}
+                              </Link>
+                            ) : (
+                              <span>{formatCellValue(asset[column.Field], column.Field)}</span>
+                            )
                           ) : column.Field === 'Peripheral_Type' || column.Field === 'Peripheral_Serial' ? (
                             <div style={{ whiteSpace: 'pre-line' }}>
                               {formatCellValue(asset[column.Field], column.Field)}
