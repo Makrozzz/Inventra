@@ -18,20 +18,20 @@
 
         body {
             font-family: 'Arial', sans-serif;
-            font-size: 6.5pt;
-            line-height: 1.1;
+            font-size: 5pt;
+            line-height: 1.0;
             color: #333;
             width: 210mm;
             min-height: 297mm;
-            padding: 5mm;
+            padding: 3mm;
             background: white;
         }
 
         .header-container {
             display: flex;
             align-items: center;
-            gap: 8px;
-            margin-bottom: 5px;
+            gap: 4px;
+            margin-bottom: 3px;
         }
 
         .logo-section {
@@ -39,7 +39,7 @@
         }
 
         .header-logo {
-            height: 55px;
+            height: 35px;
             width: auto;
             object-fit: contain;
             filter: grayscale(100%);
@@ -49,12 +49,12 @@
         .header {
             background: #333;
             color: white;
-            padding: 8px 15px;
-            border-radius: 4px;
+            padding: 4px 8px;
+            border-radius: 3px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            border: 2px solid #000;
+            border: 1px solid #000;
             flex: 1;
         }
 
@@ -63,13 +63,13 @@
         }
 
         .header-left h1 {
-            font-size: 9pt;
+            font-size: 7pt;
             font-weight: bold;
-            margin-bottom: 2px;
+            margin-bottom: 1px;
         }
 
         .header-left p {
-            font-size: 6pt;
+            font-size: 5pt;
             opacity: 0.95;
         }
 
@@ -78,75 +78,75 @@
         }
 
         .header-right .pm-id {
-            font-size: 10pt;
+            font-size: 7pt;
             font-weight: bold;
             background: rgba(255,255,255,0.2);
-            padding: 4px 10px;
-            border-radius: 3px;
+            padding: 2px 6px;
+            border-radius: 2px;
             display: inline-block;
             border: 1px solid white;
         }
 
         .status-badge {
             display: inline-block;
-            padding: 2px 8px;
-            border-radius: 12px;
-            font-size: 6.5pt;
+            padding: 1px 4px;
+            border-radius: 8px;
+            font-size: 5pt;
             font-weight: bold;
-            margin-top: 2px;
+            margin-top: 1px;
             background: white;
             color: #333;
             border: 1px solid #333;
         }
 
         .section {
-            margin-bottom: 4px;
+            margin-bottom: 2px;
             background: white;
-            padding: 4px;
-            border-radius: 4px;
-            border: 2px solid #333;
+            padding: 2px;
+            border-radius: 2px;
+            border: 1px solid #333;
         }
 
         .section-title {
-            font-size: 8pt;
+            font-size: 6pt;
             font-weight: bold;
             color: #000;
-            margin-bottom: 3px;
+            margin-bottom: 2px;
             display: flex;
             align-items: center;
-            padding-bottom: 2px;
-            border-bottom: 2px solid #333;
+            padding-bottom: 1px;
+            border-bottom: 1px solid #333;
         }
 
         .section-title::before {
             content: '';
             display: inline-block;
-            width: 5px;
-            height: 5px;
+            width: 3px;
+            height: 3px;
             background: #333;
             border-radius: 50%;
-            margin-right: 6px;
+            margin-right: 3px;
         }
 
         .info-grid {
             display: grid;
             grid-template-columns: 1fr 1fr 1fr;
-            gap: 3px;
+            gap: 2px;
         }
 
         .info-item {
             display: flex;
-            padding: 2px 4px;
+            padding: 1px 2px;
             background: white;
-            border-radius: 3px;
-            font-size: 6.5pt;
+            border-radius: 2px;
+            font-size: 5pt;
             border: 1px solid #ccc;
         }
 
         .info-label {
             font-weight: bold;
             color: #000;
-            min-width: 75px;
+            min-width: 50px;
         }
 
         .info-value {
@@ -157,38 +157,38 @@
         table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 5px;
+            margin-top: 2px;
             background: white;
-            font-size: 7pt;
-            border: 2px solid #000;
+            font-size: 5pt;
+            border: 1px solid #000;
         }
 
         th {
             background: #333;
             color: white;
-            padding: 5px 4px;
+            padding: 2px 2px;
             text-align: center;
             font-weight: bold;
             border: 1px solid #000;
-            font-size: 8.5pt;
+            font-size: 6pt;
         }
 
         td {
-            padding: 4px;
+            padding: 2px;
             border: 1px solid #333;
             text-align: center;
         }
 
         td.checklist-item {
             text-align: left;
-            padding-left: 6px;
-            font-size: 7.5pt;
+            padding-left: 3px;
+            font-size: 5pt;
         }
 
         td.remarks-cell {
             text-align: left;
-            font-size: 7pt;
-            max-width: 120px;
+            font-size: 5pt;
+            max-width: 80px;
             word-wrap: break-word;
         }
 
@@ -197,9 +197,9 @@
         }
 
         .checkbox {
-            width: 16px;
-            height: 16px;
-            border: 2px solid #000;
+            width: 10px;
+            height: 10px;
+            border: 1px solid #000;
             display: inline-block;
             position: relative;
             vertical-align: middle;
@@ -211,7 +211,7 @@
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            font-size: 9pt;
+            font-size: 6pt;
             font-weight: bold;
             color: #000;
             line-height: 1;
@@ -220,27 +220,27 @@
         .signatures {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 8px;
-            margin-top: 8px;
+            gap: 4px;
+            margin-top: 4px;
             page-break-inside: avoid;
         }
 
         .signature-box {
-            border: 2px solid #333;
-            border-radius: 4px;
-            padding: 8px 8px 10px 8px;
+            border: 1px solid #333;
+            border-radius: 2px;
+            padding: 4px 4px 5px 4px;
             background: white;
-            min-height: 95px;
+            min-height: 50px;
             display: flex;
             flex-direction: column;
         }
 
         .signature-box h3 {
-            font-size: 9pt;
+            font-size: 6pt;
             color: #000;
-            margin-bottom: 6px;
-            border-bottom: 2px solid #333;
-            padding-bottom: 3px;
+            margin-bottom: 3px;
+            border-bottom: 1px solid #333;
+            padding-bottom: 2px;
         }
 
         .signature-content {
@@ -251,15 +251,15 @@
         }
 
         .signature-line {
-            margin: 4px 0;
-            font-size: 7.5pt;
+            margin: 2px 0;
+            font-size: 5pt;
             display: flex;
             align-items: center;
         }
 
         .signature-line strong {
             display: inline-block;
-            width: 70px;
+            width: 45px;
             color: #000;
             flex-shrink: 0;
         }
@@ -271,10 +271,10 @@
 
         .footer {
             text-align: center;
-            margin-top: 8px;
-            padding-top: 6px;
-            border-top: 2px solid #333;
-            font-size: 6pt;
+            margin-top: 4px;
+            padding-top: 3px;
+            border-top: 1px solid #333;
+            font-size: 5pt;
             color: #333;
         }
 
