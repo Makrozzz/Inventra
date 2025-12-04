@@ -41,6 +41,39 @@ router.get('/asset/:assetId', getPMByAssetId);
 // PDF Report route
 router.get('/:pmId/report', getPMReport);
 
+// DEBUG: Check filename before download
+router.get('/:pmId/report-debug', async (req, res) => {
+  try {
+    const pmId = parseInt(req.params.pmId);
+    const PMaintenance = require('../models/PMaintenance');
+    const pmData = await PMaintenance.getDetailedPM(pmId);
+    
+    if (!pmData) {
+      return res.json({ error: 'PM not found' });
+    }
+    
+    const sanitize = (text) => {
+      if (!text) return 'UNKNOWN';
+      return text.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_-]/g, '').toUpperCase().substring(0, 50);
+    };
+    
+    const customerName = sanitize(pmData.Customer_Name);
+    const filename = `PM_Report_PM${pmData.PM_ID}_${customerName}_${pmData.Asset_Serial_Number}.pdf`;
+    
+    res.json({
+      pmId: pmData.PM_ID,
+      customerName: pmData.Customer_Name,
+      sanitizedCustomer: customerName,
+      serialNumber: pmData.Asset_Serial_Number,
+      generatedFilename: filename,
+      filenameLength: filename.length,
+      hasProperExtension: filename.endsWith('.pdf')
+    });
+  } catch (error) {
+    res.json({ error: error.message });
+  }
+});
+
 // Blank PM Report route
 router.get('/asset/:assetId/blank-report', getBlankPMReport);
 
