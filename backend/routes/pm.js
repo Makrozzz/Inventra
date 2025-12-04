@@ -38,10 +38,7 @@ router.get('/results/:pmId', getResultsByPMId);
 router.get('/detail/:pmId', getDetailedPM);
 router.get('/asset/:assetId', getPMByAssetId);
 
-// PDF Report route
-router.get('/:pmId/report', getPMReport);
-
-// DEBUG: Check filename before download
+// DEBUG: Check filename before download (MUST be before /:pmId/report)
 router.get('/:pmId/report-debug', async (req, res) => {
   try {
     const pmId = parseInt(req.params.pmId);
@@ -73,6 +70,9 @@ router.get('/:pmId/report-debug', async (req, res) => {
     res.json({ error: error.message });
   }
 });
+
+// PDF Report route
+router.get('/:pmId/report', getPMReport);
 
 // Blank PM Report route
 router.get('/asset/:assetId/blank-report', getBlankPMReport);
