@@ -1,4 +1,4 @@
-const pdf = require('pdf-creator-node');
+const wkhtmltopdf = require('wkhtmltopdf');
 const handlebars = require('handlebars');
 const fs = require('fs').promises;
 const fsSync = require('fs');
@@ -142,27 +142,27 @@ class PDFGenerator {
             console.log('Sanitized customer name:', customerName);
             console.log('Generated filename:', filename);
 
-            // 6. Generate PDF using pdf-creator-node
-            console.log('Generating PDF with pdf-creator-node...');
-            const options = {
-                format: 'A4',
-                orientation: 'portrait',
-                border: {
-                    top: '10mm',
-                    right: '10mm',
-                    bottom: '10mm',
-                    left: '10mm'
-                }
-            };
+            // 6. Generate PDF using wkhtmltopdf
+            console.log('Generating PDF with wkhtmltopdf...');
             
-            const document = {
-                html: html,
-                data: {},
-                path: filepath,
-                type: ''
-            };
+            // Create write stream
+            const writeStream = fsSync.createWriteStream(filepath);
             
-            await pdf.create(document, options);
+            // Generate PDF
+            wkhtmltopdf(html, {
+                pageSize: 'A4',
+                marginTop: '10mm',
+                marginRight: '10mm',
+                marginBottom: '10mm',
+                marginLeft: '10mm',
+                printMediaType: true
+            }).pipe(writeStream);
+            
+            // Wait for completion
+            await new Promise((resolve, reject) => {
+                writeStream.on('finish', resolve);
+                writeStream.on('error', reject);
+            });
 
             console.log(`PDF generated successfully: ${filename}`);
 
@@ -388,27 +388,27 @@ class PDFGenerator {
             
             console.log('Generated blank form filename:', filename);
 
-            // 5. Generate PDF using pdf-creator-node
-            console.log('Generating PDF with pdf-creator-node...');
-            const options = {
-                format: 'A4',
-                orientation: 'portrait',
-                border: {
-                    top: '10mm',
-                    right: '10mm',
-                    bottom: '10mm',
-                    left: '10mm'
-                }
-            };
+            // 5. Generate PDF using wkhtmltopdf
+            console.log('Generating PDF with wkhtmltopdf...');
             
-            const document = {
-                html: html,
-                data: {},
-                path: filepath,
-                type: ''
-            };
+            // Create write stream
+            const writeStream = fsSync.createWriteStream(filepath);
             
-            await pdf.create(document, options);
+            // Generate PDF
+            wkhtmltopdf(html, {
+                pageSize: 'A4',
+                marginTop: '10mm',
+                marginRight: '10mm',
+                marginBottom: '10mm',
+                marginLeft: '10mm',
+                printMediaType: true
+            }).pipe(writeStream);
+            
+            // Wait for completion
+            await new Promise((resolve, reject) => {
+                writeStream.on('finish', resolve);
+                writeStream.on('error', reject);
+            });
 
             console.log(`Blank PDF generated successfully: ${filename}`);
 
@@ -664,27 +664,27 @@ class PDFGenerator {
             const filename = `${customerName}_${branchName}_${timestamp}.pdf`;
             const filepath = path.join(this.bulkOutputDir, filename);
 
-            // Step 4: Generate bulk PDF with pdf-creator-node
+            // Step 4: Generate bulk PDF with wkhtmltopdf
             console.log('  🖨️  Compiling bulk PDF...');
-            const options = {
-                format: 'A4',
-                orientation: 'portrait',
-                border: {
-                    top: '10mm',
-                    right: '10mm',
-                    bottom: '10mm',
-                    left: '10mm'
-                }
-            };
             
-            const document = {
-                html: combinedHtml,
-                data: {},
-                path: filepath,
-                type: ''
-            };
+            // Create write stream
+            const writeStream = fsSync.createWriteStream(filepath);
             
-            await pdf.create(document, options);
+            // Generate PDF
+            wkhtmltopdf(combinedHtml, {
+                pageSize: 'A4',
+                marginTop: '10mm',
+                marginRight: '10mm',
+                marginBottom: '10mm',
+                marginLeft: '10mm',
+                printMediaType: true
+            }).pipe(writeStream);
+            
+            // Wait for completion
+            await new Promise((resolve, reject) => {
+                writeStream.on('finish', resolve);
+                writeStream.on('error', reject);
+            });
 
             console.log(`✅ Bulk PDF compiled: ${filename}`);
 
