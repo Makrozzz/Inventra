@@ -387,19 +387,44 @@ const getPMReport = async (req, res, next) => {
       });
     }
 
-    // Check if PDF already exists
+    // Check if PDF already exists in database
     const pdfCheck = await pdfGenerator.checkPDFExists(pmId);
     
     let filepath;
     let filename;
+    const fs = require('fs');
 
-    if (pdfCheck.exists) {
-      // PDF exists, use existing file
-      filepath = pdfCheck.filepath;
-      filename = path.basename(filepath);
-      logger.info(`✅ Using existing PDF for PM_ID ${pmId}: ${filename}`);
+    if (pdfCheck.exists && pdfCheck.filepath) {
+      // Database has file_path, check if file actually exists
+      const absolutePath = path.join(__dirname, '../', pdfCheck.filepath);
+      
+      if (fs.existsSync(absolutePath)) {
+        // File exists in directory, use it
+        filepath = pdfCheck.filepath;
+        filename = path.basename(filepath);
+        logger.info(`✅ Using existing PDF for PM_ID ${pmId}: ${filename}`);
+      } else {
+        // File path in DB but file missing, regenerate
+        logger.info(`⚠️  PDF record exists but file missing, regenerating for PM_ID ${pmId}`);
+        const result = await pdfGenerator.generatePMReport(pmId);
+
+        if (!result.success) {
+          return res.status(500).json({
+            error: 'Failed to generate PDF report',
+            message: result.error
+          });
+        }
+
+        filepath = result.filepath;
+        filename = result.filename;
+        
+        // Update database with new file path
+        await pdfGenerator.updateFilePath(pmId, filepath);
+        
+        logger.info(`✅ PDF regenerated successfully: ${filename}`);
+      }
     } else {
-      // Generate new PDF (either doesn't exist or file missing locally)
+      // No PDF record, generate new one
       logger.info(`⚙️ Generating new PDF for PM_ID ${pmId}`);
       const result = await pdfGenerator.generatePMReport(pmId);
 
@@ -422,18 +447,21 @@ const getPMReport = async (req, res, next) => {
     // Convert relative path to absolute path
     const absolutePath = path.join(__dirname, '../', filepath);
 
+    // Final check before download
+    if (!fs.existsSync(absolutePath)) {
+      logger.error(`❌ PDF file not found: ${absolutePath}`);
+      return res.status(404).json({
+        error: 'PDF file not found',
+        message: 'The PDF file could not be located on the server'
+      });
+    }
+
     // Log filename for debugging
     logger.info(`📥 Downloading PM report: ${filename}`);
     logger.info(`📂 File path: ${absolutePath}`);
 
-    // Set explicit headers before sending file
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-    res.setHeader('Content-Transfer-Encoding', 'binary');
-    res.setHeader('Cache-Control', 'no-cache');
-
-    // Send file
-    res.sendFile(absolutePath, (err) => {
+    // Use simple download method (let Express handle headers)
+    res.download(absolutePath, filename, (err) => {
       if (err) {
         logger.error('❌ Error sending PDF file:', err);
         if (!res.headersSent) {
@@ -520,14 +548,8 @@ const bulkDownloadPM = async (req, res, next) => {
     logger.info(`📥 Downloading bulk PDF: ${filename}`);
     logger.info(`📂 File path: ${absolutePath}`);
 
-    // Set explicit headers before sending file
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-    res.setHeader('Content-Transfer-Encoding', 'binary');
-    res.setHeader('Cache-Control', 'no-cache');
-
-    // Send file and delete after sending
-    res.sendFile(absolutePath, (err) => {
+    // Use simple download method
+    res.download(absolutePath, filename, (err) => {
       if (err) {
         logger.error('❌ Error sending bulk PDF file:', err);
         if (!res.headersSent) {
@@ -661,14 +683,8 @@ const getBlankPMReport = async (req, res, next) => {
     logger.info(`📥 Downloading blank PM form: ${result.filename}`);
     logger.info(`📂 File path: ${absolutePath}`);
 
-    // Set explicit headers before sending file
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename="${result.filename}"`);
-    res.setHeader('Content-Transfer-Encoding', 'binary');
-    res.setHeader('Cache-Control', 'no-cache');
-
-    // Send file and delete after sending
-    res.sendFile(absolutePath, (err) => {
+    // Use simple download method
+    res.download(absolutePath, result.filename, (err) => {
       if (err) {
         logger.error('❌ Error sending blank PDF file:', err);
         if (!res.headersSent) {
