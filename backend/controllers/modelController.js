@@ -361,11 +361,11 @@ const getModelSpecs = async (req, res, next) => {
       SELECT 
         msb.Attributes_ID,
         msb.Attributes_Value,
-        s.Attributes_Value as Attributes_Name
+        s.Attributes_Name as Attributes_Name
       FROM MODEL_SPECS_BRIDGE msb
       INNER JOIN SPECS s ON msb.Attributes_ID = s.Attributes_ID
       WHERE msb.Model_ID = ?
-      ORDER BY s.Attributes_Value ASC
+      ORDER BY s.Attributes_Name ASC
     `, [modelId]);
 
     res.status(200).json(specs);
