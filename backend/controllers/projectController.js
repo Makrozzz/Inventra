@@ -150,6 +150,50 @@ exports.getBranchesByCustomer = async (req, res) => {
   }
 };
 
+// Get branches by customer reference number
+exports.getBranchesByCustomerRef = async (req, res) => {
+  try {
+    const { customerRefNumber } = req.params;
+    console.log('Looking up branches for customer ref:', customerRefNumber);
+    
+    const branches = await Customer.findBranchesByCustomerRef(customerRefNumber);
+    
+    res.json({
+      success: true,
+      data: branches || []
+    });
+  } catch (error) {
+    console.error('Error fetching branches by customer ref:', error);
+    res.status(500).json({ 
+      success: false,
+      error: 'Failed to fetch branches for customer reference',
+      message: error.message 
+    });
+  }
+};
+
+// Get branches for a specific project by project reference number
+exports.getBranchesByProjectRef = async (req, res) => {
+  try {
+    const { projectRefNumber } = req.params;
+    console.log('Looking up branches for project:', projectRefNumber);
+    
+    const branches = await Customer.findBranchesByProjectRef(projectRefNumber);
+    
+    res.json({
+      success: true,
+      data: branches || []
+    });
+  } catch (error) {
+    console.error('Error fetching branches by project:', error);
+    res.status(500).json({ 
+      success: false,
+      error: 'Failed to fetch branches for project',
+      message: error.message 
+    });
+  }
+};
+
 // Create new project
 exports.createProject = async (req, res) => {
   try {
