@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { User, Mail, Lock, Bell, Shield, Palette, Save, Eye, EyeOff, CheckCircle, Users, Plus, X, Edit } from 'lucide-react';
+import { authenticatedFetch, handleTokenExpiration } from '../utils/authUtils';
 
 const AccountSettings = () => {
   const [activeTab, setActiveTab] = useState('profile');
@@ -79,18 +80,10 @@ const AccountSettings = () => {
 
   const fetchUserProfile = async () => {
     try {
-      const token = localStorage.getItem('authToken');
-      console.log('🔍 Fetching profile with token:', token ? 'Token exists' : 'No token');
+      console.log('🔍 Fetching user profile...');
       
-      const response = await fetch('http://localhost:5000/api/v1/auth/profile', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      console.log('📡 Profile API Response Status:', response.status);
-      const data = await response.json();
+      const data = await authenticatedFetch('http://localhost:5000/api/v1/auth/profile');
+      
       console.log('📦 Profile API Response Data:', data);
       
       if (data.success) {
@@ -109,6 +102,7 @@ const AccountSettings = () => {
       }
     } catch (error) {
       console.error('❌ Error fetching profile:', error);
+      // Token expiration is already handled by authenticatedFetch
     } finally {
       setLoading(false);
     }
@@ -122,15 +116,8 @@ const AccountSettings = () => {
     
     setLoadingUsers(true);
     try {
-      const token = localStorage.getItem('authToken');
-      const response = await fetch('http://localhost:5000/api/v1/auth/users', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      const data = await response.json();
+      const data = await authenticatedFetch('http://localhost:5000/api/v1/auth/users');
+      
       if (data.success) {
         setAllUsers(data.data);
       } else {
@@ -138,6 +125,7 @@ const AccountSettings = () => {
       }
     } catch (error) {
       console.error('Error fetching users:', error);
+      // Token expiration is already handled by authenticatedFetch
     } finally {
       setLoadingUsers(false);
     }

@@ -20,6 +20,7 @@ import EditAsset from './pages/EditAsset';
 import CSVImport from './pages/CSVImport';
 import DatabaseTest from './components/DatabaseTest';
 import apiService from './services/apiService';
+import inactivityMonitor from './utils/inactivityMonitor';
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -32,14 +33,26 @@ function App() {
     const token = localStorage.getItem('authToken');
     if (token) {
       setIsAuthenticated(true);
+      // Start inactivity monitoring
+      inactivityMonitor.start();
     }
+    
+    // Cleanup on unmount
+    return () => {
+      inactivityMonitor.stop();
+    };
   }, []);
 
   const handleLogin = () => {
     setIsAuthenticated(true);
+    // Start monitoring user inactivity after login
+    inactivityMonitor.start();
   };
 
   const handleLogout = () => {
+    // Stop inactivity monitoring
+    inactivityMonitor.stop();
+    
     // Clear authentication data
     localStorage.removeItem('authToken');
     localStorage.removeItem('userInfo');
