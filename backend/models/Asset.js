@@ -62,6 +62,7 @@ class Asset {
           a.Windows,
           a.Microsoft_Office,
           a.Monthly_Prices,
+          a.Model_ID,
           c.Category,
           m.Model_Name as Model,
           r.Recipient_Name,
@@ -85,7 +86,7 @@ class Asset {
            FROM PERIPHERAL per2
            LEFT JOIN PERIPHERAL_TYPE pt2 ON per2.Peripheral_Type_ID = pt2.Peripheral_Type_ID
            WHERE per2.Asset_ID = a.Asset_ID) AS Peripheral_Data,
-          GROUP_CONCAT(DISTINCT CONCAT(spec_names.Attributes_Name, ': ', model_specs.Attributes_Value) SEPARATOR '; ') AS Specs_Attributes
+          GROUP_CONCAT(DISTINCT CONCAT(spec_names.Attribute_Name, ': ', model_specs.Attributes_Value) SEPARATOR '; ') AS Specs_Attributes
         FROM INVENTORY i
         INNER JOIN ASSET a ON i.Asset_ID = a.Asset_ID
         LEFT JOIN CATEGORY c ON a.Category_ID = c.Category_ID
@@ -595,6 +596,7 @@ class Asset {
           a.Windows,
           a.Microsoft_Office,
           a.Monthly_Prices,
+          a.Model_ID,
           c.Category,
           m.Model_Name as Model,
           r.Recipient_Name,
@@ -614,7 +616,7 @@ class Asset {
           cust.Branch,
           GROUP_CONCAT(DISTINCT s.Software_Name SEPARATOR ', ') AS Software,
           GROUP_CONCAT(DISTINCT s.Price SEPARATOR ', ') AS Software_Prices,
-          GROUP_CONCAT(DISTINCT CONCAT(spec_names.Attributes_Name, ': ', model_specs.Attributes_Value) SEPARATOR '; ') AS Specs_Attributes
+          GROUP_CONCAT(DISTINCT CONCAT(spec_names.Attribute_Name, ': ', model_specs.Attributes_Value) SEPARATOR '; ') AS Specs_Attributes
         FROM ASSET a
         LEFT JOIN CATEGORY c ON a.Category_ID = c.Category_ID
         LEFT JOIN MODEL m ON a.Model_ID = m.Model_ID

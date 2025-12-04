@@ -361,11 +361,11 @@ const getModelSpecs = async (req, res, next) => {
       SELECT 
         msb.Attributes_ID,
         msb.Attributes_Value,
-        s.Attributes_Name as Attributes_Name
+        s.Attribute_Name as Attributes_Name
       FROM MODEL_SPECS_BRIDGE msb
       INNER JOIN SPECS s ON msb.Attributes_ID = s.Attributes_ID
       WHERE msb.Model_ID = ?
-      ORDER BY s.Attributes_Name ASC
+      ORDER BY s.Attribute_Name ASC
     `, [modelId]);
 
     res.status(200).json(specs);
@@ -380,6 +380,311 @@ const getModelSpecs = async (req, res, next) => {
   }
 };
 
+/**
+ * Get all models with their specifications
+ */
+const getAllModelsWithSpecs = async (req, res, next) => {
+  try {
+    const [models] = await pool.execute(`
+      SELECT 
+        m.Model_ID,
+        m.Model_Name,
+        m.Category_ID,
+        c.Category as Category_Name,
+        COUNT(DISTINCT msb.Attributes_ID) as Spec_Count
+      FROM MODEL m
+      LEFT JOIN CATEGORY c ON m.Category_ID = c.Category_ID
+      LEFT JOIN MODEL_SPECS_BRIDGE msb ON m.Model_ID = msb.Model_ID
+      GROUP BY m.Model_ID, m.Model_Name, m.Category_ID, c.Category
+      ORDER BY m.Model_Name ASC
+    `);
+
+    // Fetch specs for each model
+    const modelsWithSpecs = await Promise.all(
+      models.map(async (model) => {
+        const [specs] = await pool.execute(`
+          SELECT 
+            msb.Attributes_ID,
+            msb.Attributes_Value,
+            s.Attribute_Name
+          FROM MODEL_SPECS_BRIDGE msb
+          INNER JOIN SPECS s ON msb.Attributes_ID = s.Attributes_ID
+          WHERE msb.Model_ID = ?
+          ORDER BY s.Attribute_Name ASC
+        `, [model.Model_ID]);
+
+        return {
+          ...model,
+          specifications: specs
+        };
+      })
+    );
+
+    res.status(200).json({
+      success: true,
+      data: modelsWithSpecs
+    });
+  } catch (error) {
+    logger.error('Error in getAllModelsWithSpecs:', error);
+    console.error('Error fetching models with specs:', error);
+    
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch models with specifications'
+    });
+  }
+};
+
+/**
+ * Get a specific model with its specifications
+ */
+const getModelWithSpecs = async (req, res, next) => {
+  try {
+    const modelId = req.params.id;
+
+    // Get model details
+    const [modelRows] = await pool.execute(`
+      SELECT 
+        m.Model_ID,
+        m.Model_Name,
+        m.Category_ID,
+        c.Category as Category_Name
+      FROM MODEL m
+      LEFT JOIN CATEGORY c ON m.Category_ID = c.Category_ID
+      WHERE m.Model_ID = ?
+    `, [modelId]);
+
+    if (modelRows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'Model not found'
+      });
+    }
+
+    const model = modelRows[0];
+
+    // Get specifications
+    const [specs] = await pool.execute(`
+      SELECT 
+        msb.Attributes_ID,
+        msb.Attributes_Value,
+        s.Attribute_Name
+      FROM MODEL_SPECS_BRIDGE msb
+      INNER JOIN SPECS s ON msb.Attributes_ID = s.Attributes_ID
+      WHERE msb.Model_ID = ?
+      ORDER BY s.Attribute_Name ASC
+    `, [modelId]);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        ...model,
+        specifications: specs
+      }
+    });
+  } catch (error) {
+    logger.error('Error in getModelWithSpecs:', error);
+    console.error('Error fetching model with specs:', error);
+    
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch model with specifications'
+    });
+  }
+};
+
+/**
+ * Add specifications to a model
+ * Expects body: { specifications: [{ attributeName, attributeValue }] }
+ */
+const addModelSpecs = async (req, res, next) => {
+  const connection = await pool.getConnection();
+  
+  try {
+    const modelId = req.params.id;
+    const { specifications } = req.body;
+
+    if (!specifications || !Array.isArray(specifications) || specifications.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'Specifications array is required and must not be empty'
+      });
+    }
+
+    // Validate model exists
+    const [modelRows] = await connection.execute(
+      'SELECT Model_ID FROM MODEL WHERE Model_ID = ?',
+      [modelId]
+    );
+
+    if (modelRows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'Model not found'
+      });
+    }
+
+    await connection.beginTransaction();
+
+    const addedSpecs = [];
+
+    for (const spec of specifications) {
+      const { attributeName, attributeValue } = spec;
+
+      if (!attributeName || !attributeValue) {
+        throw new Error('Both attributeName and attributeValue are required for each specification');
+      }
+
+      // Check if attribute name exists in SPECS table
+      const [existingAttr] = await connection.execute(
+        'SELECT Attributes_ID FROM SPECS WHERE Attribute_Name = ?',
+        [attributeName.trim()]
+      );
+
+      let attributeId;
+
+      if (existingAttr.length > 0) {
+        // Use existing attribute ID
+        attributeId = existingAttr[0].Attributes_ID;
+      } else {
+        // Create new attribute in SPECS table
+        const [insertResult] = await connection.execute(
+          'INSERT INTO SPECS (Attribute_Name) VALUES (?)',
+          [attributeName.trim()]
+        );
+        attributeId = insertResult.insertId;
+      }
+
+      // Check if this spec already exists for this model
+      const [existingSpec] = await connection.execute(
+        'SELECT * FROM MODEL_SPECS_BRIDGE WHERE Model_ID = ? AND Attributes_ID = ?',
+        [modelId, attributeId]
+      );
+
+      if (existingSpec.length > 0) {
+        // Update existing spec
+        await connection.execute(
+          'UPDATE MODEL_SPECS_BRIDGE SET Attributes_Value = ? WHERE Model_ID = ? AND Attributes_ID = ?',
+          [attributeValue.trim(), modelId, attributeId]
+        );
+      } else {
+        // Insert new spec
+        await connection.execute(
+          'INSERT INTO MODEL_SPECS_BRIDGE (Model_ID, Attributes_ID, Attributes_Value) VALUES (?, ?, ?)',
+          [modelId, attributeId, attributeValue.trim()]
+        );
+      }
+
+      addedSpecs.push({
+        attributeId,
+        attributeName: attributeName.trim(),
+        attributeValue: attributeValue.trim()
+      });
+    }
+
+    await connection.commit();
+
+    logger.info(`Added ${addedSpecs.length} specifications to model ${modelId}`);
+
+    res.status(201).json({
+      success: true,
+      message: `Successfully added ${addedSpecs.length} specification(s)`,
+      data: addedSpecs
+    });
+  } catch (error) {
+    await connection.rollback();
+    logger.error('Error in addModelSpecs:', error);
+    console.error('Error adding model specifications:', error);
+    
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to add model specifications'
+    });
+  } finally {
+    connection.release();
+  }
+};
+
+/**
+ * Update a specific specification for a model
+ */
+const updateModelSpec = async (req, res, next) => {
+  try {
+    const { modelId, attributeId } = req.params;
+    const { attributeValue } = req.body;
+
+    if (!attributeValue) {
+      return res.status(400).json({
+        success: false,
+        error: 'Attribute value is required'
+      });
+    }
+
+    const [result] = await pool.execute(
+      'UPDATE MODEL_SPECS_BRIDGE SET Attributes_Value = ? WHERE Model_ID = ? AND Attributes_ID = ?',
+      [attributeValue.trim(), modelId, attributeId]
+    );
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'Specification not found for this model'
+      });
+    }
+
+    logger.info(`Updated specification ${attributeId} for model ${modelId}`);
+
+    res.status(200).json({
+      success: true,
+      message: 'Specification updated successfully'
+    });
+  } catch (error) {
+    logger.error('Error in updateModelSpec:', error);
+    console.error('Error updating model specification:', error);
+    
+    res.status(500).json({
+      success: false,
+      error: 'Failed to update model specification'
+    });
+  }
+};
+
+/**
+ * Delete a specification from a model
+ */
+const deleteModelSpec = async (req, res, next) => {
+  try {
+    const { modelId, attributeId } = req.params;
+
+    const [result] = await pool.execute(
+      'DELETE FROM MODEL_SPECS_BRIDGE WHERE Model_ID = ? AND Attributes_ID = ?',
+      [modelId, attributeId]
+    );
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'Specification not found for this model'
+      });
+    }
+
+    logger.info(`Deleted specification ${attributeId} from model ${modelId}`);
+
+    res.status(200).json({
+      success: true,
+      message: 'Specification deleted successfully'
+    });
+  } catch (error) {
+    logger.error('Error in deleteModelSpec:', error);
+    console.error('Error deleting model specification:', error);
+    
+    res.status(500).json({
+      success: false,
+      error: 'Failed to delete model specification'
+    });
+  }
+};
+
 module.exports = {
   getAllModels,
   getOrCreateModel,
@@ -387,5 +692,10 @@ module.exports = {
   createModel,
   updateModel,
   deleteModel,
-  getModelSpecs
+  getModelSpecs,
+  getAllModelsWithSpecs,
+  getModelWithSpecs,
+  addModelSpecs,
+  updateModelSpec,
+  deleteModelSpec
 };

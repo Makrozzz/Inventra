@@ -15,6 +15,8 @@ import AccountSettings from './pages/AccountSettings';
 import AuditLog from './pages/AuditLog';
 import SolutionPrincipal from './pages/SolutionPrincipal';
 import Models from './pages/Models';
+import ModelSpecifications from './pages/ModelSpecifications';
+import AddModelSpecs from './pages/AddModelSpecs';
 import AddAsset from './pages/AddAsset';
 import EditAsset from './pages/EditAsset';
 import CSVImport from './pages/CSVImport';
@@ -103,6 +105,8 @@ function App() {
             <Route path="/maintenance" element={<PreventiveMaintenance assets={assets} />} />
             <Route path="/maintenance/detail/:pmId" element={<PMDetail />} />
             <Route path="/models" element={<Models />} />
+            <Route path="/models/specs" element={<ModelSpecifications />} />
+            <Route path="/models/:modelId/add-specs" element={<AddModelSpecs />} />
             <Route path="/solution-principal" element={<SolutionPrincipal />} />
             <Route path="/settings" element={<AccountSettings />} />
             <Route path="/audit-log" element={<AuditLog />} />
