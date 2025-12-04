@@ -67,12 +67,18 @@ const Assets = ({ onDelete }) => {
         
         // Use direct fetch with correct API endpoint
         const response = await fetch('http://localhost:5000/api/v1/assets');
+        
+        console.log('Assets API Response Status:', response.status); // Debug log
+        
         if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
+          const errorText = await response.text();
+          console.error('Assets API Error Response:', errorText);
+          throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
         }
         const assets = await response.json();
         
         console.log('Assets API Response:', assets); // Debug log
+        console.log('Number of assets:', assets.length); // Debug log
         
         setAllAssets(assets);
         

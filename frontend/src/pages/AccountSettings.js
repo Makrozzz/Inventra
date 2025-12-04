@@ -80,6 +80,8 @@ const AccountSettings = () => {
   const fetchUserProfile = async () => {
     try {
       const token = localStorage.getItem('authToken');
+      console.log('🔍 Fetching profile with token:', token ? 'Token exists' : 'No token');
+      
       const response = await fetch('http://localhost:5000/api/v1/auth/profile', {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -87,19 +89,26 @@ const AccountSettings = () => {
         }
       });
 
+      console.log('📡 Profile API Response Status:', response.status);
       const data = await response.json();
+      console.log('📦 Profile API Response Data:', data);
+      
       if (data.success) {
-        setProfileData({
+        const profileInfo = {
           firstName: data.data.firstName || '',
           lastName: data.data.lastName || '',
           email: data.data.email || '',
           username: data.data.username || '',
           department: data.data.department || '',
           role: data.data.role || ''
-        });
+        };
+        console.log('✅ Setting profile data:', profileInfo);
+        setProfileData(profileInfo);
+      } else {
+        console.error('❌ Profile fetch failed:', data.message);
       }
     } catch (error) {
-      console.error('Error fetching profile:', error);
+      console.error('❌ Error fetching profile:', error);
     } finally {
       setLoading(false);
     }
@@ -107,7 +116,7 @@ const AccountSettings = () => {
 
   const fetchAllUsers = async () => {
     // Only fetch if user is admin
-    if (profileData.role.toLowerCase() !== 'admin') {
+    if (!profileData.role || profileData.role.toLowerCase() !== 'admin') {
       return;
     }
     
@@ -396,13 +405,17 @@ const AccountSettings = () => {
               <Palette size={20} />
               Appearance
             </button>
-            <button 
-              className={`settings-nav-item ${activeTab === 'users' ? 'active' : ''}`}
-              onClick={() => setActiveTab('users')}
-            >
-              <Users size={20} />
-              User Management
-            </button>
+            
+            {/* Only show User Management tab for Admin users */}
+            {profileData.role && profileData.role.toLowerCase() === 'admin' && (
+              <button 
+                className={`settings-nav-item ${activeTab === 'users' ? 'active' : ''}`}
+                onClick={() => setActiveTab('users')}
+              >
+                <Users size={20} />
+                User Management
+              </button>
+            )}
           </nav>
         </div>
 
@@ -436,7 +449,7 @@ const AccountSettings = () => {
                     <input
                       type="text"
                       value={profileData.username}
-                      placeholder={profileData.username || 'Username'}
+                      placeholder="Enter username"
                       disabled
                       style={{ background: '#f5f5f5', cursor: 'not-allowed' }}
                     />
@@ -449,7 +462,7 @@ const AccountSettings = () => {
                         type="text"
                         value={profileData.firstName}
                         onChange={(e) => setProfileData({ ...profileData, firstName: e.target.value })}
-                        placeholder={profileData.firstName || 'First Name'}
+                        placeholder="Enter first name"
                         required
                       />
                     </div>
@@ -459,7 +472,7 @@ const AccountSettings = () => {
                         type="text"
                         value={profileData.lastName}
                         onChange={(e) => setProfileData({ ...profileData, lastName: e.target.value })}
-                        placeholder={profileData.lastName || 'Last Name'}
+                        placeholder="Enter last name"
                         required
                       />
                     </div>
@@ -471,7 +484,7 @@ const AccountSettings = () => {
                       type="email"
                       value={profileData.email}
                       onChange={(e) => setProfileData({ ...profileData, email: e.target.value })}
-                      placeholder={profileData.email || 'Email Address'}
+                      placeholder="Enter email address"
                       required
                     />
                   </div>
@@ -482,7 +495,7 @@ const AccountSettings = () => {
                       type="text"
                       value={profileData.department}
                       onChange={(e) => setProfileData({ ...profileData, department: e.target.value })}
-                      placeholder={profileData.department || 'Department'}
+                      placeholder="Enter department (optional)"
                     />
                   </div>
 
@@ -714,7 +727,7 @@ const AccountSettings = () => {
 
           {activeTab === 'users' && (
             <div className="card">
-              {profileData.role.toLowerCase() !== 'admin' ? (
+              {!profileData.role || profileData.role.toLowerCase() !== 'admin' ? (
                 // Non-admin view - restricted access
                 <div>
                   <h2 style={{ margin: 0, marginBottom: '20px' }}>User Management</h2>
