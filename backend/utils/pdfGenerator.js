@@ -131,10 +131,11 @@ class PDFGenerator {
             const template = handlebars.compile(templateHtml);
             const html = template(templateData);
 
-            // 5. Generate filename with PM_ID (deterministic, no timestamp)
+            // 5. Generate filename using PM sequence number (deterministic, no timestamp)
             // Use Customer_Name if available, otherwise use 'UNKNOWN'
             const customerName = pmData.Customer_Name ? this.sanitizeForFilename(pmData.Customer_Name) : 'UNKNOWN';
-            const filename = `PM_Report_PM${pmData.PM_ID}_${customerName}_${pmData.Asset_Serial_Number}.pdf`;
+            const pmNumber = pmSequenceNumber || pmData.PM_ID || 'UNKNOWN';
+            const filename = `PM_Report_${customerName}_${pmData.Asset_Serial_Number}_${pmNumber}.pdf`;
             const filepath = path.join(this.outputDir, filename);
             
             console.log('Customer_Name from DB:', pmData.Customer_Name);
