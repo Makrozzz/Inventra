@@ -46,6 +46,8 @@ const corsOptions = {
       'http://172.16.0.2:3000',
       'https://inventra.ivms2006.com',
       'http://inventra.ivms2006.com',
+      'https://test.inventra.ivms2006.com',
+      'http://inventra.ivms2006.com',
       process.env.CORS_ORIGIN
     ].filter(Boolean);
     
