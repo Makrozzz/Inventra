@@ -67,12 +67,15 @@ class PDFGenerator {
     getProjectLogoBase64(logoPath) {
         try {
             if (!logoPath) {
+                console.log('⚠️  No project logo path provided');
                 return '';
             }
             
             // The logoPath from database is like: uploads/project-logo/ILIM.png
             // We need to construct the full path from backend directory
             const fullPath = path.join(__dirname, '..', logoPath);
+            
+            console.log('🔍 Looking for project logo at:', fullPath);
             
             if (fsSync.existsSync(fullPath)) {
                 const logoBuffer = fsSync.readFileSync(fullPath);
@@ -89,13 +92,16 @@ class PDFGenerator {
                     mimeType = 'image/svg+xml';
                 }
                 
+                console.log('✅ Project logo loaded successfully');
                 return `data:${mimeType};base64,${logoBase64}`;
             } else {
-                console.warn('Project logo file not found at:', fullPath);
+                console.warn('❌ Project logo file not found at:', fullPath);
+                console.warn('📂 Current directory:', __dirname);
+                console.warn('📂 Checking if uploads folder exists:', fsSync.existsSync(path.join(__dirname, '..', 'uploads')));
                 return '';
             }
         } catch (error) {
-            console.error('Error reading project logo file:', error);
+            console.error('❌ Error reading project logo file:', error);
             return '';
         }
     }
@@ -157,7 +163,10 @@ class PDFGenerator {
                 quality: '95',
                 dpi: 72,
                 zoomFactor: '1',
-                httpTimeout: 30000
+                httpTimeout: 30000,
+                height: '297mm',        // A4 height
+                width: '210mm',         // A4 width
+                base: `file://${__dirname}/../`  // Base path for relative resources
             };
 
             await new Promise((resolve, reject) => {
@@ -409,7 +418,10 @@ class PDFGenerator {
                 quality: '95',
                 dpi: 72,
                 zoomFactor: '1',
-                httpTimeout: 30000
+                httpTimeout: 30000,
+                height: '297mm',        // A4 height
+                width: '210mm',         // A4 width
+                base: `file://${__dirname}/../`  // Base path for relative resources
             };
 
             await new Promise((resolve, reject) => {
