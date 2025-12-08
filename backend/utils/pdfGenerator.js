@@ -172,19 +172,20 @@ class PDFGenerator {
                 format: 'A4',
                 orientation: 'portrait',
                 border: {
-                    top: '10mm',
-                    right: '10mm',
-                    bottom: '10mm',
-                    left: '10mm'
+                    top: '8mm',
+                    right: '8mm',
+                    bottom: '8mm',
+                    left: '8mm'
                 },
                 type: 'pdf',
-                quality: '95',
-                dpi: 72,
+                quality: '100',
+                dpi: 96,
                 zoomFactor: '1',
                 httpTimeout: 30000,
                 height: '297mm',        // A4 height
                 width: '210mm',         // A4 width
-                base: `file://${__dirname}/../`  // Base path for relative resources
+                base: `file://${__dirname}/../`,  // Base path for relative resources
+                phantomArgs: ['--web-security=no', '--local-url-access=true']
             };
 
             await new Promise((resolve, reject) => {
@@ -430,19 +431,20 @@ class PDFGenerator {
                 format: 'A4',
                 orientation: 'portrait',
                 border: {
-                    top: '10mm',
-                    right: '10mm',
-                    bottom: '10mm',
-                    left: '10mm'
+                    top: '8mm',
+                    right: '8mm',
+                    bottom: '8mm',
+                    left: '8mm'
                 },
                 type: 'pdf',
-                quality: '95',
-                dpi: 72,
+                quality: '100',
+                dpi: 96,
                 zoomFactor: '1',
                 httpTimeout: 30000,
                 height: '297mm',        // A4 height
                 width: '210mm',         // A4 width
-                base: `file://${__dirname}/../`  // Base path for relative resources
+                base: `file://${__dirname}/../`,  // Base path for relative resources
+                phantomArgs: ['--web-security=no', '--local-url-access=true']
             };
 
             await new Promise((resolve, reject) => {
