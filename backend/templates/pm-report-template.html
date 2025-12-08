@@ -127,6 +127,10 @@
             height: 12px;
         }
 
+        .with-logo-margin {
+            margin-right: 156px;
+        }
+
         .footer-text {
             text-align: center;
             margin-top: 10px;
@@ -172,7 +176,7 @@
             <img src="{{Project_Logo_Base64}}" alt="Project Logo" style="max-height: 110px; max-width: 140px; border: 2px solid #000; padding: 4px; background: white;">
         </div>
         {{/if}}
-        <div style="{{#if Project_Logo_Base64}}margin-right: 156px;{{/if}}">
+        <div {{#if Project_Logo_Base64}}class="with-logo-margin"{{/if}}>
             <div style="display: block; margin-bottom: 5px; padding-bottom: 3px; border-bottom: 1px solid #000;">
                 <span class="section-title" style="border-bottom: none; margin-bottom: 0; padding-bottom: 0;">Maintenance &amp; Agency Details</span>
                 <span style="float: right; font-size: 9pt;">
