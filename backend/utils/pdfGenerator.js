@@ -1,5 +1,4 @@
 const pdf = require('html-pdf');
-const pdf = require('html-pdf');
 const handlebars = require('handlebars');
 const fs = require('fs').promises;
 const fsSync = require('fs');
