@@ -636,7 +636,8 @@ class Asset {
       console.log('✅ Asset found:', {
         serial: assetData.Asset_Serial_Number,
         tag: assetData.Asset_Tag_ID,
-        customer: assetData.Customer_Name
+        customer: assetData.Customer_Name,
+        model_id: assetData.Model_ID
       });
 
       // Get peripherals for this asset
@@ -655,10 +656,29 @@ class Asset {
 
       console.log(`✅ Found ${peripheralRows.length} peripherals for asset`);
 
-      // Combine asset data with peripherals
+      // Get model specifications if Model_ID exists
+      let modelSpecs = [];
+      if (assetData.Model_ID) {
+        const [specsRows] = await pool.execute(`
+          SELECT 
+            s.Attribute_Name,
+            msb.Attributes_Value,
+            msb.Attributes_ID
+          FROM MODEL_SPECS_BRIDGE msb
+          INNER JOIN SPECS s ON msb.Attributes_ID = s.Attributes_ID
+          WHERE msb.Model_ID = ?
+          ORDER BY s.Attribute_Name
+        `, [assetData.Model_ID]);
+        
+        modelSpecs = specsRows;
+        console.log(`✅ Found ${specsRows.length} specifications for model`);
+      }
+
+      // Combine asset data with peripherals and specs
       return {
         ...assetData,
-        Peripherals: peripheralRows
+        Peripherals: peripheralRows,
+        ModelSpecifications: modelSpecs
       };
     } catch (error) {
       console.error('Error in Asset.findDetailById:', error);
