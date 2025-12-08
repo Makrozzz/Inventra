@@ -470,26 +470,18 @@ const getPMReport = async (req, res, next) => {
     logger.info(`📥 Downloading PM report: ${filename} (${stats.size} bytes)`);
     logger.info(`📂 File path: ${absolutePath}`);
 
-    // Set proper headers manually to ensure correct MIME type
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Length', stats.size);
-    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-    
-    // Stream the file
-    const fileStream = fs.createReadStream(absolutePath);
-    fileStream.pipe(res);
-    
-    fileStream.on('end', () => {
-      logger.info(`📥 PDF streamed successfully: ${filename}`);
-    });
-    
-    fileStream.on('error', (err) => {
-      logger.error('❌ Error streaming PDF file:', err);
-      if (!res.headersSent) {
-        res.status(500).json({
-          error: 'Failed to download PDF',
-          message: err.message
-        });
+    // Use res.download to handle headers/filenames consistently across environments
+    res.download(absolutePath, filename, (err) => {
+      if (err) {
+        logger.error('❌ Error downloading PDF file:', err);
+        if (!res.headersSent) {
+          return res.status(500).json({
+            error: 'Failed to download PDF',
+            message: err.message
+          });
+        }
+      } else {
+        logger.info(`📥 PDF downloaded successfully: ${filename}`);
       }
     });
 
