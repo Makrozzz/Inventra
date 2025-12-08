@@ -1,4 +1,4 @@
-const puppeteer = require('puppeteer');
+const pdf = require('html-pdf');
 const handlebars = require('handlebars');
 const fs = require('fs').promises;
 const fsSync = require('fs');
@@ -106,7 +106,6 @@ class PDFGenerator {
      * @returns {Promise<Object>} - { success, filepath, filename, error }
      */
     async generatePMReport(pmId) {
-        let browser;
         try {
             // 1. Fetch PM data with all details
             console.log(`Fetching PM data for PM_ID: ${pmId}`);
@@ -142,26 +141,30 @@ class PDFGenerator {
             console.log('Sanitized customer name:', customerName);
             console.log('Generated filename:', filename);
 
-            // 6. Launch Puppeteer and generate PDF
-            console.log('Launching Puppeteer to generate PDF...');
-            browser = await puppeteer.launch({
-                headless: 'new',
-                args: ['--no-sandbox', '--disable-setuid-sandbox']
-            });
-
-            const page = await browser.newPage();
-            await page.setContent(html, { waitUntil: 'networkidle0' });
-
-            await page.pdf({
-                path: filepath,
+            // 6. Generate PDF using html-pdf
+            console.log('Generating PDF with html-pdf...');
+            const options = {
                 format: 'A4',
-                printBackground: true,
-                margin: {
+                border: {
                     top: '10mm',
                     right: '10mm',
                     bottom: '10mm',
                     left: '10mm'
-                }
+                },
+                type: 'pdf',
+                quality: '75',
+                dpi: 96,
+                zoomFactor: '1'
+            };
+
+            await new Promise((resolve, reject) => {
+                pdf.create(html, options).toFile(filepath, (err, res) => {
+                    if (err) {
+                        reject(err);
+                    } else {
+                        resolve(res);
+                    }
+                });
             });
 
             console.log(`PDF generated successfully: ${filename}`);
@@ -183,10 +186,6 @@ class PDFGenerator {
                 success: false,
                 error: error.message
             };
-        } finally {
-            if (browser) {
-                await browser.close();
-            }
         }
     }
 
@@ -366,7 +365,6 @@ class PDFGenerator {
      * @returns {Promise<Object>} - { success, filepath, filename, error }
      */
     async generateBlankPMReport(assetId) {
-        let browser;
         try {
             // 1. Fetch asset data
             console.log(`Fetching asset data for Asset_ID: ${assetId}`);
@@ -393,26 +391,30 @@ class PDFGenerator {
             
             console.log('Generated blank form filename:', filename);
 
-            // 5. Launch Puppeteer and generate PDF
-            console.log('Launching Puppeteer to generate PDF...');
-            browser = await puppeteer.launch({
-                headless: 'new',
-                args: ['--no-sandbox', '--disable-setuid-sandbox']
-            });
-
-            const page = await browser.newPage();
-            await page.setContent(html, { waitUntil: 'networkidle0' });
-
-            await page.pdf({
-                path: filepath,
+            // 5. Generate PDF using html-pdf
+            console.log('Generating blank PDF with html-pdf...');
+            const options = {
                 format: 'A4',
-                printBackground: true,
-                margin: {
+                border: {
                     top: '10mm',
                     right: '10mm',
                     bottom: '10mm',
                     left: '10mm'
-                }
+                },
+                type: 'pdf',
+                quality: '75',
+                dpi: 96,
+                zoomFactor: '1'
+            };
+
+            await new Promise((resolve, reject) => {
+                pdf.create(html, options).toFile(filepath, (err, res) => {
+                    if (err) {
+                        reject(err);
+                    } else {
+                        resolve(res);
+                    }
+                });
             });
 
             console.log(`Blank PDF generated successfully: ${filename}`);
@@ -431,10 +433,6 @@ class PDFGenerator {
                 success: false,
                 error: error.message
             };
-        } finally {
-            if (browser) {
-                await browser.close();
-            }
         }
     }
 
@@ -556,7 +554,6 @@ class PDFGenerator {
      * @returns {Promise<Object>} - { success, filepath, filename, absolutePath, error }
      */
     async generateBulkPM(pmRecords, blankAssets = []) {
-        let browser;
         try {
             console.log(`📦 Generating bulk PDF for ${pmRecords.length} PM records and ${blankAssets.length} blank forms with caching`);
 
@@ -674,29 +671,32 @@ class PDFGenerator {
             const filename = `${customerName}_${branchName}_${timestamp}.pdf`;
             const filepath = path.join(this.bulkOutputDir, filename);
 
-            // Step 4: Generate bulk PDF with Puppeteer
+            // Step 4: Generate bulk PDF with html-pdf
             console.log('  🖨️  Compiling bulk PDF...');
-            browser = await puppeteer.launch({
-                headless: 'new',
-                args: ['--no-sandbox', '--disable-setuid-sandbox']
-            });
-
-            const page = await browser.newPage();
-            await page.setContent(combinedHtml, { waitUntil: 'networkidle0' });
-
-            await page.pdf({
-                path: filepath,
+            const options = {
                 format: 'A4',
-                printBackground: true,
-                margin: {
+                border: {
                     top: '10mm',
                     right: '10mm',
                     bottom: '10mm',
                     left: '10mm'
-                }
+                },
+                type: 'pdf',
+                quality: '75',
+                dpi: 96,
+                zoomFactor: '1'
+            };
+
+            await new Promise((resolve, reject) => {
+                pdf.create(combinedHtml, options).toFile(filepath, (err, res) => {
+                    if (err) {
+                        reject(err);
+                    } else {
+                        resolve(res);
+                    }
+                });
             });
 
-            await browser.close();
             console.log(`✅ Bulk PDF compiled: ${filename}`);
 
             // Return relative path and absolute path
@@ -712,9 +712,6 @@ class PDFGenerator {
 
         } catch (error) {
             console.error('❌ Error generating bulk PDF:', error);
-            if (browser) {
-                await browser.close();
-            }
             return {
                 success: false,
                 filepath: null,
