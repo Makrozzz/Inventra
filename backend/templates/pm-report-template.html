@@ -5,11 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Preventive Maintenance Report</title>
     <style>
-        @page {
-            size: A4;
-            margin: 10mm 10mm;
-        }
-
         * {
             margin: 0;
             padding: 0;
@@ -17,517 +12,342 @@
         }
 
         body {
-            font-family: 'Arial', sans-serif;
-            font-size: 5pt;
-            line-height: 1.0;
-            color: #333;
-            width: 210mm;
-            min-height: 297mm;
-            padding: 3mm;
-            background: white;
-        }
-
-        .header-container {
-            display: flex;
-            align-items: center;
-            gap: 4px;
-            margin-bottom: 3px;
-        }
-
-        .logo-section {
-            flex-shrink: 0;
-        }
-
-        .header-logo {
-            height: 35px;
-            width: auto;
-            object-fit: contain;
+            font-family: Arial, sans-serif;
+            font-size: 10pt;
+            line-height: 1.35;
+            color: #000;
+            padding: 10px;
             filter: grayscale(100%);
-            display: block;
-        }
-
-        .header {
-            background: #333;
-            color: white;
-            padding: 4px 8px;
-            border-radius: 3px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border: 1px solid #000;
-            flex: 1;
-        }
-
-        .header-content {
-            flex: 1;
-        }
-
-        .header-left h1 {
-            font-size: 7pt;
-            font-weight: bold;
-            margin-bottom: 1px;
-        }
-
-        .header-left p {
-            font-size: 5pt;
-            opacity: 0.95;
-        }
-
-        .header-right {
-            text-align: right;
-        }
-
-        .header-right .pm-id {
-            font-size: 7pt;
-            font-weight: bold;
-            background: rgba(255,255,255,0.2);
-            padding: 2px 6px;
-            border-radius: 2px;
-            display: inline-block;
-            border: 1px solid white;
-        }
-
-        .status-badge {
-            display: inline-block;
-            padding: 1px 4px;
-            border-radius: 8px;
-            font-size: 5pt;
-            font-weight: bold;
-            margin-top: 1px;
-            background: white;
-            color: #333;
-            border: 1px solid #333;
-        }
-
-        .section {
-            margin-bottom: 2px;
-            background: white;
-            padding: 2px;
-            border-radius: 2px;
-            border: 1px solid #333;
-        }
-
-        .section-title {
-            font-size: 6pt;
-            font-weight: bold;
-            color: #000;
-            margin-bottom: 2px;
-            display: flex;
-            align-items: center;
-            padding-bottom: 1px;
-            border-bottom: 1px solid #333;
-        }
-
-        .section-title::before {
-            content: '';
-            display: inline-block;
-            width: 3px;
-            height: 3px;
-            background: #333;
-            border-radius: 50%;
-            margin-right: 3px;
-        }
-
-        .info-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
-            gap: 2px;
-        }
-
-        .info-item {
-            display: flex;
-            padding: 1px 2px;
-            background: white;
-            border-radius: 2px;
-            font-size: 5pt;
-            border: 1px solid #ccc;
-        }
-
-        .info-label {
-            font-weight: bold;
-            color: #000;
-            min-width: 50px;
-        }
-
-        .info-value {
-            color: #333;
-            font-weight: 500;
         }
 
         table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 2px;
-            background: white;
-            font-size: 5pt;
-            border: 1px solid #000;
         }
 
-        th {
-            background: #333;
-            color: white;
-            padding: 2px 2px;
-            text-align: center;
+        .section-box {
+            border: 2px solid #000;
+            margin-bottom: 10px;
+            padding: 8px;
+        }
+
+        .section-title {
+            font-size: 11pt;
             font-weight: bold;
-            border: 1px solid #000;
-            font-size: 6pt;
+            margin-bottom: 6px;
+            padding-bottom: 3px;
+            border-bottom: 1px solid #000;
         }
 
-        td {
-            padding: 2px;
+        .info-table td {
+            padding: 4px 6px;
+            font-size: 9pt;
+            border: 1px solid #ccc;
+        }
+
+        .info-label {
+            font-weight: bold;
+            width: 90px;
+            background-color: #f0f0f0;
+            white-space: nowrap;
+        }
+
+        .checklist-table {
+            margin-top: 5px;
+        }
+
+        .checklist-table th {
+            background-color: #333;
+            color: #fff;
+            padding: 5px;
+            font-size: 10pt;
+            text-align: center;
+            border: 1px solid #000;
+        }
+
+        .checklist-table td {
+            padding: 4px 5px;
             border: 1px solid #333;
+            font-size: 9pt;
             text-align: center;
         }
 
-        td.checklist-item {
+        .checklist-table td.left-align {
             text-align: left;
-            padding-left: 3px;
-            font-size: 5pt;
         }
 
-        td.remarks-cell {
-            text-align: left;
-            font-size: 5pt;
-            max-width: 80px;
-            word-wrap: break-word;
+        .checklist-table tr:nth-child(even) {
+            background-color: #f5f5f5;
         }
 
-        tr:nth-child(even) {
-            background: #f5f5f5;
-        }
-
-        .checkbox {
-            width: 10px;
-            height: 10px;
-            border: 1px solid #000;
+        .checkbox-cell {
+            width: 18px;
+            height: 18px;
+            border: 2px solid #000;
             display: inline-block;
-            position: relative;
-            vertical-align: middle;
-        }
-
-        .checkbox.checked::after {
-            content: '✓';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            font-size: 6pt;
+            text-align: center;
+            line-height: 16px;
+            font-size: 10pt;
             font-weight: bold;
-            color: #000;
-            line-height: 1;
         }
 
-        .signatures {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 4px;
-            margin-top: 4px;
-            page-break-inside: avoid;
+        .signature-table {
+            margin-top: 10px;
         }
 
-        .signature-box {
-            border: 1px solid #333;
-            border-radius: 2px;
-            padding: 4px 4px 5px 4px;
-            background: white;
-            min-height: 50px;
-            display: flex;
-            flex-direction: column;
+        .signature-table td {
+            padding: 6px;
+            border: 2px solid #000;
+            vertical-align: top;
         }
 
-        .signature-box h3 {
-            font-size: 6pt;
-            color: #000;
-            margin-bottom: 3px;
-            border-bottom: 1px solid #333;
-            padding-bottom: 2px;
-        }
-
-        .signature-content {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
+        .signature-title {
+            font-size: 10pt;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 6px;
+            padding-bottom: 3px;
+            border-bottom: 1px solid #000;
         }
 
         .signature-line {
-            margin: 2px 0;
-            font-size: 5pt;
-            display: flex;
-            align-items: center;
+            margin: 5px 0;
+            font-size: 9pt;
         }
 
         .signature-line strong {
             display: inline-block;
-            width: 45px;
-            color: #000;
-            flex-shrink: 0;
+            width: 70px;
         }
 
-        .signature-value {
-            flex: 1;
-            color: #333;
+        .signature-underline {
+            display: inline-block;
+            border-bottom: 1px solid #000;
+            width: 150px;
+            height: 12px;
         }
 
-        .footer {
+        .footer-text {
             text-align: center;
-            margin-top: 4px;
-            padding-top: 3px;
-            border-top: 1px solid #333;
-            font-size: 5pt;
-            color: #333;
-        }
-
-        .footer strong {
-            color: #000;
-        }
-
-        .no-checklist {
-            text-align: center;
-            padding: 10px;
-            color: #000;
-            font-style: italic;
-            font-weight: bold;
-            border: 2px solid #333;
+            margin-top: 10px;
+            padding-top: 5px;
+            border-top: 1px solid #000;
             font-size: 7pt;
-        }
-
-        @media print {
-            body {
-                padding: 0;
-            }
         }
     </style>
 </head>
 <body>
-    <!-- Logo and Header Container -->
-    <div class="header-container">
-        {{#if Logo_Base64}}
-        <div class="logo-section">
-            <img src="{{Logo_Base64}}" alt="Company Logo" class="header-logo">
+    <!-- Header: Logo, Title, PM Number on same line -->
+    <table style="margin-bottom: 10px; border: none;">
+        <tr>
+            {{#if Logo_Base64}}
+            <td style="width: 60px; border: none; padding: 0; vertical-align: middle;">
+                <img src="{{Logo_Base64}}" alt="Logo" style="height: 50px; width: auto;">
+            </td>
+            {{/if}}
+            <td style="background-color: #333333; border: 2px solid #000; padding: 8px; vertical-align: middle;">
+                <table style="width: 100%; border: none;">
+                    <tr>
+                        <td style="border: none; padding: 0; text-align: center;">
+                            <span style="color: #ffffff; font-size: 12pt; font-weight: bold;">Preventive Maintenance Report</span><br>
+                            <span style="color: #ffffff; font-size: 8pt;">- Asset Inspection &amp; Maintenance Record -</span>
+                        </td>
+                        <td style="border: none; padding: 0; text-align: right; width: 150px;">
+                            {{#if isBlankForm}}
+                            <span style="background-color: #555555; color: #ffffff; padding: 6px 12px; border: 1px solid #ffffff; font-size: 11pt; font-weight: bold;">PM #___</span>
+                            {{else}}
+                            <span style="background-color: #555555; color: #ffffff; padding: 6px 12px; border: 1px solid #ffffff; font-size: 11pt; font-weight: bold;">PM #{{PM_Sequence_Number}}</span>
+                            {{/if}}
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+
+    <!-- Maintenance & Agency Details with Project Logo -->
+    <div class="section-box" style="position: relative;">
+        {{#if Project_Logo_Base64}}
+        <div style="position: absolute; top: 8px; right: 8px; z-index: 10;">
+            <img src="{{Project_Logo_Base64}}" alt="Project Logo" style="max-height: 110px; max-width: 140px; border: 2px solid #000; padding: 4px; background: white;">
         </div>
         {{/if}}
-        
-        <div class="header">
-            <div class="header-content">
-                <div class="header-left">
-                    <h1>Preventive Maintenance Report</h1>
-                    <p>Asset Inspection & Maintenance Record</p>
-                </div>
+        <div style="{{#if Project_Logo_Base64}}margin-right: 156px;{{/if}}">
+            <div style="display: block; margin-bottom: 5px; padding-bottom: 3px; border-bottom: 1px solid #000;">
+                <span class="section-title" style="border-bottom: none; margin-bottom: 0; padding-bottom: 0;">Maintenance &amp; Agency Details</span>
+                <span style="float: right; font-size: 9pt;">
+                    <strong>PM Date:</strong> 
+                    {{#if isBlankForm}}
+                    <span style="border-bottom: 1px solid #000; display: inline-block; width: 100px; height: 12px;"></span>
+                    {{else}}
+                    {{PM_Date_Formatted}}
+                    {{/if}}
+                </span>
             </div>
-            <div class="header-right">
-            {{#if isBlankForm}}
-            <div class="pm-id">PM #<span style="display: inline-block; border-bottom: 1px solid white; min-width: 40px; height: 14px;"></span></div>
-            {{else}}
-            <div class="pm-id">PM #{{PM_Sequence_Number}}</div>
-            {{/if}}
-        </div>
-        </div>
-    </div>
-
-    <!-- Recipient & PM Details Section (Combined) -->
-    <div class="section">
-        <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 10px;">
-            <div style="flex: 1;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; padding-bottom: 3px; border-bottom: 2px solid #333;">
-                    <div class="section-title" style="margin-bottom: 0; padding-bottom: 0; border-bottom: none;">
-                        Maintenance & Agency Details
-                    </div>
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                        <span style="font-weight: bold; color: #000; font-size: 7pt;">PM Date:</span>
-                        {{#if isBlankForm}}
-                        <span style="display: inline-block; border-bottom: 1px solid #333; min-width: 100px; height: 12px;"></span>
-                        {{else}}
-                        <span style="color: #333; font-size: 7pt; font-weight: 500;">{{PM_Date_Formatted}}</span>
-                        {{/if}}
-                    </div>
-                </div>
-                <div class="info-grid">
-                    <div class="info-item" style="grid-column: 1 / -1;">
-                        <span class="info-label">Recipient:</span>
-                        <span class="info-value">{{Recipient_Name}}</span>
-                    </div>
-                    <div class="info-item" style="grid-column: 1 / -1;">
-                        <span class="info-label">Department:</span>
-                        <span class="info-value">{{Department}}</span>
-                    </div>
-                    <div class="info-item" style="grid-column: 1 / -1;">
-                        <span class="info-label">Position:</span>
-                        <span class="info-value">{{#if Position}}{{Position}}{{else}}-{{/if}}</span>
-                    </div>
-                    <div class="info-item" style="grid-column: 1 / -1;">
-                        <span class="info-label">Contract:</span>
-                        <span class="info-value">{{#if Project_Title}}{{Project_Title}}{{else}}-{{/if}}</span>
-                    </div>
-                </div>
-            </div>
-            {{#if Project_Logo_Base64}}
-            <div style="flex-shrink: 0; display: flex; align-items: center; justify-content: center; padding: 5px; border: 1px solid #ccc; border-radius: 4px; background: white;">
-                <img src="{{Project_Logo_Base64}}" alt="Project Logo" style="max-height: 90px; max-width: 120px; width: auto; height: auto; object-fit: contain; display: block; filter: grayscale(100%);">
-            </div>
-            {{/if}}
+            <table class="info-table" style="width: 100%;">
+                <tr>
+                    <td class="info-label" style="width: 90px;">Recipient:</td>
+                    <td>{{Recipient_Name}}</td>
+                </tr>
+                <tr>
+                    <td class="info-label" style="width: 90px;">Department:</td>
+                    <td>{{Department}}</td>
+                </tr>
+                <tr>
+                    <td class="info-label" style="width: 90px;">Position:</td>
+                    <td>{{#if Position}}{{Position}}{{else}}-{{/if}}</td>
+                </tr>
+                <tr>
+                    <td class="info-label" style="width: 90px;">Contract:</td>
+                    <td>{{#if Project_Title}}{{Project_Title}}{{else}}-{{/if}}</td>
+                </tr>
+            </table>
         </div>
     </div>
 
-    <!-- Asset Information Section -->
-    <div class="section">
+    <!-- Asset Information -->
+    <div class="section-box">
         <div class="section-title">Asset Information</div>
-        <div class="info-grid">
-            <div class="info-item">
-                <span class="info-label">Serial Number:</span>
-                <span class="info-value">{{Asset_Serial_Number}}</span>
-            </div>
-            <div class="info-item">
-                <span class="info-label">Asset Tag ID:</span>
-                <span class="info-value">{{Asset_Tag_ID}}</span>
-            </div>
-            <div class="info-item">
-                <span class="info-label">Customer:</span>
-                <span class="info-value">{{Customer_Name}}</span>
-            </div>
-            <div class="info-item">
-                <span class="info-label">Item Name:</span>
-                <span class="info-value">{{Item_Name}}</span>
-            </div>
-            <div class="info-item">
-                <span class="info-label">Category:</span>
-                <span class="info-value">{{Category}}</span>
-            </div>
-            <div class="info-item">
-                <span class="info-label">Model:</span>
-                <span class="info-value">{{Model}}</span>
-            </div>
-            <div class="info-item" style="grid-column: 1 / -1;">
-                <span class="info-label">Remarks:</span>
-                <span class="info-value">{{#if Remarks}}{{Remarks}}{{else}}-{{/if}}</span>
-            </div>
-        </div>
+        <table class="info-table">
+            <tr>
+                <td class="info-label">Serial Number:</td>
+                <td>{{Asset_Serial_Number}}</td>
+                <td class="info-label">Asset Tag ID:</td>
+                <td>{{Asset_Tag_ID}}</td>
+                <td class="info-label">Customer:</td>
+                <td>{{Customer_Name}}</td>
+            </tr>
+            <tr>
+                <td class="info-label">Item Name:</td>
+                <td>{{Item_Name}}</td>
+                <td class="info-label">Category:</td>
+                <td>{{Category}}</td>
+                <td class="info-label">Model:</td>
+                <td>{{Model}}</td>
+            </tr>
+            <tr>
+                <td class="info-label">Remarks:</td>
+                <td colspan="5">{{#if Remarks}}{{Remarks}}{{else}}-{{/if}}</td>
+            </tr>
+        </table>
     </div>
 
-    <!-- Inspection Checklist Section -->
-    <div class="section">
-        <div class="section-title">Inspection Checklist</div>
+    <!-- Inspection Checklist -->
+    <div class="section-box">
+        <div class="section-title" style="letter-spacing: 0.5px;">Inspection Checklist</div>
         {{#if checklist_results}}
-        <table>
+        <table class="checklist-table">
             <thead>
                 <tr>
-                    <th style="width: 25px;">No.</th>
-                    <th style="width: 35%;">Checklist</th>
-                    <th style="width: 30px;">Yes</th>
-                    <th style="width: 30px;">No</th>
-                    <th style="width: 40%;">Remarks</th>
+                    <th style="width: 30px;">No.</th>
+                    <th style="width: 40%;">Checklist Item</th>
+                    <th style="width: 40px;">Yes</th>
+                    <th style="width: 40px;">No</th>
+                    <th>Remarks</th>
                 </tr>
             </thead>
             <tbody>
                 {{#each checklist_results}}
                 <tr>
                     <td>{{index}}</td>
-                    <td class="checklist-item">{{Check_item_Long}}</td>
+                    <td class="left-align">{{Check_item_Long}}</td>
                     <td>
                         {{#if ../isBlankForm}}
-                        <span class="checkbox"></span>
                         {{else}}
                             {{#if Is_OK_bool}}
-                            <span class="checkbox checked"></span>
-                            {{else}}
-                            <span class="checkbox"></span>
+                            &#10004;
                             {{/if}}
                         {{/if}}
                     </td>
                     <td>
                         {{#if ../isBlankForm}}
-                        <span class="checkbox"></span>
                         {{else}}
                             {{#if Is_OK_bool}}
-                            <span class="checkbox"></span>
                             {{else}}
-                            <span class="checkbox checked"></span>
+                            &#10004;
                             {{/if}}
                         {{/if}}
                     </td>
-                    <td class="remarks-cell">{{#if ../isBlankForm}}-{{else}}{{#if Remarks}}{{Remarks}}{{else}}-{{/if}}{{/if}}</td>
+                    <td class="left-align">{{#if ../isBlankForm}}-{{else}}{{#if Remarks}}{{Remarks}}{{else}}-{{/if}}{{/if}}</td>
                 </tr>
                 {{/each}}
             </tbody>
         </table>
         {{else}}
-        <div class="no-checklist">⚠️ No checklist data available for this PM record</div>
+        <p style="text-align: center; padding: 10px; font-weight: bold;">No checklist data available</p>
         {{/if}}
     </div>
 
-    <!-- Accessories Section -->
-    <div class="section">
-        <div class="section-title">Accessories</div>
-        <div style="padding: 8px 10px; min-height: 40px;">
+    <!-- Accessories -->
+    <div class="section-box">
+        <div class="section-title" style="letter-spacing: 0.5px;">Accessories</div>
+        <div style="padding: 5px;">
             {{#if peripherals}}
             {{#each peripherals}}
-            <div style="margin-bottom: 4px; font-size: 7.5pt; color: #2c3e50;">
-                <strong style="color: #000;">{{Peripheral_Type_Name}}:</strong> {{Serial_Code}}
+            <div style="margin-bottom: 3px; font-size: 8pt;">
+                <strong>{{Peripheral_Type_Name}}:</strong> {{Serial_Code}}
             </div>
             {{/each}}
             {{/if}}
-            <div style="margin-top: 8px; font-size: 7.5pt;">
-                <strong style="color: #000;">Other Accessories:</strong>
-                <div style="border: 1px solid #ccc; border-radius: 3px; padding: 8px; min-height: 35px; margin-top: 4px; background: white;">
-                </div>
+            <div style="margin-top: 8px;">
+                <strong style="font-size: 8pt;">Other Accessories:</strong>
+                <div style="border: 1px solid #000; padding: 8px; min-height: 40px; margin-top: 4px;"></div>
             </div>
         </div>
     </div>
 
-    <!-- Signatures Section -->
-    <div class="signatures">
-        <div class="signature-box">
-            <h3>Technician Acknowledgment</h3>
-            <div class="signature-content">
+    <!-- Signatures -->
+    <table class="signature-table">
+        <tr>
+            <td style="width: 48%;">
+                <div class="signature-title" style="letter-spacing: 0.5px;">Technician Acknowledgment</div>
                 <div class="signature-line">
                     <strong>Name:</strong>
                     {{#if isBlankForm}}
-                    <span class="signature-value"></span>
+                    <span class="signature-underline"></span>
                     {{else}}
-                    <span class="signature-value">{{Created_By_Name}}</span>
+                    {{Created_By_Name}}
                     {{/if}}
                 </div>
                 <div class="signature-line">
                     <strong>Signature:</strong>
-                    <span class="signature-value"></span>
+                    <span class="signature-underline"></span>
                 </div>
                 <div class="signature-line">
                     <strong>Date:</strong>
                     {{#if isBlankForm}}
-                    <span class="signature-value"></span>
+                    <span class="signature-underline"></span>
                     {{else}}
-                    <span class="signature-value">{{PM_Date_Formatted}}</span>
+                    {{PM_Date_Formatted}}
                     {{/if}}
                 </div>
-            </div>
-        </div>
-
-        <div class="signature-box">
-            <h3>Recipient Acknowledgment</h3>
-            <div class="signature-content">
+            </td>
+            <td style="width: 2%; border: none;"></td>
+            <td style="width: 48%;">
+                <div class="signature-title" style="letter-spacing: 0.5px;">Recipient Acknowledgment</div>
                 <div class="signature-line">
                     <strong>Name:</strong>
-                    <span class="signature-value">{{Recipient_Name}}</span>
+                    {{Recipient_Name}}
                 </div>
                 <div class="signature-line">
                     <strong>Department:</strong>
-                    <span class="signature-value">{{Department}}</span>
+                    {{Department}}
                 </div>
                 <div class="signature-line">
                     <strong>Signature:</strong>
-                    <span class="signature-value"></span>
+                    <span class="signature-underline"></span>
                 </div>
                 <div class="signature-line">
                     <strong>Date:</strong>
-                    <span class="signature-value"></span>
+                    <span class="signature-underline"></span>
                 </div>
-            </div>
-        </div>
-    </div>
+            </td>
+        </tr>
+    </table>
 
     <!-- Footer -->
-    <div class="footer">
-        <p><strong>Inventra Asset Management System</strong> | Generated on: {{Generated_Date}}</p>
+    <div class="footer-text">
+        <strong>Inventra Asset Management System</strong> | Generated on: {{Generated_Date}}
     </div>
 </body>
 </html>

@@ -1,4 +1,5 @@
 const pdf = require('html-pdf');
+const pdf = require('html-pdf');
 const handlebars = require('handlebars');
 const fs = require('fs').promises;
 const fsSync = require('fs');
@@ -106,7 +107,6 @@ class PDFGenerator {
      * @returns {Promise<Object>} - { success, filepath, filename, error }
      */
     async generatePMReport(pmId) {
-        let browser;
         try {
             // 1. Fetch PM data with all details
             console.log(`Fetching PM data for PM_ID: ${pmId}`);
@@ -144,8 +144,6 @@ class PDFGenerator {
 
             // 6. Generate PDF using html-pdf
             console.log('Generating PDF with html-pdf...');
-            
-            // PDF options
             const options = {
                 format: 'A4',
                 border: {
@@ -153,14 +151,20 @@ class PDFGenerator {
                     right: '10mm',
                     bottom: '10mm',
                     left: '10mm'
-                }
+                },
+                type: 'pdf',
+                quality: '75',
+                dpi: 96,
+                zoomFactor: '1'
             };
-            
-            // Generate PDF - html-pdf uses callbacks
+
             await new Promise((resolve, reject) => {
-                pdf.create(html, options).toFile(filepath, (err, result) => {
-                    if (err) return reject(err);
-                    resolve(result);
+                pdf.create(html, options).toFile(filepath, (err, res) => {
+                    if (err) {
+                        reject(err);
+                    } else {
+                        resolve(res);
+                    }
                 });
             });
 
@@ -389,9 +393,7 @@ class PDFGenerator {
             console.log('Generated blank form filename:', filename);
 
             // 5. Generate PDF using html-pdf
-            console.log('Generating PDF with html-pdf...');
-            
-            // PDF options
+            console.log('Generating blank PDF with html-pdf...');
             const options = {
                 format: 'A4',
                 border: {
@@ -399,14 +401,20 @@ class PDFGenerator {
                     right: '10mm',
                     bottom: '10mm',
                     left: '10mm'
-                }
+                },
+                type: 'pdf',
+                quality: '75',
+                dpi: 96,
+                zoomFactor: '1'
             };
-            
-            // Generate PDF
+
             await new Promise((resolve, reject) => {
-                pdf.create(html, options).toFile(filepath, (err, result) => {
-                    if (err) return reject(err);
-                    resolve(result);
+                pdf.create(html, options).toFile(filepath, (err, res) => {
+                    if (err) {
+                        reject(err);
+                    } else {
+                        resolve(res);
+                    }
                 });
             });
 
@@ -666,8 +674,6 @@ class PDFGenerator {
 
             // Step 4: Generate bulk PDF with html-pdf
             console.log('  🖨️  Compiling bulk PDF...');
-            
-            // PDF options
             const options = {
                 format: 'A4',
                 border: {
@@ -675,14 +681,20 @@ class PDFGenerator {
                     right: '10mm',
                     bottom: '10mm',
                     left: '10mm'
-                }
+                },
+                type: 'pdf',
+                quality: '75',
+                dpi: 96,
+                zoomFactor: '1'
             };
-            
-            // Generate PDF
+
             await new Promise((resolve, reject) => {
-                pdf.create(combinedHtml, options).toFile(filepath, (err, result) => {
-                    if (err) return reject(err);
-                    resolve(result);
+                pdf.create(combinedHtml, options).toFile(filepath, (err, res) => {
+                    if (err) {
+                        reject(err);
+                    } else {
+                        resolve(res);
+                    }
                 });
             });
 

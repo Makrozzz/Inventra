@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Cpu, Plus, Search, Package, ArrowLeft, X, Filter } from 'lucide-react';
-import { API_URL } from '../config/api';
 
 const Models = () => {
   const navigate = useNavigate();
@@ -25,7 +24,7 @@ const Models = () => {
       setLoading(true);
       setError(null);
       
-      const response = await fetch(`${API_URL}/models`);
+      const response = await fetch('http://localhost:5000/api/v1/models');
       
       if (!response.ok) {
         const errorText = await response.text();
@@ -45,7 +44,7 @@ const Models = () => {
 
   const fetchCategories = async () => {
     try {
-      const response = await fetch(`${API_URL}/categories`);
+      const response = await fetch('http://localhost:5000/api/v1/categories');
       if (response.ok) {
         const data = await response.json();
         const categoriesArray = Array.isArray(data) ? data : (data.data || []);
@@ -59,7 +58,7 @@ const Models = () => {
   const fetchModelSpecs = async (modelId) => {
     try {
       setLoadingSpecs(true);
-      const response = await fetch(`${API_URL}/models/${modelId}/specs`);
+      const response = await fetch(`http://localhost:5000/api/v1/models/${modelId}/specs`);
       
       if (response.ok) {
         const data = await response.json();

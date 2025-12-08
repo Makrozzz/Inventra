@@ -19,6 +19,7 @@ const EditAsset = () => {
   const [softwareOptions, setSoftwareOptions] = useState([]);
   const [modelOptions, setModelOptions] = useState([]);
   const [peripheralTypeOptions, setPeripheralTypeOptions] = useState([]);
+  const [branchOptions, setBranchOptions] = useState([]);
   
   // Modal states for adding new options
   const [showAddModal, setShowAddModal] = useState(false);
@@ -67,6 +68,13 @@ const EditAsset = () => {
     fetchAssetData();
     fetchDropdownOptions();
   }, [id]);
+
+  // Fetch branches when Customer_Ref_Number changes
+  useEffect(() => {
+    if (formData.Customer_Ref_Number) {
+      fetchBranchesForCustomer(formData.Customer_Ref_Number);
+    }
+  }, [formData.Customer_Ref_Number]);
 
   const fetchAssetData = async () => {
     try {
@@ -229,6 +237,25 @@ const EditAsset = () => {
       setOfficeOptions(['Office 2019', 'Office 2021', 'Microsoft 365', 'None']);
       setSoftwareOptions([]);
       setModelOptions([]);
+    }
+  };
+
+  const fetchBranchesForCustomer = async (customerRefNumber) => {
+    try {
+      console.log('🔍 Fetching branches for customer ref:', customerRefNumber);
+      const response = await fetch(`http://localhost:5000/api/v1/projects/branches-by-ref/${encodeURIComponent(customerRefNumber)}`);
+      
+      if (response.ok) {
+        const data = await response.json();
+        console.log('✅ Branches fetched:', data.data);
+        setBranchOptions(data.data || []);
+      } else {
+        console.warn('Failed to fetch branches:', response.status);
+        setBranchOptions([]);
+      }
+    } catch (err) {
+      console.error('Error fetching branches for customer:', err);
+      setBranchOptions([]);
     }
   };
 
@@ -1227,12 +1254,25 @@ const EditAsset = () => {
 
                 <div className="form-group" style={{ gridColumn: '1 / -1' }}>
                   <label>Branch / Location</label>
-                  <input
-                    type="text"
+                  <select
                     name="Branch"
                     value={formData.Branch}
                     onChange={handleInputChange}
-                  />
+                    disabled={!formData.Customer_Ref_Number || branchOptions.length === 0}
+                  >
+                    <option value="">
+                      {!formData.Customer_Ref_Number 
+                        ? 'Select customer reference first' 
+                        : branchOptions.length === 0 
+                        ? 'No branches available' 
+                        : 'Select Branch'}
+                    </option>
+                    {branchOptions.map((branch, index) => (
+                      <option key={index} value={branch.Branch}>
+                        {branch.Branch}
+                      </option>
+                    ))}
+                  </select>
                 </div>
 
                 <div className="form-group">
