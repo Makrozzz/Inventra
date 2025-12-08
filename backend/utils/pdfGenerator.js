@@ -76,6 +76,8 @@ class PDFGenerator {
             const fullPath = path.join(__dirname, '..', logoPath);
             
             console.log('🔍 Looking for project logo at:', fullPath);
+            console.log('🔍 __dirname is:', __dirname);
+            console.log('🔍 Constructed path:', path.join(__dirname, '..'));
             
             if (fsSync.existsSync(fullPath)) {
                 const logoBuffer = fsSync.readFileSync(fullPath);
@@ -92,12 +94,28 @@ class PDFGenerator {
                     mimeType = 'image/svg+xml';
                 }
                 
+                const dataUri = `data:${mimeType};base64,${logoBase64}`;
                 console.log('✅ Project logo loaded successfully');
-                return `data:${mimeType};base64,${logoBase64}`;
+                console.log('✅ Logo data URI length:', dataUri.length);
+                console.log('✅ First 100 chars of data URI:', dataUri.substring(0, 100));
+                return dataUri;
             } else {
                 console.warn('❌ Project logo file not found at:', fullPath);
                 console.warn('📂 Current directory:', __dirname);
                 console.warn('📂 Checking if uploads folder exists:', fsSync.existsSync(path.join(__dirname, '..', 'uploads')));
+                console.warn('📂 Checking if project-logo folder exists:', fsSync.existsSync(path.join(__dirname, '..', 'uploads', 'project-logo')));
+                
+                // List files in project-logo directory
+                try {
+                    const projectLogoDir = path.join(__dirname, '..', 'uploads', 'project-logo');
+                    if (fsSync.existsSync(projectLogoDir)) {
+                        const files = fsSync.readdirSync(projectLogoDir);
+                        console.warn('📂 Files in project-logo directory:', files);
+                    }
+                } catch (dirError) {
+                    console.warn('❌ Could not list project-logo directory:', dirError.message);
+                }
+                
                 return '';
             }
         } catch (error) {
@@ -328,7 +346,10 @@ class PDFGenerator {
         const logoBase64 = this.getLogoBase64();
         
         // Convert project logo to base64 if available
+        console.log('📋 Project_Logo_Path from database:', pmData.Project_Logo_Path);
         const projectLogoBase64 = this.getProjectLogoBase64(pmData.Project_Logo_Path);
+        console.log('📋 Project_Logo_Base64 length:', projectLogoBase64 ? projectLogoBase64.length : 0);
+        console.log('📋 Project logo will be included:', !!projectLogoBase64);
 
         return {
             // PM Information
