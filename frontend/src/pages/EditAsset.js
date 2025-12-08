@@ -243,7 +243,7 @@ const EditAsset = () => {
   const fetchBranchesForCustomer = async (customerRefNumber) => {
     try {
       console.log('🔍 Fetching branches for customer ref:', customerRefNumber);
-      const response = await fetch(`http://localhost:5000/api/v1/projects/branches-by-ref/${encodeURIComponent(customerRefNumber)}`);
+      const response = await fetch(`${API_URL}/projects/branches-by-ref/${encodeURIComponent(customerRefNumber)}`);
       
       if (response.ok) {
         const data = await response.json();

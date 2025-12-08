@@ -82,7 +82,7 @@ const AccountSettings = () => {
   const fetchUserProfile = async () => {
     try {
       const token = localStorage.getItem('authToken');
-      const response = await fetch('http://localhost:5000/api/v1/auth/profile', {
+      const response = await fetch(`${API_URL}/auth/profile`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -121,7 +121,7 @@ const AccountSettings = () => {
     setLoadingUsers(true);
     try {
       const token = localStorage.getItem('authToken');
-      const response = await fetch('http://localhost:5000/api/v1/auth/users', {
+      const response = await fetch(`${API_URL}/auth/users`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
