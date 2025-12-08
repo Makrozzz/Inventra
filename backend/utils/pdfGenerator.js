@@ -141,10 +141,11 @@ class PDFGenerator {
             console.log('Sanitized customer name:', customerName);
             console.log('Generated filename:', filename);
 
-            // 6. Generate PDF using html-pdf
-            console.log('Generating PDF with html-pdf...');
+            // 5. Generate PDF using html-pdf
+            console.log('Generating PM PDF with html-pdf...');
             const options = {
                 format: 'A4',
+                orientation: 'portrait',
                 border: {
                     top: '10mm',
                     right: '10mm',
@@ -152,9 +153,10 @@ class PDFGenerator {
                     left: '10mm'
                 },
                 type: 'pdf',
-                quality: '75',
-                dpi: 96,
-                zoomFactor: '1'
+                quality: '95',
+                dpi: 72,
+                zoomFactor: '1',
+                httpTimeout: 30000
             };
 
             await new Promise((resolve, reject) => {
@@ -395,6 +397,7 @@ class PDFGenerator {
             console.log('Generating blank PDF with html-pdf...');
             const options = {
                 format: 'A4',
+                orientation: 'portrait',
                 border: {
                     top: '10mm',
                     right: '10mm',
@@ -402,9 +405,10 @@ class PDFGenerator {
                     left: '10mm'
                 },
                 type: 'pdf',
-                quality: '75',
-                dpi: 96,
-                zoomFactor: '1'
+                quality: '95',
+                dpi: 72,
+                zoomFactor: '1',
+                httpTimeout: 30000
             };
 
             await new Promise((resolve, reject) => {
