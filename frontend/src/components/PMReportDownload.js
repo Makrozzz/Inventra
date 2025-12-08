@@ -44,9 +44,10 @@ const PMReportDownload = ({ pmId, assetSerialNumber, customerName, variant = 'de
       let filename;
       
       if (contentDisposition) {
-        const filenameMatch = contentDisposition.match(/filename="?(.+)"?/);
+        // Parse filename from Content-Disposition header correctly
+        const filenameMatch = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
         if (filenameMatch && filenameMatch[1]) {
-          filename = filenameMatch[1];
+          filename = filenameMatch[1].replace(/['"]/g, ''); // Remove quotes
         }
       }
       
@@ -55,6 +56,8 @@ const PMReportDownload = ({ pmId, assetSerialNumber, customerName, variant = 'de
         const sanitizedCustomer = sanitizeForFilename(customerName);
         filename = `PM_Report_${sanitizedCustomer}_${assetSerialNumber}_${Date.now()}.pdf`;
       }
+
+      console.log('📥 Downloading file:', filename); // Debug log
 
       // Convert response to blob
       const blob = await response.blob();

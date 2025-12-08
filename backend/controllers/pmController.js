@@ -467,11 +467,16 @@ const getPMReport = async (req, res, next) => {
     }
 
     // Log filename for debugging
-    logger.info(`📥 Downloading PM report: ${filename} (${stats.size} bytes)`);
+    // Normalize filename to guarantee .pdf extension
+    const downloadName = filename && filename.toLowerCase().endsWith('.pdf')
+      ? filename
+      : `${filename || 'pm_report'}.pdf`;
+
+    logger.info(`📥 Downloading PM report: ${downloadName} (${stats.size} bytes)`);
     logger.info(`📂 File path: ${absolutePath}`);
 
     // Use res.download to handle headers/filenames consistently across environments
-    res.download(absolutePath, filename, (err) => {
+    res.download(absolutePath, downloadName, (err) => {
       if (err) {
         logger.error('❌ Error downloading PDF file:', err);
         if (!res.headersSent) {
