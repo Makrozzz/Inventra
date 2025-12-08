@@ -31,41 +31,7 @@ const Projects = () => {
     } catch (error) {
       console.error('❌ Error fetching projects:', error);
       console.error('❌ Error details:', error.message);
-      
-      // Fallback to mock data if API fails
-      console.log('🔄 Using fallback mock projects data');
-      setProjects([
-        {
-          Project_ID: 1,
-          Project_Ref_Number: "PRJ-2024-001",
-          Project_Title: "Office Digital Transformation",
-          Solution_Principal: "John Smith",
-          Warranty: "2 Years Extended",
-          Preventive_Maintenance: "Quarterly Service",
-          Start_Date: "2024-01-15",
-          End_Date: "2024-12-31"
-        },
-        {
-          Project_ID: 2,
-          Project_Ref_Number: "PRJ-2024-002",
-          Project_Title: "IT Infrastructure Upgrade",
-          Solution_Principal: "Sarah Johnson",
-          Warranty: "1 Year Standard",
-          Preventive_Maintenance: "Monthly Checkup",
-          Start_Date: "2024-03-01",
-          End_Date: "2025-02-28"
-        },
-        {
-          Project_ID: 3,
-          Project_Ref_Number: "PRJ-2024-003",
-          Project_Title: "Security System Implementation",
-          Solution_Principal: "Mike Wilson",
-          Warranty: "3 Years Premium",
-          Preventive_Maintenance: "Bi-weekly Monitoring",
-          Start_Date: "2024-06-01",
-          End_Date: "2024-11-30"
-        }
-      ]);
+      setProjects([]);
     } finally {
       console.log('⏰ Projects API call completed, loading set to false');
       setLoading(false);

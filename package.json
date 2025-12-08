@@ -42,6 +42,10 @@
     ]
   },
   "dependencies": {
-    "node-fetch": "^3.3.2"
+    "multer": "^2.0.2",
+    "node-fetch": "^3.3.2",
+    "papaparse": "^5.5.3",
+    "uuid": "^13.0.0",
+    "xlsx": "^0.18.5"
   }
 }

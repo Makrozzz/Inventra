@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, Package, Users, TrendingUp, BarChart3 } from 'lucide-react';
+import { Plus, Package, Users, TrendingUp, BarChart3, AlertCircle } from 'lucide-react';
 import apiService from '../services/apiService';
 import './Dashboard.css';
 
@@ -109,7 +109,7 @@ const Dashboard = () => {
           <h1 className="page-title">Dashboard</h1>
         </div>
         <div className="error-container">
-          <div className="error-icon">⚠️</div>
+          <div className="error-icon"><AlertCircle size={48} /></div>
           <div className="error-text">Error: {error}</div>
         </div>
       </div>
@@ -407,7 +407,7 @@ const Dashboard = () => {
           </div>
         ) : (
           <div className="empty-state">
-            <div className="empty-state-icon">📦</div>
+            <div className="empty-state-icon"><Package size={48} /></div>
             <p>No recent assets available</p>
           </div>
         )}

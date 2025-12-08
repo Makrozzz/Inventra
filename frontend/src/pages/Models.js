@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Cpu, Plus, Search, Package, ArrowLeft, X, Filter } from 'lucide-react';
+import { Cpu, Plus, Search, Package, ArrowLeft, X, Filter, AlertCircle, RefreshCw } from 'lucide-react';
 
 const Models = () => {
   const navigate = useNavigate();
@@ -320,8 +320,9 @@ const Models = () => {
             boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
             border: '1px solid #fee'
           }}>
-            <p style={{ color: '#e74c3c', fontSize: '16px', marginBottom: '20px' }}>
-              ⚠️ Error: {error}
+            <p style={{ color: '#e74c3c', fontSize: '16px', marginBottom: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+              <AlertCircle size={20} />
+              Error: {error}
             </p>
             <button 
               onClick={fetchModels}
@@ -330,13 +331,18 @@ const Models = () => {
                 backgroundColor: '#667eea',
                 color: 'white',
                 border: 'none',
-                borderRadius: '8px',
+                borderRadius: '6px',
                 cursor: 'pointer',
                 fontSize: '14px',
-                fontWeight: '600'
+                fontWeight: '600',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                margin: '0 auto'
               }}
             >
-              🔄 Retry
+              <RefreshCw size={16} />
+              Retry
             </button>
           </div>
         )}

@@ -2538,8 +2538,9 @@ const PreventiveMaintenance = () => {
             <p style={{ margin: '0 0 24px 0', color: '#2c3e50', fontSize: '0.95rem', fontWeight: '600', background: '#f8f9fa', padding: '12px', borderRadius: '6px' }}>
               "{itemToDelete?.Check_Item}"
             </p>
-            <p style={{ margin: '0 0 24px 0', color: '#e74c3c', fontSize: '0.9rem', fontStyle: 'italic' }}>
-              ⚠️ Warning: This action cannot be undone. If this item is used in existing PM records, deletion will fail.
+            <p style={{ margin: '0 0 24px 0', color: '#e74c3c', fontSize: '0.9rem', fontStyle: 'italic', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <AlertTriangle size={16} />
+              <span>Warning: This action cannot be undone. If this item is used in existing PM records, deletion will fail.</span>
             </p>
             <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
               <button
@@ -2608,8 +2609,9 @@ const PreventiveMaintenance = () => {
             <p style={{ margin: '0 0 24px 0', color: '#2c3e50', fontSize: '0.95rem', fontWeight: '600', background: '#f8f9fa', padding: '12px', borderRadius: '6px' }}>
               "{pendingEdit?.text}"
             </p>
-            <p style={{ margin: '0 0 24px 0', color: '#f39c12', fontSize: '0.9rem', fontStyle: 'italic' }}>
-              ⚠️ This will affect all assets in this category for future PM records.
+            <p style={{ margin: '0 0 24px 0', color: '#f39c12', fontSize: '0.9rem', fontStyle: 'italic', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <AlertTriangle size={16} />
+              <span>This will affect all assets in this category for future PM records.</span>
             </p>
             <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
               <button

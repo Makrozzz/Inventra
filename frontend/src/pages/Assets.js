@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Search, Filter, Edit, Trash2, Download, Plus, Upload, FileText, Columns, AlertTriangle, X, Settings2, Eye, Trash, Edit2 } from 'lucide-react';
+import { Search, Filter, Edit, Trash2, Download, Plus, Upload, FileText, Columns, AlertTriangle, X, Settings2, Eye, Trash, Edit2, AlertCircle, RefreshCw, Package } from 'lucide-react';
 import Pagination from '../components/Pagination';
 import apiService from '../services/apiService';
 import ColumnFilterPopup from '../components/ColumnFilterPopup';
@@ -875,9 +875,13 @@ const Assets = ({ onDelete }) => {
           </div>
         ) : error ? (
           <div style={{ textAlign: 'center', padding: '40px', background: 'white', borderRadius: '8px', border: '1px solid #e9ecef' }}>
-            <p style={{ color: '#e74c3c', fontSize: '1.1rem', marginBottom: '20px' }}>⚠️ Error: {error}</p>
-            <button onClick={() => window.location.reload()} className="btn btn-primary">
-              🔄 Retry
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', color: '#e74c3c', fontSize: '1.1rem', marginBottom: '20px' }}>
+              <AlertCircle size={24} />
+              <span>Error: {error}</span>
+            </div>
+            <button onClick={() => window.location.reload()} className="btn btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: '0 auto' }}>
+              <RefreshCw size={16} />
+              Retry
             </button>
           </div>
         ) : (
@@ -1271,7 +1275,10 @@ const Assets = ({ onDelete }) => {
 
         {!loading && !error && filteredAssets.length === 0 && (
           <div className="empty-state">
-            <p>📦 No assets found matching your search criteria.</p>
+            <p style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+              <Package size={20} />
+              No assets found matching your search criteria.
+            </p>
             <Link to="/add-asset" className="btn btn-primary">
               <Plus size={16} style={{ marginRight: '5px' }} />
               Add Your First Asset
@@ -1400,9 +1407,13 @@ const Assets = ({ onDelete }) => {
                 margin: 0,
                 color: '#856404',
                 fontSize: '0.9rem',
-                lineHeight: '1.5'
+                lineHeight: '1.5',
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: '8px'
               }}>
-                <strong>⚠️ Warning:</strong> This action cannot be undone. The following related records will also be permanently deleted:
+                <AlertTriangle size={16} style={{ flexShrink: 0, marginTop: '2px' }} />
+                <span><strong>Warning:</strong> This action cannot be undone. The following related records will also be permanently deleted:</span>
               </p>
               <ul style={{
                 marginTop: '10px',
