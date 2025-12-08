@@ -13,10 +13,10 @@
 
         body {
             font-family: Arial, sans-serif;
-            font-size: 9pt;
-            line-height: 1.2;
+            font-size: 8pt;
+            line-height: 1.1;
             color: #000;
-            padding: 5px;
+            padding: 3px;
             filter: grayscale(100%);
         }
 
@@ -27,8 +27,8 @@
 
         .section-box {
             border: 2px solid #000;
-            margin-bottom: 6px;
-            padding: 5px;
+            margin-bottom: 4px;
+            padding: 4px;
         }
 
         .section-title {
@@ -149,18 +149,18 @@
                 <img src="{{Logo_Base64}}" alt="Logo" style="max-height: 50px; max-width: 60px; width: auto; height: auto;">
             </td>
             {{/if}}
-            <td style="background-color: #333333; border: 2px solid #000; padding: 8px; vertical-align: middle;">
+            <td style="background-color: #333333; border: 2px solid #000; padding: 6px; vertical-align: middle;">
                 <table style="width: 100%; border: none;">
                     <tr>
                         <td style="border: none; padding: 0; text-align: center;">
-                            <span style="color: #ffffff; font-size: 12pt; font-weight: bold;">Preventive Maintenance Report</span><br>
-                            <span style="color: #ffffff; font-size: 8pt;">- Asset Inspection &amp; Maintenance Record -</span>
+                            <span style="color: #ffffff; font-size: 11pt; font-weight: bold;">Preventive Maintenance Report</span><br>
+                            <span style="color: #ffffff; font-size: 7pt;">- Asset Inspection &amp; Maintenance Record -</span>
                         </td>
                         <td style="border: none; padding: 0; text-align: right; width: 150px;">
                             {{#if isBlankForm}}
-                            <span style="background-color: #555555; color: #ffffff; padding: 6px 12px; border: 1px solid #ffffff; font-size: 11pt; font-weight: bold;">PM #___</span>
+                            <span style="background-color: #555555; color: #ffffff; padding: 4px 8px; border: 1px solid #ffffff; font-size: 10pt; font-weight: bold;">PM #___</span>
                             {{else}}
-                            <span style="background-color: #555555; color: #ffffff; padding: 6px 12px; border: 1px solid #ffffff; font-size: 11pt; font-weight: bold;">PM #{{PM_Sequence_Number}}</span>
+                            <span style="background-color: #555555; color: #ffffff; padding: 4px 8px; border: 1px solid #ffffff; font-size: 10pt; font-weight: bold;">PM #{{PM_Sequence_Number}}</span>
                             {{/if}}
                         </td>
                     </tr>
