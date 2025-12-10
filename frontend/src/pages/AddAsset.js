@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Save, ArrowLeft, Package, Building2, MapPin, Plus, Trash2, User, Wrench, Hash } from 'lucide-react';
+import { Save, ArrowLeft, Package, Building2, MapPin, Plus, Trash2, User, Wrench, Hash, Loader, Lightbulb, CheckCircle, AlertCircle } from 'lucide-react';
 import { API_URL } from '../config/api';
 import apiService from '../services/apiService';
 import SearchableDropdown from '../components/SearchableDropdown';
@@ -324,7 +324,8 @@ const AddAsset = () => {
       ];
       
       setBranches(fallbackBranches);
-      setError(`Branch loading failed for "${customerName}". Using default options. (${err.message || 'Network error'})`);
+      // Don't show error to user, just log it - fallback branches work fine
+      console.warn(`⚠️ Branch loading failed for "${customerName}". Using default options. (${err.message || 'Network error'})`);
       
       console.log('📋 Using fallback branches due to error:', fallbackBranches);
     } finally {
@@ -1262,24 +1263,6 @@ const AddAsset = () => {
                     <span>
                       Model <span style={{ color: '#f44336' }}>*</span>
                     </span>
-                    <button
-                      type="button"
-                      onClick={() => handleOpenAddModal('model')}
-                      style={{
-                        background: '#4caf50',
-                        color: 'white',
-                        border: 'none',
-                        padding: '4px 8px',
-                        borderRadius: '4px',
-                        cursor: 'pointer',
-                        fontSize: '12px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '4px'
-                      }}
-                    >
-                      <Plus size={14} /> 
-                    </button>
                   </label>
                   <select
                     value={asset.model}
@@ -1299,149 +1282,50 @@ const AddAsset = () => {
                 </div>
 
                 <div className="form-group">
-                  <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span>Windows</span>
-                    <button
-                      type="button"
-                      onClick={() => handleOpenAddModal('windows')}
-                      style={{
-                        background: '#4caf50',
-                        color: 'white',
-                        border: 'none',
-                        padding: '4px 8px',
-                        borderRadius: '4px',
-                        cursor: 'pointer',
-                        fontSize: '12px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '4px'
-                      }}
-                    >
-                      <Plus size={14} /> 
-                    </button>
-                  </label>
-                  <select
+                  <label>Windows</label>
+                  <input
+                    type="text"
+                    name="windows"
                     value={asset.windows}
-                    onChange={(e) => setAsset({ ...asset, windows: e.target.value })}
-                  >
-                    <option value="">Select Windows version</option>
-                    {windowsOptions.map((win, index) => (
-                      <option key={`win-${win}-${index}`} value={win}>
-                        {win}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={handleAssetChange}
+                    placeholder="e.g., Windows 10 Pro"
+                  />
                 </div>
 
                 <div className="form-group">
-                  <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span>Microsoft Office</span>
-                    <button
-                      type="button"
-                      onClick={() => handleOpenAddModal('office')}
-                      style={{
-                        background: '#4caf50',
-                        color: 'white',
-                        border: 'none',
-                        padding: '4px 8px',
-                        borderRadius: '4px',
-                        cursor: 'pointer',
-                        fontSize: '12px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '4px'
-                      }}
-                    >
-                      <Plus size={14} /> 
-                    </button>
-                  </label>
-                  <select
+                  <label>Microsoft Office</label>
+                  <input
+                    type="text"
+                    name="microsoft_office"
                     value={asset.microsoft_office}
-                    onChange={(e) => setAsset({ ...asset, microsoft_office: e.target.value })}
-                  >
-                    <option value="">Select Office version</option>
-                    {officeOptions.map((office, index) => (
-                      <option key={`office-${office}-${index}`} value={office}>
-                        {office}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={handleAssetChange}
+                    placeholder="e.g., Microsoft Office 365"
+                  />
                 </div>
 
                 <div className="form-group">
-                  <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span>Antivirus</span>
-                    <button
-                      type="button"
-                      onClick={() => handleOpenAddModal('antivirus')}
-                      style={{
-                        background: '#4caf50',
-                        color: 'white',
-                        border: 'none',
-                        padding: '4px 8px',
-                        borderRadius: '4px',
-                        cursor: 'pointer',
-                        fontSize: '12px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '4px'
-                      }}
-                    >
-                      <Plus size={14} /> 
-                    </button>
-                  </label>
+                  <label>Antivirus</label>
                   <select
                     value={asset.antivirus}
                     onChange={(e) => setAsset({ ...asset, antivirus: e.target.value })}
                   >
                     <option value="">Select antivirus</option>
-                    {antivirusOptions.map((av, index) => (
-                      <option key={`av-${av}-${index}`} value={av}>
-                        {av}
-                      </option>
-                    ))}
+                    {asset.antivirus && asset.antivirus !== 'No' && (
+                      <option value={asset.antivirus}>{asset.antivirus}</option>
+                    )}
+                    <option value="No">No</option>
                   </select>
-                  {projectData.project_reference_num && asset.antivirus && (
-                    <small style={{ color: '#666', fontSize: '11px', marginTop: '4px', display: 'block' }}>
-                       Auto-populated 
-                    </small>
-                  )}
                 </div>
 
                 <div className="form-group">
-                  <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span>Software</span>
-                    <button
-                      type="button"
-                      onClick={() => handleOpenAddModal('software')}
-                      style={{
-                        background: '#4caf50',
-                        color: 'white',
-                        border: 'none',
-                        padding: '4px 8px',
-                        borderRadius: '4px',
-                        cursor: 'pointer',
-                        fontSize: '12px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '4px'
-                      }}
-                    >
-                      <Plus size={14} /> 
-                    </button>
-                  </label>
-                  <select
+                  <label>Software</label>
+                  <input
+                    type="text"
+                    name="software"
                     value={asset.software}
-                    onChange={(e) => setAsset({ ...asset, software: e.target.value })}
-                  >
-                    <option value="">Select software</option>
-                    <option value="None">None</option>
-                    {softwareOptions.map((sw, index) => (
-                      <option key={`sw-${sw}-${index}`} value={sw}>
-                        {sw}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={handleAssetChange}
+                    placeholder="e.g., Visual Studio Code, Adobe Reader"
+                  />
                 </div>
 
                 <div className="form-group">
