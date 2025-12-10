@@ -181,11 +181,12 @@ class PDFGenerator {
                 quality: '100',
                 dpi: 96,
                 zoomFactor: '1',
-                httpTimeout: 30000,
+                timeout: 30000,         // 30 seconds for PhantomJS
+                httpTimeout: 30000,     // 30 seconds for HTTP requests
                 height: '297mm',        // A4 height
                 width: '210mm',         // A4 width
                 base: `file://${__dirname}/../`,  // Base path for relative resources
-                phantomArgs: ['--web-security=no', '--local-url-access=true']
+                phantomArgs: ['--web-security=no', '--local-url-access=true', '--ignore-ssl-errors=yes']
             };
 
             await new Promise((resolve, reject) => {
@@ -426,7 +427,7 @@ class PDFGenerator {
             console.log('Generated blank form filename:', filename);
 
             // 5. Generate PDF using html-pdf
-            console.log('Generating blank PDF with html-pdf...');
+            console.log('Generating PM PDF with html-pdf...');
             const options = {
                 format: 'A4',
                 orientation: 'portrait',
@@ -440,11 +441,12 @@ class PDFGenerator {
                 quality: '100',
                 dpi: 96,
                 zoomFactor: '1',
-                httpTimeout: 30000,
+                timeout: 30000,         // 30 seconds for PhantomJS
+                httpTimeout: 30000,     // 30 seconds for HTTP requests
                 height: '297mm',        // A4 height
                 width: '210mm',         // A4 width
                 base: `file://${__dirname}/../`,  // Base path for relative resources
-                phantomArgs: ['--web-security=no', '--local-url-access=true']
+                phantomArgs: ['--web-security=no', '--local-url-access=true', '--ignore-ssl-errors=yes']
             };
 
             await new Promise((resolve, reject) => {
