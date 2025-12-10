@@ -71,7 +71,10 @@ class Asset {
           p.Project_ID,
           p.Project_Ref_Number,
           p.Project_Title,
-          p.Antivirus,
+          CASE 
+            WHEN LOWER(TRIM(c.Category)) IN ('scanner', 'printer', 'projector') THEN 'None'
+            ELSE COALESCE(p.Antivirus, 'None')
+          END AS Antivirus,
           p.Warranty,
           p.Preventive_Maintenance,
           p.Start_Date,
@@ -602,7 +605,10 @@ class Asset {
           p.Project_ID,
           p.Project_Ref_Number,
           p.Project_Title,
-          p.Antivirus,
+          CASE 
+            WHEN LOWER(TRIM(c.Category)) IN ('scanner', 'printer', 'projector') THEN 'None'
+            ELSE COALESCE(p.Antivirus, 'None')
+          END AS Antivirus,
           p.Warranty,
           p.Preventive_Maintenance,
           p.Start_Date,
@@ -636,7 +642,8 @@ class Asset {
       console.log('✅ Asset found:', {
         serial: assetData.Asset_Serial_Number,
         tag: assetData.Asset_Tag_ID,
-        customer: assetData.Customer_Name
+        customer: assetData.Customer_Name,
+        model_id: assetData.Model_ID
       });
 
       // Get peripherals for this asset
@@ -655,10 +662,29 @@ class Asset {
 
       console.log(`✅ Found ${peripheralRows.length} peripherals for asset`);
 
-      // Combine asset data with peripherals
+      // Get model specifications if Model_ID exists
+      let modelSpecs = [];
+      if (assetData.Model_ID) {
+        const [specsRows] = await pool.execute(`
+          SELECT 
+            s.Attribute_Name,
+            msb.Attributes_Value,
+            msb.Attributes_ID
+          FROM MODEL_SPECS_BRIDGE msb
+          INNER JOIN SPECS s ON msb.Attributes_ID = s.Attributes_ID
+          WHERE msb.Model_ID = ?
+          ORDER BY s.Attribute_Name
+        `, [assetData.Model_ID]);
+        
+        modelSpecs = specsRows;
+        console.log(`✅ Found ${specsRows.length} specifications for model`);
+      }
+
+      // Combine asset data with peripherals and specs
       return {
         ...assetData,
-        Peripherals: peripheralRows
+        Peripherals: peripheralRows,
+        ModelSpecifications: modelSpecs
       };
     } catch (error) {
       console.error('Error in Asset.findDetailById:', error);
@@ -834,13 +860,23 @@ class Asset {
   }
 
   // Helper method to get or create category - ENHANCED with hybrid functionality
-  static async getOrCreateCategory(categoryName) {
+  static async getOrCreateCategory(categoryName, cache = null) {
     try {
       if (!categoryName || typeof categoryName !== 'string' || categoryName.trim() === '') {
         throw new Error('Category name is required and must be a non-empty string');
       }
 
       const cleanCategoryName = categoryName.trim();
+      
+      // Check cache first if provided
+      if (cache) {
+        const cached = cache.hasCategory(cleanCategoryName);
+        if (cached.exists) {
+          console.log(`✓ Found category in cache: "${cached.originalName}" (ID: ${cached.id})`);
+          return cached.id;
+        }
+      }
+      
       console.log(`Getting or creating category: "${cleanCategoryName}"`);
 
       // First try to find existing category (case-insensitive)
@@ -850,8 +886,25 @@ class Asset {
       );
       
       if (existing.length > 0) {
-        console.log(`Found existing category: ID=${existing[0].Category_ID}, Name="${existing[0].Category}"`);
-        return existing[0].Category_ID;
+        const categoryId = existing[0].Category_ID;
+        console.log(`Found existing category: ID=${categoryId}, Name="${existing[0].Category}"`);
+        
+        // Add to cache if provided
+        if (cache) {
+          cache.addCategory(existing[0].Category, categoryId);
+        }
+        
+        return categoryId;
+      }
+      
+      // Category doesn't exist in database - check if we should create it
+      if (cache) {
+        // Double-check cache in case another asset in this import already created it
+        const cacheRecheck = cache.hasCategory(cleanCategoryName);
+        if (cacheRecheck.exists) {
+          console.log(`⚠️  Category was just created by another asset in this import, reusing: "${cacheRecheck.originalName}" (ID: ${cacheRecheck.id})`);
+          return cacheRecheck.id;
+        }
       }
       
       // Create new category
@@ -862,6 +915,15 @@ class Asset {
       
       const newCategoryId = result.insertId;
       console.log(`✅ Created new category: ID=${newCategoryId}, Name="${cleanCategoryName}"`);
+      
+      // Add to cache
+      if (cache) {
+        const wasAdded = cache.addCategory(cleanCategoryName, newCategoryId);
+        if (wasAdded) {
+          console.log(`✅ Category added to cache as first occurrence`);
+        }
+      }
+      
       return newCategoryId;
     } catch (error) {
       // Handle duplicate key error (race condition)
@@ -872,7 +934,11 @@ class Asset {
             [categoryName.trim()]
           );
           if (existing.length > 0) {
-            return existing[0].Category_ID;
+            const categoryId = existing[0].Category_ID;
+            if (cache) {
+              cache.addCategory(categoryName.trim(), categoryId);
+            }
+            return categoryId;
           }
         } catch (retryError) {
           console.error('Error in retry after duplicate:', retryError);
@@ -883,14 +949,221 @@ class Asset {
     }
   }
 
-  // Helper method to get or create model - ENHANCED with hybrid functionality and category linking
-  static async getOrCreateModel(modelName, categoryId = null) {
+  // Helper method to get or create Windows version with cache support
+  static async getOrCreateWindows(version, cache = null) {
+    try {
+      if (!version || typeof version !== 'string' || version.trim() === '') {
+        return null; // Windows is optional
+      }
+
+      const cleanVersion = version.trim();
+      
+      // Check cache first if provided
+      if (cache) {
+        const cached = cache.hasWindows(cleanVersion);
+        if (cached.exists) {
+          console.log(`✓ Found Windows version in cache: "${cached.originalName}"`);
+          return cached.originalName;
+        }
+      }
+
+      console.log(`Getting or creating Windows version: "${cleanVersion}"`);
+
+      // Check if this Windows version exists in database
+      const [existing] = await pool.execute(
+        'SELECT DISTINCT Windows FROM ASSET WHERE LOWER(Windows) = LOWER(?) AND Windows IS NOT NULL LIMIT 1',
+        [cleanVersion]
+      );
+      
+      if (existing.length > 0) {
+        const existingVersion = existing[0].Windows;
+        console.log(`Found existing Windows version: "${existingVersion}"`);
+        
+        // Add to cache if provided
+        if (cache) {
+          cache.addWindows(existingVersion);
+        }
+        
+        return existingVersion;
+      }
+      
+      // New Windows version - add to cache if this is first occurrence
+      console.log(`✅ New Windows version will be created on first asset: "${cleanVersion}"`);
+      
+      if (cache) {
+        const isFirst = cache.addWindows(cleanVersion);
+        if (!isFirst) {
+          console.log(`⚠️  Duplicate Windows version in import ignored: "${cleanVersion}"`);
+        }
+      }
+      
+      return cleanVersion;
+    } catch (error) {
+      console.error('Error in getOrCreateWindows:', error);
+      throw error;
+    }
+  }
+
+  // Helper method to get or create Microsoft Office version with cache support
+  static async getOrCreateMicrosoftOffice(version, cache = null) {
+    try {
+      if (!version || typeof version !== 'string' || version.trim() === '') {
+        return null; // MS Office is optional
+      }
+
+      const cleanVersion = version.trim();
+      
+      // Check cache first if provided
+      if (cache) {
+        const cached = cache.hasMsOffice(cleanVersion);
+        if (cached.exists) {
+          console.log(`✓ Found MS Office version in cache: "${cached.originalName}"`);
+          return cached.originalName;
+        }
+      }
+
+      console.log(`Getting or creating MS Office version: "${cleanVersion}"`);
+
+      // Check if this MS Office version exists in database
+      const [existing] = await pool.execute(
+        'SELECT DISTINCT Microsoft_Office FROM ASSET WHERE LOWER(Microsoft_Office) = LOWER(?) AND Microsoft_Office IS NOT NULL LIMIT 1',
+        [cleanVersion]
+      );
+      
+      if (existing.length > 0) {
+        const existingVersion = existing[0].Microsoft_Office;
+        console.log(`Found existing MS Office version: "${existingVersion}"`);
+        
+        // Add to cache if provided
+        if (cache) {
+          cache.addMsOffice(existingVersion);
+        }
+        
+        return existingVersion;
+      }
+      
+      // New MS Office version - add to cache if this is first occurrence
+      console.log(`✅ New MS Office version will be created on first asset: "${cleanVersion}"`);
+      
+      if (cache) {
+        const isFirst = cache.addMsOffice(cleanVersion);
+        if (!isFirst) {
+          console.log(`⚠️  Duplicate MS Office version in import ignored: "${cleanVersion}"`);
+        }
+      }
+      
+      return cleanVersion;
+    } catch (error) {
+      console.error('Error in getOrCreateMicrosoftOffice:', error);
+      throw error;
+    }
+  }
+
+  // Helper method to get or create software with cache support
+  static async getOrCreateSoftware(softwareName, cache = null) {
+    try {
+      if (!softwareName || typeof softwareName !== 'string' || softwareName.trim() === '') {
+        return null;
+      }
+
+      const cleanSoftwareName = softwareName.trim();
+      
+      // Check cache first if provided
+      if (cache) {
+        const cached = cache.hasSoftware(cleanSoftwareName);
+        if (cached.exists) {
+          console.log(`✓ Found software in cache: "${cached.originalName}" (ID: ${cached.id})`);
+          return cached.id;
+        }
+      }
+
+      console.log(`Getting or creating software: "${cleanSoftwareName}"`);
+
+      // Check if software exists in database (case-insensitive)
+      const [existing] = await pool.execute(
+        'SELECT Software_ID, Software_Name FROM SOFTWARE WHERE LOWER(Software_Name) = LOWER(?)',
+        [cleanSoftwareName]
+      );
+      
+      if (existing.length > 0) {
+        const softwareId = existing[0].Software_ID;
+        console.log(`Found existing software: ID=${softwareId}, Name="${existing[0].Software_Name}"`);
+        
+        // Add to cache if provided
+        if (cache) {
+          cache.addSoftware(existing[0].Software_Name, softwareId);
+        }
+        
+        return softwareId;
+      }
+      
+      // Create new software only if this is the first occurrence in import
+      if (cache) {
+        // Check if we've already seen this software in the import
+        const cacheCheck = cache.hasSoftware(cleanSoftwareName);
+        if (cacheCheck.exists) {
+          console.log(`⚠️  Duplicate software in import, reusing: "${cacheCheck.originalName}" (ID: ${cacheCheck.id})`);
+          return cacheCheck.id;
+        }
+      }
+      
+      // Create new software
+      const [result] = await pool.execute(
+        'INSERT INTO SOFTWARE (Software_Name) VALUES (?)',
+        [cleanSoftwareName]
+      );
+      
+      const newSoftwareId = result.insertId;
+      console.log(`✅ Created new software: ID=${newSoftwareId}, Name="${cleanSoftwareName}"`);
+      
+      // Add to cache
+      if (cache) {
+        cache.addSoftware(cleanSoftwareName, newSoftwareId);
+      }
+      
+      return newSoftwareId;
+    } catch (error) {
+      // Handle duplicate key error (race condition)
+      if (error.code === 'ER_DUP_ENTRY') {
+        try {
+          const [existing] = await pool.execute(
+            'SELECT Software_ID FROM SOFTWARE WHERE LOWER(Software_Name) = LOWER(?)',
+            [softwareName.trim()]
+          );
+          if (existing.length > 0) {
+            const softwareId = existing[0].Software_ID;
+            if (cache) {
+              cache.addSoftware(softwareName.trim(), softwareId);
+            }
+            return softwareId;
+          }
+        } catch (retryError) {
+          console.error('Error in retry after duplicate:', retryError);
+        }
+      }
+      console.error('Error in getOrCreateSoftware:', error);
+      throw error;
+    }
+  }
+
+  // Helper method to get or create model - ENHANCED with hybrid functionality, category linking, and cache support
+  static async getOrCreateModel(modelName, categoryId = null, cache = null) {
     try {
       if (!modelName || typeof modelName !== 'string' || modelName.trim() === '') {
         throw new Error('Model name is required and must be a non-empty string');
       }
 
       const cleanModelName = modelName.trim();
+      
+      // Check cache first if provided
+      if (cache) {
+        const cached = cache.hasModel(cleanModelName);
+        if (cached.exists) {
+          console.log(`✓ Found model in cache: "${cached.originalName}" (ID: ${cached.id})`);
+          return cached.id;
+        }
+      }
+      
       console.log(`Getting or creating model: "${cleanModelName}" with Category_ID: ${categoryId}`);
 
       // First try to find existing model (case-insensitive)
@@ -900,18 +1173,34 @@ class Asset {
       );
       
       if (existing.length > 0) {
-        console.log(`Found existing model: ID=${existing[0].Model_ID}, Name="${existing[0].Model_Name}", Category_ID=${existing[0].Category_ID}`);
+        const modelId = existing[0].Model_ID;
+        console.log(`Found existing model: ID=${modelId}, Name="${existing[0].Model_Name}", Category_ID=${existing[0].Category_ID}`);
         
         // If category is provided and existing model has no category, update it
         if (categoryId && !existing[0].Category_ID) {
           await pool.execute(
             'UPDATE MODEL SET Category_ID = ? WHERE Model_ID = ?',
-            [categoryId, existing[0].Model_ID]
+            [categoryId, modelId]
           );
-          console.log(`✅ Updated model ${existing[0].Model_ID} with Category_ID: ${categoryId}`);
+          console.log(`✅ Updated model ${modelId} with Category_ID: ${categoryId}`);
         }
         
-        return existing[0].Model_ID;
+        // Add to cache if provided
+        if (cache) {
+          cache.addModel(existing[0].Model_Name, modelId);
+        }
+        
+        return modelId;
+      }
+      
+      // Model doesn't exist in database - check if we should create it
+      if (cache) {
+        // Double-check cache in case another asset in this import already created it
+        const cacheRecheck = cache.hasModel(cleanModelName);
+        if (cacheRecheck.exists) {
+          console.log(`⚠️  Model was just created by another asset in this import, reusing: "${cacheRecheck.originalName}" (ID: ${cacheRecheck.id})`);
+          return cacheRecheck.id;
+        }
       }
       
       // Create new model with category link
@@ -922,6 +1211,14 @@ class Asset {
       
       const newModelId = result.insertId;
       console.log(`✅ Created new model: ID=${newModelId}, Name="${cleanModelName}", Category_ID=${categoryId}`);
+      
+      // Add to cache
+      if (cache) {
+        const wasAdded = cache.addModel(cleanModelName, newModelId);
+        if (wasAdded) {
+          console.log(`✅ Model added to cache as first occurrence`);
+        }
+      }
       
       // Verify the category was saved
       const [verification] = await pool.execute(
@@ -1118,27 +1415,15 @@ class Asset {
     }
   }
 
-  // Link software to asset via ASSET_SOFTWARE_BRIDGE table
-  static async linkSoftwareToAsset(assetId, softwareName) {
+  // Link software to asset via ASSET_SOFTWARE_BRIDGE table with cache support
+  static async linkSoftwareToAsset(assetId, softwareName, cache = null) {
     try {
-      // First, get or create the software ID
-      let softwareId;
+      // Use the getOrCreateSoftware method which handles caching
+      const softwareId = await this.getOrCreateSoftware(softwareName, cache);
       
-      // Check if software exists
-      const [existingSoftware] = await pool.execute(
-        'SELECT Software_ID FROM SOFTWARE WHERE Software_Name = ?',
-        [softwareName]
-      );
-      
-      if (existingSoftware.length > 0) {
-        softwareId = existingSoftware[0].Software_ID;
-      } else {
-        // Create new software
-        const [result] = await pool.execute(
-          'INSERT INTO SOFTWARE (Software_Name) VALUES (?)',
-          [softwareName]
-        );
-        softwareId = result.insertId;
+      if (!softwareId) {
+        console.log('⚠️  No software ID returned, skipping link');
+        return null;
       }
       
       // Check if link already exists
@@ -1153,6 +1438,9 @@ class Asset {
           'INSERT INTO ASSET_SOFTWARE_BRIDGE (Asset_ID, Software_ID) VALUES (?, ?)',
           [assetId, softwareId]
         );
+        console.log(`✅ Linked software ID ${softwareId} to asset ID ${assetId}`);
+      } else {
+        console.log(`✓ Software ID ${softwareId} already linked to asset ID ${assetId}`);
       }
       
       return softwareId;

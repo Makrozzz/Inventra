@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Search, Filter, Edit, Trash2, Download, Plus, Upload, FileText, Columns, AlertTriangle, X, Settings2, Eye, Trash, Edit2, Boxes } from 'lucide-react';
+import { Search, Filter, Edit, Trash2, Download, Plus, Upload, FileText, Columns, AlertTriangle, X, Settings2, Eye, Trash, Edit2, AlertCircle, RefreshCw, Package, Boxes } from 'lucide-react';
 import Pagination from '../components/Pagination';
 import apiService from '../services/apiService';
 import ColumnFilterPopup from '../components/ColumnFilterPopup';
@@ -14,6 +14,8 @@ const Assets = ({ onDelete }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [isSearching, setIsSearching] = useState(false);
+  const [searchFocused, setSearchFocused] = useState(false);
   
   // Column customization state
   const [columnConfig, setColumnConfig] = useState([]);
@@ -635,16 +637,127 @@ const Assets = ({ onDelete }) => {
       {/* Full Width Asset Table Section */}
       <div style={{ padding: '0 20px', width: '100%', boxSizing: 'border-box' }}>
         <div className="card" style={{ width: '100%' }}>
-        <div className="search-bar" style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
-          <div style={{ position: 'relative', flex: 1, minWidth: '200px' }}>
-            <Search size={16} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#666' }} />
+        {/* Enhanced Search Bar Section */}
+        <div style={{ 
+          display: 'flex', 
+          gap: '15px', 
+          flexWrap: 'wrap', 
+          width: '100%',
+          marginBottom: '20px',
+          alignItems: 'center'
+        }}>
+          {/* Responsive Search Bar */}
+          <div style={{ 
+            flex: '1', 
+            minWidth: '280px', 
+            maxWidth: selectedAssets.length > 0 ? '400px' : '600px',
+            position: 'relative' 
+          }}>
+            <Search 
+              size={20} 
+              style={{ 
+                position: 'absolute', 
+                left: '15px', 
+                top: '50%', 
+                transform: 'translateY(-50%)', 
+                color: searchFocused ? '#667eea' : '#9ca3af',
+                transition: 'color 0.3s ease',
+                pointerEvents: 'none',
+                zIndex: 1
+              }} 
+            />
+            {searchTerm && (
+              <button
+                onClick={() => {
+                  setSearchTerm('');
+                  setIsSearching(false);
+                }}
+                style={{
+                  position: 'absolute',
+                  right: '12px',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  background: 'transparent',
+                  border: 'none',
+                  color: '#9ca3af',
+                  cursor: 'pointer',
+                  padding: '4px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  borderRadius: '50%',
+                  transition: 'all 0.2s ease',
+                  zIndex: 1
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.backgroundColor = '#f3f4f6';
+                  e.currentTarget.style.color = '#667eea';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                  e.currentTarget.style.color = '#9ca3af';
+                }}
+                title="Clear search (Esc)"
+                aria-label="Clear search"
+              >
+                <X size={18} />
+              </button>
+            )}
             <input
               type="text"
-              placeholder="Search assets by name, ID, or category..."
+              placeholder="Search assets by customer, serial, tag, model, category..."
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              style={{ paddingLeft: '35px' }}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setIsSearching(e.target.value.length > 0);
+              }}
+              onFocus={() => setSearchFocused(true)}
+              onBlur={() => setSearchFocused(false)}
+              onKeyDown={(e) => {
+                if (e.key === 'Escape') {
+                  setSearchTerm('');
+                  setIsSearching(false);
+                  e.target.blur();
+                }
+              }}
+              style={{
+                width: '100%',
+                padding: '13px 45px 13px 48px',
+                border: `2px solid ${searchFocused ? '#667eea' : '#e5e7eb'}`,
+                borderRadius: '10px',
+                fontSize: '15px',
+                transition: 'all 0.3s ease',
+                outline: 'none',
+                backgroundColor: 'white',
+                boxShadow: searchFocused ? '0 0 0 3px rgba(102, 126, 234, 0.1)' : 'none',
+                fontFamily: 'inherit'
+              }}
+              aria-label="Search assets"
             />
+            {isSearching && (
+              <div style={{
+                position: 'absolute',
+                top: '100%',
+                left: '0',
+                right: '0',
+                marginTop: '4px',
+                fontSize: '12px',
+                color: '#6b7280',
+                padding: '4px 8px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px'
+              }}>
+                <span style={{ 
+                  width: '4px', 
+                  height: '4px', 
+                  backgroundColor: '#667eea', 
+                  borderRadius: '50%',
+                  display: 'inline-block'
+                }} />
+                Searching across all asset fields...
+              </div>
+            )}
           </div>
           
           {/* Bulk Action Buttons */}
@@ -725,24 +838,26 @@ const Assets = ({ onDelete }) => {
             </div>
           )}
           
+          {/* Manage Columns Button */}
           <button 
             onClick={() => setShowColumnFilter(true)} 
             style={{
               background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
               color: 'white',
               border: 'none',
-              padding: '10px 18px',
-              borderRadius: '8px',
+              padding: '13px 20px',
+              borderRadius: '10px',
               cursor: 'pointer',
-              fontSize: '14px',
+              fontSize: '15px',
               fontWeight: '600',
               display: 'inline-flex',
               alignItems: 'center',
               gap: '8px',
-              transition: 'all 0.2s ease',
+              transition: 'all 0.3s ease',
               boxShadow: '0 2px 8px rgba(102, 126, 234, 0.3)',
               whiteSpace: 'nowrap',
-              marginLeft: 'auto'
+              flexShrink: 0,
+              border: '2px solid transparent'
             }}
             onMouseOver={(e) => {
               e.currentTarget.style.transform = 'translateY(-2px)';
@@ -753,8 +868,9 @@ const Assets = ({ onDelete }) => {
               e.currentTarget.style.boxShadow = '0 2px 8px rgba(102, 126, 234, 0.3)';
             }}
             title="Manage table columns"
+            aria-label="Manage columns"
           >
-            <Settings2 size={16} />
+            <Settings2 size={18} />
             Manage Columns
           </button>
         </div>
@@ -765,9 +881,13 @@ const Assets = ({ onDelete }) => {
           </div>
         ) : error ? (
           <div style={{ textAlign: 'center', padding: '40px', background: 'white', borderRadius: '8px', border: '1px solid #e9ecef' }}>
-            <p style={{ color: '#e74c3c', fontSize: '1.1rem', marginBottom: '20px' }}>⚠️ Error: {error}</p>
-            <button onClick={() => window.location.reload()} className="btn btn-primary">
-              🔄 Retry
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', color: '#e74c3c', fontSize: '1.1rem', marginBottom: '20px' }}>
+              <AlertCircle size={24} />
+              <span>Error: {error}</span>
+            </div>
+            <button onClick={() => window.location.reload()} className="btn btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: '0 auto' }}>
+              <RefreshCw size={16} />
+              Retry
             </button>
           </div>
         ) : (
@@ -1161,7 +1281,10 @@ const Assets = ({ onDelete }) => {
 
         {!loading && !error && filteredAssets.length === 0 && (
           <div className="empty-state">
-            <p>📦 No assets found matching your search criteria.</p>
+            <p style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+              <Package size={20} />
+              No assets found matching your search criteria.
+            </p>
             <Link to="/add-asset" className="btn btn-primary">
               <Plus size={16} style={{ marginRight: '5px' }} />
               Add Your First Asset
@@ -1290,9 +1413,13 @@ const Assets = ({ onDelete }) => {
                 margin: 0,
                 color: '#856404',
                 fontSize: '0.9rem',
-                lineHeight: '1.5'
+                lineHeight: '1.5',
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: '8px'
               }}>
-                <strong>⚠️ Warning:</strong> This action cannot be undone. The following related records will also be permanently deleted:
+                <AlertTriangle size={16} style={{ flexShrink: 0, marginTop: '2px' }} />
+                <span><strong>Warning:</strong> This action cannot be undone. The following related records will also be permanently deleted:</span>
               </p>
               <ul style={{
                 marginTop: '10px',

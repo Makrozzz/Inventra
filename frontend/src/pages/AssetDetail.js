@@ -312,7 +312,108 @@ const AssetDetail = () => {
               </div>
             )}
 
-            {assetData.Specs_Attributes && (
+            {/* Model Specifications Section */}
+            {assetData.ModelSpecifications && assetData.ModelSpecifications.length > 0 && (
+              <div>
+                <div style={{ 
+                  color: '#7f8c8d', 
+                  fontSize: '0.85rem', 
+                  marginBottom: '15px', 
+                  fontWeight: '600',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.5px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '10px'
+                }}>
+                  <ClipboardList size={18} style={{ color: '#667eea' }} />
+                  Model Technical Specifications
+                  <span style={{
+                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                    color: 'white',
+                    padding: '2px 10px',
+                    borderRadius: '12px',
+                    fontSize: '0.75rem',
+                    fontWeight: '700'
+                  }}>
+                    {assetData.ModelSpecifications.length}
+                  </span>
+                </div>
+                <div style={{ 
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
+                  gap: '15px'
+                }}>
+                  {assetData.ModelSpecifications.map((spec, index) => (
+                    <div 
+                      key={spec.Attributes_ID || index}
+                      style={{
+                        background: 'linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%)',
+                        border: '2px solid #e9ecef',
+                        borderLeft: '4px solid #667eea',
+                        borderRadius: '10px',
+                        padding: '18px',
+                        transition: 'all 0.3s ease',
+                        cursor: 'default',
+                        position: 'relative',
+                        overflow: 'hidden'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.transform = 'translateY(-3px) scale(1.02)';
+                        e.currentTarget.style.boxShadow = '0 8px 20px rgba(102, 126, 234, 0.2)';
+                        e.currentTarget.style.borderLeftColor = '#5a67d8';
+                        e.currentTarget.style.borderColor = '#667eea';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.transform = 'translateY(0) scale(1)';
+                        e.currentTarget.style.boxShadow = 'none';
+                        e.currentTarget.style.borderLeftColor = '#667eea';
+                        e.currentTarget.style.borderColor = '#e9ecef';
+                      }}
+                    >
+                      {/* Decorative corner accent */}
+                      <div style={{
+                        position: 'absolute',
+                        top: 0,
+                        right: 0,
+                        width: '60px',
+                        height: '60px',
+                        background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, transparent 100%)',
+                        borderRadius: '0 10px 0 100%'
+                      }} />
+                      
+                      <div style={{
+                        color: '#667eea',
+                        fontSize: '0.75rem',
+                        fontWeight: '700',
+                        marginBottom: '10px',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.8px',
+                        position: 'relative',
+                        zIndex: 1
+                      }}>
+                        {spec.Attribute_Name}
+                      </div>
+                      <div style={{
+                        color: '#2d3748',
+                        fontSize: '0.95rem',
+                        lineHeight: '1.6',
+                        fontWeight: '500',
+                        wordBreak: 'break-word',
+                        position: 'relative',
+                        zIndex: 1,
+                        minHeight: '24px'
+                      }}>
+                        {spec.Attributes_Value || <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>Not specified</span>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Legacy Specs_Attributes for backward compatibility */}
+            {assetData.Specs_Attributes && !assetData.ModelSpecifications && (
               <div>
                 <div style={{ 
                   color: '#7f8c8d', 

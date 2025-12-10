@@ -1621,6 +1621,19 @@ input[type="checkbox"] {
   }
 }
 
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.rotating-loader {
+  animation: spin 1s linear infinite;
+}
+
 /* Header */
 .column-filter-header {
   display: flex;

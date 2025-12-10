@@ -24,7 +24,7 @@ const Register = ({ onRegister }) => {
 
         const { full_name, username, email, password, role } = formData;
         if (!full_name || !username || !email || !password || !role) {
-            setMessage('⚠️ Please fill in all fields.');
+            setMessage('Please fill in all fields.');
             return;
         }
 
@@ -38,18 +38,18 @@ const Register = ({ onRegister }) => {
             const data = await res.json();
 
             if (res.ok) {
-                setMessage('✅ Registration successful! Redirecting to login...');
+                setMessage('Registration successful! Redirecting to login...');
                 setFormData({ full_name: '', username: '', email: '', password: '', role: 'staff' });
                 // Wait for 2 seconds to show the success message, then redirect
                 setTimeout(() => {
                     navigate('/login');
                 }, 2000); onRegister();
             } else {
-                setMessage(`⚠️ ${data.message || 'Registration failed.'}`);
+                setMessage(data.message || 'Registration failed.');
             }
         } catch (error) {
             console.error('Registration error:', error);
-            setMessage('❌ Unable to connect to the server.');
+            setMessage('Unable to connect to the server.');
         }
     };
 

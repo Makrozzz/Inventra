@@ -106,7 +106,7 @@ class InactivityMonitor {
         animation: slideIn 0.3s ease-out;
       ">
         <div style="display: flex; align-items: center; gap: 12px;">
-          <span style="font-size: 24px;">⏰</span>
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
           <div style="flex: 1;">
             <div style="font-weight: 600; margin-bottom: 4px;">Session Expiring Soon</div>
             <div style="opacity: 0.9; font-size: 13px;">You'll be logged out in 2 minutes due to inactivity</div>
