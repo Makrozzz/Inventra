@@ -71,7 +71,10 @@ class Asset {
           p.Project_ID,
           p.Project_Ref_Number,
           p.Project_Title,
-          p.Antivirus,
+          CASE 
+            WHEN LOWER(TRIM(c.Category)) IN ('scanner', 'printer', 'projector') THEN 'None'
+            ELSE COALESCE(p.Antivirus, 'None')
+          END AS Antivirus,
           p.Warranty,
           p.Preventive_Maintenance,
           p.Start_Date,
@@ -602,7 +605,10 @@ class Asset {
           p.Project_ID,
           p.Project_Ref_Number,
           p.Project_Title,
-          p.Antivirus,
+          CASE 
+            WHEN LOWER(TRIM(c.Category)) IN ('scanner', 'printer', 'projector') THEN 'None'
+            ELSE COALESCE(p.Antivirus, 'None')
+          END AS Antivirus,
           p.Warranty,
           p.Preventive_Maintenance,
           p.Start_Date,

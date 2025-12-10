@@ -993,7 +993,16 @@ const processNewAssets = async (assets) => {
         Serial: assetToCreate.Asset_Serial_Number,
         Recipients_ID: assetToCreate.Recipients_ID,
         Category_ID: assetToCreate.Category_ID,
-        Model_ID: assetToCreate.Model_ID
+        Model_ID: assetToCreate.Model_ID,
+        Windows: assetToCreate.Windows,
+        Microsoft_Office: assetToCreate.Microsoft_Office,
+        Monthly_Prices: assetToCreate.Monthly_Prices
+      });
+      
+      console.log(`   🔍 Raw field values from assetData:`, {
+        windows: assetData.windows,
+        microsoft_office: assetData.microsoft_office,
+        monthly_prices: assetData.monthly_prices
       });
 
       const newAsset = await Asset.create(assetToCreate);
@@ -1519,6 +1528,14 @@ const bulkImportAssets = async (req, res, next) => {
         
         try {
           console.log(`Processing asset ${rowNumber}: ${assetData.serial_number}`);
+          console.log(`   🔍 Full assetData received:`, {
+            windows: assetData.windows,
+            microsoft_office: assetData.microsoft_office,
+            monthly_prices: assetData.monthly_prices,
+            department: assetData.department,
+            department_name: assetData.department_name,
+            position: assetData.position
+          });
           
           // Validate required fields (accept both field name formats)
           const projectRefNum = assetData.project_reference_num || assetData.project_ref_num;
@@ -1629,7 +1646,11 @@ const bulkImportAssets = async (req, res, next) => {
             model: assetData.model || 'Unknown',
             status: assetData.status || 'Active',
             recipient_name: assetData.recipient_name || '',
-            department_name: assetData.department_name || '',
+            department_name: assetData.department_name || assetData.department || '',
+            position: assetData.position || '',
+            windows: assetData.windows || null,
+            microsoft_office: assetData.microsoft_office || null,
+            monthly_prices: assetData.monthly_prices || null,
             peripherals: processedPeripherals
           };
 

@@ -1103,8 +1103,7 @@ const AddAsset = () => {
                     justifyContent: 'center',
                     gap: '8px'
                   }}>
-                    <Loader size={16} style={{ animation: 'spin 1s linear infinite' }} />
-                    <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
+                    <Loader size={16} className="rotating-loader" />
                     Loading branches...
                   </div>
                 ) : (

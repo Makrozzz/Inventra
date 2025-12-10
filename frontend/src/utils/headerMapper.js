@@ -110,7 +110,12 @@ class HeaderMapper {
     // department variations (maps to Department in RECIPIENTS table)
     'department': [
       'department', 'department_name', 'department name', 'dept',
-      'unit', 'division', 'team', 'departmentname'
+      'unit', 'division', 'team', 'departmentname', 'dept_name'
+    ],
+    
+    // Alternative department_name mapping (for explicit department_name columns)
+    'department_name': [
+      'department_name', 'department name', 'dept name', 'deptname'
     ],
     
     // peripheral_name variations
@@ -232,10 +237,10 @@ class HeaderMapper {
     ],
     
     // monthly_price variations
-    'monthly_price': [
-      'monthly_price', 'monthly price', 'price per month', 'monthly cost',
-      'monthly rate', 'monthly fee', 'monthlyprice', 'monthlycost',
-      'monthly_cost', 'monthly_rate', 'monthly_fee', 'price/month'
+    'monthly_prices': [
+      'monthly_prices', 'monthly_price', 'monthly price', 'price per month', 'monthly cost',
+      'monthly rate', 'monthly fee', 'monthlyprice', 'monthlycost', 'monthlyfee',
+      'monthly_cost', 'monthly_rate', 'monthly_fee', 'price/month', 'monthly_pricing'
     ],
     
     // software_prices variations
@@ -290,7 +295,7 @@ class HeaderMapper {
       'start_date': ['start', 'begin', 'commence'],
       'end_date': ['end', 'finish', 'expir'],
       'position': ['position', 'title', 'role', 'job'],
-      'monthly_price': ['monthly', 'price', 'cost', 'rate'],
+      'monthly_prices': ['monthly', 'price', 'cost', 'rate', 'pricing'],
       'software_prices': ['software', 'price', 'cost', 'license']
     };
     

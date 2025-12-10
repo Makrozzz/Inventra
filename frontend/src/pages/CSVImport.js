@@ -83,10 +83,15 @@ const CSVImport = () => {
         reader.onload = (e) => {
           try {
             const data = new Uint8Array(e.target.result);
-            const workbook = XLSX.read(data, { type: 'array' });
+            const workbook = XLSX.read(data, { type: 'array', cellText: false, cellDates: true });
             const firstSheetName = workbook.SheetNames[0];
             const worksheet = workbook.Sheets[firstSheetName];
-            const jsonData = XLSX.utils.sheet_to_json(worksheet);
+            const jsonData = XLSX.utils.sheet_to_json(worksheet, { 
+              defval: '',
+              raw: false,
+              blankrows: false
+            });
+            console.log('Excel parsed, sample row:', jsonData[0]);
             resolve(jsonData);
           } catch (error) {
             reject(error);
@@ -112,6 +117,14 @@ const CSVImport = () => {
     setHeaderMapping(mappingResult);
     
     console.log('Header Mapping Result:', mappingResult);
+    console.log('First row raw data:', data[0]);
+    console.log('Checking specific fields in first row:', {
+      Windows: data[0]['Windows'],
+      'Microsoft Office': data[0]['Microsoft Office'],
+      'Monthly Price': data[0]['Monthly Price'],
+      Department: data[0]['Department'],
+      Position: data[0]['Position']
+    });
     
     // Check if mapping is valid
     const validation = HeaderMapper.validateMapping(mappingResult.mapping);
@@ -122,6 +135,15 @@ const CSVImport = () => {
     } else {
       // Auto-map and continue
       const transformedData = HeaderMapper.transformData(data, mappingResult.mapping);
+      
+      console.log('After transformation, first row:', transformedData[0]);
+      console.log('Transformed specific fields:', {
+        windows: transformedData[0].windows,
+        microsoft_office: transformedData[0].microsoft_office,
+        monthly_prices: transformedData[0].monthly_prices,
+        department: transformedData[0].department,
+        position: transformedData[0].position
+      });
       
       // Check if data needs grouping (duplicate assets with different peripherals)
       const needsGrouping = AssetGrouper.needsGrouping(transformedData);
