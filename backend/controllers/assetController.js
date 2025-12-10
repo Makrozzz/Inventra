@@ -153,7 +153,7 @@ const createAsset = async (req, res, next) => {
     next(error);
   }
 };
-const createAssetWithDetails = async (req, res, next) => {
+const createAssetWithDetails = async (req, res, next, importCache = null) => {
   try {
     const completeData = req.body;
     console.log('Creating asset with complete details:', completeData);
@@ -199,19 +199,33 @@ const createAssetWithDetails = async (req, res, next) => {
     }
 
     console.log('Creating/getting category...');
-    // Step 2: Get or create category
+    // Step 2: Get or create category (with cache support)
     let categoryId = null;
     if (completeData.category) {
-      categoryId = await Asset.getOrCreateCategory(completeData.category);
+      categoryId = await Asset.getOrCreateCategory(completeData.category, importCache);
       console.log('Category ID:', categoryId);
     }
 
     console.log('Creating/getting model...');
-    // Step 3: Get or create model (with category link)
+    // Step 3: Get or create model (with category link and cache support)
     let modelId = null;
     if (completeData.model) {
-      modelId = await Asset.getOrCreateModel(completeData.model, categoryId);
+      modelId = await Asset.getOrCreateModel(completeData.model, categoryId, importCache);
       console.log('Model ID:', modelId, '(linked to Category ID:', categoryId, ')');
+    }
+
+    console.log('Processing Windows and MS Office versions...');
+    // Step 3.5: Process Windows and MS Office with cache support
+    let windowsVersion = null;
+    if (completeData.windows) {
+      windowsVersion = await Asset.getOrCreateWindows(completeData.windows, importCache);
+      console.log('Windows version:', windowsVersion);
+    }
+    
+    let msOfficeVersion = null;
+    if (completeData.microsoft_office) {
+      msOfficeVersion = await Asset.getOrCreateMicrosoftOffice(completeData.microsoft_office, importCache);
+      console.log('MS Office version:', msOfficeVersion);
     }
 
     console.log('Creating asset record...');
@@ -224,8 +238,8 @@ const createAssetWithDetails = async (req, res, next) => {
       Recipients_ID: recipientId,
       Category_ID: categoryId,
       Model_ID: modelId,
-      Windows: completeData.windows || null,
-      Microsoft_Office: completeData.microsoft_office || null,
+      Windows: windowsVersion,
+      Microsoft_Office: msOfficeVersion,
       Monthly_Prices: completeData.monthly_prices || null
     };
 
@@ -301,11 +315,11 @@ const createAssetWithDetails = async (req, res, next) => {
     }
 
     console.log('Linking software...');
-    // Step 5.5: Link software to asset if provided (skip if 'None')
+    // Step 5.5: Link software to asset if provided (skip if 'None') with cache support
     if (completeData.software && completeData.software.trim()) {
       if (completeData.software.toLowerCase() !== 'none') {
         try {
-          await Asset.linkSoftwareToAsset(newAsset.Asset_ID, completeData.software.trim());
+          await Asset.linkSoftwareToAsset(newAsset.Asset_ID, completeData.software.trim(), importCache);
           console.log(`✅ Linked software: ${completeData.software}`);
         } catch (softwareError) {
           console.log('Failed to link software:', softwareError.message);
@@ -1208,49 +1222,93 @@ const validateImportData = async (req, res, next) => {
     const existingWindowsVersions = new Set(existingWindows.map(w => w.Windows.toLowerCase()));
     const existingOfficeVersions = new Set(existingOffice.map(o => o.Microsoft_Office.toLowerCase()));
 
-    console.log('Checking assets for new options...');
-    // Check each asset for new options
+    console.log('Checking assets for new options with deduplication logic...');
+    // Track what we've seen in this import (for deduplication)
+    const seenInImport = {
+      categories: new Set(),
+      models: new Set(),
+      software: new Set(),
+      windows: new Set(),
+      office: new Set()
+    };
+    
+    // Check each asset for new options (only accept first occurrence)
     for (let i = 0; i < assets.length; i++) {
       const asset = assets[i];
       
       try {
-        // Check category - only if value exists and is not empty
+        // Check category - only accept FIRST new occurrence
         if (asset.category && typeof asset.category === 'string' && asset.category.trim() !== '') {
           const categoryName = asset.category.trim();
-          if (!existingCategoryNames.has(categoryName.toLowerCase())) {
+          const lowerCategoryName = categoryName.toLowerCase();
+          
+          // Only add if: 1) Not in database AND 2) First time seeing it in this import
+          if (!existingCategoryNames.has(lowerCategoryName) && !seenInImport.categories.has(lowerCategoryName)) {
             newOptions.categories.add(categoryName);
+            seenInImport.categories.add(lowerCategoryName);
+            console.log(`  ✨ New category detected (first occurrence): "${categoryName}"`);
+          } else if (!existingCategoryNames.has(lowerCategoryName)) {
+            console.log(`  ⚠️  Duplicate new category skipped: "${categoryName}"`);
           }
         }
 
-        // Check model - only if value exists and is not empty
+        // Check model - only accept FIRST new occurrence
         if (asset.model && typeof asset.model === 'string' && asset.model.trim() !== '') {
           const modelName = asset.model.trim();
-          if (!existingModelNames.has(modelName.toLowerCase())) {
+          const lowerModelName = modelName.toLowerCase();
+          
+          // Only add if: 1) Not in database AND 2) First time seeing it in this import
+          if (!existingModelNames.has(lowerModelName) && !seenInImport.models.has(lowerModelName)) {
             newOptions.models.add(modelName);
+            seenInImport.models.add(lowerModelName);
+            console.log(`  ✨ New model detected (first occurrence): "${modelName}"`);
+          } else if (!existingModelNames.has(lowerModelName)) {
+            console.log(`  ⚠️  Duplicate new model skipped: "${modelName}"`);
           }
         }
 
-        // Check software - only if value exists and is not empty and not 'None'
+        // Check software - only accept FIRST new occurrence (skip 'None')
         if (asset.software && typeof asset.software === 'string' && asset.software.trim() !== '' && asset.software.trim().toLowerCase() !== 'none') {
           const softwareName = asset.software.trim();
-          if (!existingSoftwareNames.has(softwareName.toLowerCase())) {
+          const lowerSoftwareName = softwareName.toLowerCase();
+          
+          // Only add if: 1) Not in database AND 2) First time seeing it in this import
+          if (!existingSoftwareNames.has(lowerSoftwareName) && !seenInImport.software.has(lowerSoftwareName)) {
             newOptions.software.add(softwareName);
+            seenInImport.software.add(lowerSoftwareName);
+            console.log(`  ✨ New software detected (first occurrence): "${softwareName}"`);
+          } else if (!existingSoftwareNames.has(lowerSoftwareName)) {
+            console.log(`  ⚠️  Duplicate new software skipped: "${softwareName}"`);
           }
         }
 
-        // Check Windows - only if value exists and is not empty
+        // Check Windows - only accept FIRST new occurrence
         if (asset.windows && typeof asset.windows === 'string' && asset.windows.trim() !== '') {
           const windowsVersion = asset.windows.trim();
-          if (!existingWindowsVersions.has(windowsVersion.toLowerCase())) {
+          const lowerWindowsVersion = windowsVersion.toLowerCase();
+          
+          // Only add if: 1) Not in database AND 2) First time seeing it in this import
+          if (!existingWindowsVersions.has(lowerWindowsVersion) && !seenInImport.windows.has(lowerWindowsVersion)) {
             newOptions.windows.add(windowsVersion);
+            seenInImport.windows.add(lowerWindowsVersion);
+            console.log(`  ✨ New Windows version detected (first occurrence): "${windowsVersion}"`);
+          } else if (!existingWindowsVersions.has(lowerWindowsVersion)) {
+            console.log(`  ⚠️  Duplicate new Windows version skipped: "${windowsVersion}"`);
           }
         }
 
-        // Check Microsoft Office - only if value exists and is not empty
+        // Check Microsoft Office - only accept FIRST new occurrence
         if (asset.microsoft_office && typeof asset.microsoft_office === 'string' && asset.microsoft_office.trim() !== '') {
           const officeVersion = asset.microsoft_office.trim();
-          if (!existingOfficeVersions.has(officeVersion.toLowerCase())) {
+          const lowerOfficeVersion = officeVersion.toLowerCase();
+          
+          // Only add if: 1) Not in database AND 2) First time seeing it in this import
+          if (!existingOfficeVersions.has(lowerOfficeVersion) && !seenInImport.office.has(lowerOfficeVersion)) {
             newOptions.office.add(officeVersion);
+            seenInImport.office.add(lowerOfficeVersion);
+            console.log(`  ✨ New MS Office version detected (first occurrence): "${officeVersion}"`);
+          } else if (!existingOfficeVersions.has(lowerOfficeVersion)) {
+            console.log(`  ⚠️  Duplicate new MS Office version skipped: "${officeVersion}"`);
           }
         }
         
@@ -1350,8 +1408,15 @@ const validateImportData = async (req, res, next) => {
  * Supports two modes:
  * 1. Create new assets (default)
  * 2. Add peripherals to existing assets (when assets already exist)
+ * 
+ * Features deduplication to ensure only first occurrence of new models,
+ * categories, Windows versions, MS Office versions, and software are accepted.
  */
 const bulkImportAssets = async (req, res, next) => {
+  // Import the deduplication cache
+  const ImportCache = require('../utils/importCache');
+  const importCache = new ImportCache();
+  
   try {
     const { assets, importMode } = req.body; // importMode can be 'auto', 'new_assets', or 'add_peripherals'
 
@@ -1364,7 +1429,11 @@ const bulkImportAssets = async (req, res, next) => {
       });
     }
 
-    console.log(`\n${'='.repeat(60)}`);
+    console.log(`\n${'='.repeat(80)}`);
+    console.log(`🚀 BULK IMPORT STARTED - ${assets.length} assets to process`);
+    console.log(`📦 Import Mode: ${importMode || 'auto'}`);
+    console.log(`🔄 Deduplication Cache: ENABLED`);
+    console.log(`${'='.repeat(80)}\n`);    console.log(`\n${'='.repeat(60)}`);
     console.log(`Starting bulk import of ${assets.length} assets...`);
     console.log(`Import Mode: ${importMode || 'auto'}`);
     console.log(`${'='.repeat(60)}\n`);
@@ -1513,82 +1582,79 @@ const bulkImportAssets = async (req, res, next) => {
     // Default mode: Create new assets only (original behavior)
     console.log(`\n📝 Creating new assets (default mode)...`);
 
-    // Process assets in batches for better performance
-    const BATCH_SIZE = 10;
-    const batches = [];
-    for (let i = 0; i < assets.length; i += BATCH_SIZE) {
-      batches.push(assets.slice(i, i + BATCH_SIZE));
-    }
-
+    // Process assets SEQUENTIALLY to prevent race conditions in cache
+    // (Parallel processing causes multiple assets to create the same model/category simultaneously)
+    console.log('⚠️  Processing assets sequentially to ensure proper deduplication...');
+    
     let processedCount = 0;
 
-    for (const batch of batches) {
-      const batchPromises = batch.map(async (assetData, index) => {
-        const rowNumber = processedCount + index + 1;
+    for (let i = 0; i < assets.length; i++) {
+      const assetData = assets[i];
+      const rowNumber = i + 1;
+      
+      try {
+        console.log(`\nProcessing asset ${rowNumber}/${assets.length}: ${assetData.serial_number}`);
+        console.log(`   🔍 Full assetData received:`, {
+          windows: assetData.windows,
+          microsoft_office: assetData.microsoft_office,
+          monthly_prices: assetData.monthly_prices,
+          department: assetData.department,
+          department_name: assetData.department_name,
+          position: assetData.position
+        });
         
-        try {
-          console.log(`Processing asset ${rowNumber}: ${assetData.serial_number}`);
-          console.log(`   🔍 Full assetData received:`, {
-            windows: assetData.windows,
-            microsoft_office: assetData.microsoft_office,
-            monthly_prices: assetData.monthly_prices,
-            department: assetData.department,
-            department_name: assetData.department_name,
-            position: assetData.position
-          });
+        // Validate required fields (accept both field name formats)
+        const projectRefNum = assetData.project_reference_num || assetData.project_ref_num;
+        const requiredFields = [
+          { value: projectRefNum, name: 'project_reference_num or project_ref_num' },
+          { value: assetData.serial_number, name: 'serial_number' },
+          { value: assetData.tag_id, name: 'tag_id' },
+          { value: assetData.item_name, name: 'item_name' }
+        ];
+        
+        for (const field of requiredFields) {
+          if (!field.value || String(field.value).trim() === '') {
+            throw new Error(`Missing required field: ${field.name}`);
+          }
+        }
+
+        // Check for duplicate serial number in database (only in new_assets mode)
+        const existingBySerial = await Asset.findBySerialNumber(assetData.serial_number);
+        if (existingBySerial && detectedMode === 'new_assets') {
+          throw new Error(`Asset with serial number '${assetData.serial_number}' already exists`);
+        }
+
+        // Check for duplicate tag ID (you'd need to implement this check in Asset model)
+        // For now, we'll skip this check but it should be added
+
+        // Convert flat peripheral fields to array if needed
+        if (!assetData.peripherals && (assetData.peripheral_name || assetData.serial_code)) {
+          console.log(`Converting flat peripheral fields for ${assetData.serial_number}...`);
+          const peripheralNames = assetData.peripheral_name ? 
+            String(assetData.peripheral_name).split(',').map(s => s.trim()).filter(s => s && s.toLowerCase() !== 'n/a' && s.toLowerCase() !== 'none') : [];
+          const serialCodes = assetData.serial_code ? 
+            String(assetData.serial_code).split(',').map(s => s.trim()).filter(s => s && s.toLowerCase() !== 'n/a' && s.toLowerCase() !== 'none') : [];
           
-          // Validate required fields (accept both field name formats)
-          const projectRefNum = assetData.project_reference_num || assetData.project_ref_num;
-          const requiredFields = [
-            { value: projectRefNum, name: 'project_reference_num or project_ref_num' },
-            { value: assetData.serial_number, name: 'serial_number' },
-            { value: assetData.tag_id, name: 'tag_id' },
-            { value: assetData.item_name, name: 'item_name' }
-          ];
-          
-          for (const field of requiredFields) {
-            if (!field.value || String(field.value).trim() === '') {
-              throw new Error(`Missing required field: ${field.name}`);
+          assetData.peripherals = [];
+          const maxLength = Math.max(peripheralNames.length, serialCodes.length);
+          for (let i = 0; i < maxLength; i++) {
+            const peripheral = {};
+            if (i < peripheralNames.length && peripheralNames[i]) {
+              peripheral.peripheral_name = peripheralNames[i];
+            }
+            if (i < serialCodes.length && serialCodes[i]) {
+              peripheral.serial_code = serialCodes[i];
+            }
+            if (peripheral.peripheral_name) {
+              assetData.peripherals.push(peripheral);
             }
           }
+          console.log(`✅ Converted to ${assetData.peripherals.length} peripherals`);
+        }
 
-          // Check for duplicate serial number in database (only in new_assets mode)
-          const existingBySerial = await Asset.findBySerialNumber(assetData.serial_number);
-          if (existingBySerial && detectedMode === 'new_assets') {
-            throw new Error(`Asset with serial number '${assetData.serial_number}' already exists`);
-          }
-
-          // Check for duplicate tag ID (you'd need to implement this check in Asset model)
-          // For now, we'll skip this check but it should be added
-
-          // Convert flat peripheral fields to array if needed
-          if (!assetData.peripherals && (assetData.peripheral_name || assetData.serial_code)) {
-            console.log(`Converting flat peripheral fields for ${assetData.serial_number}...`);
-            const peripheralNames = assetData.peripheral_name ? 
-              String(assetData.peripheral_name).split(',').map(s => s.trim()).filter(s => s && s.toLowerCase() !== 'n/a' && s.toLowerCase() !== 'none') : [];
-            const serialCodes = assetData.serial_code ? 
-              String(assetData.serial_code).split(',').map(s => s.trim()).filter(s => s && s.toLowerCase() !== 'n/a' && s.toLowerCase() !== 'none') : [];
-            
-            assetData.peripherals = [];
-            const maxLength = Math.max(peripheralNames.length, serialCodes.length);
-            for (let i = 0; i < maxLength; i++) {
-              const peripheral = {};
-              if (i < peripheralNames.length && peripheralNames[i]) {
-                peripheral.peripheral_name = peripheralNames[i];
-              }
-              if (i < serialCodes.length && serialCodes[i]) {
-                peripheral.serial_code = serialCodes[i];
-              }
-              if (peripheral.peripheral_name) {
-                assetData.peripherals.push(peripheral);
-              }
-            }
-            console.log(`✅ Converted to ${assetData.peripherals.length} peripherals`);
-          }
-
-          // Process peripherals - split comma-separated values into individual peripherals
-          let processedPeripherals = [];
-          if (assetData.peripherals && Array.isArray(assetData.peripherals)) {
+        // Process peripherals - split comma-separated values into individual peripherals
+        let processedPeripherals = [];
+        if (assetData.peripherals && Array.isArray(assetData.peripherals)) {
             console.log(`Processing ${assetData.peripherals.length} peripheral entries for ${assetData.serial_number}...`);
             console.log(`📦 Original assetData.peripherals:`, JSON.stringify(assetData.peripherals, null, 2));
             
@@ -1686,14 +1752,14 @@ const bulkImportAssets = async (req, res, next) => {
             })
           };
 
-          // Use the existing createAssetWithDetails function
+          // Use the existing createAssetWithDetails function with deduplication cache
           try {
             await createAssetWithDetails(mockReq, mockRes, (error) => {
               if (error) {
                 assetCreationError = error.message || 'Unknown error in next middleware';
                 console.error('Error passed to next():', assetCreationError);
               }
-            });
+            }, importCache); // Pass the import cache for deduplication
           } catch (createError) {
             // Catch any unhandled errors from createAssetWithDetails
             assetCreationError = createError.message || 'Unhandled error during asset creation';
@@ -1704,45 +1770,46 @@ const bulkImportAssets = async (req, res, next) => {
             throw new Error(assetCreationError);
           }
 
-          if (assetCreated) {
-            return { success: true, row: rowNumber };
-          } else {
+          if (!assetCreated) {
             throw new Error('Failed to create asset - no success response received');
           }
-
-        } catch (error) {
-          console.error(`❌ Failed to process asset ${rowNumber}:`, error.message);
-          return {
-            success: false,
-            row: rowNumber,
-            serial_number: assetData.serial_number,
-            error: error.message
-          };
-        }
-      });
-
-      // Wait for batch to complete
-      const batchResults = await Promise.all(batchPromises);
-      
-      // Aggregate results
-      batchResults.forEach(result => {
-        if (result.success) {
+          
+          // Asset created successfully
+          console.log(`✅ Asset ${rowNumber} completed successfully`);
           results.imported++;
-        } else {
-          results.failed++;
-          results.errors.push({
-            row: result.row,
-            serial_number: result.serial_number,
-            error: result.error
-          });
-        }
-      });
 
-      processedCount += batch.length;
-      console.log(`Processed batch: ${processedCount}/${assets.length}`);
+      } catch (error) {
+        console.error(`❌ Failed to process asset ${rowNumber}:`, error.message);
+        results.failed++;
+        results.errors.push({
+          row: rowNumber,
+          serial_number: assetData.serial_number,
+          error: error.message
+        });
+      }
+      
+      processedCount++;
+      
+      // Show progress every 10 assets
+      if (processedCount % 10 === 0 || processedCount === assets.length) {
+        console.log(`📊 Progress: ${processedCount}/${assets.length} assets processed`);
+      }
     }
 
     results.assetsCreated = results.imported;
+    
+    // Get cache statistics
+    const cacheStats = importCache.getStats();
+    console.log(`\n${'='.repeat(80)}`);
+    console.log(`📊 DEDUPLICATION CACHE STATISTICS:`);
+    console.log(`   🏷️  Unique Models: ${cacheStats.models}`);
+    console.log(`   📁 Unique Categories: ${cacheStats.categories}`);
+    console.log(`   🪟 Unique Windows Versions: ${cacheStats.windowsVersions}`);
+    console.log(`   📄 Unique MS Office Versions: ${cacheStats.msOfficeVersions}`);
+    console.log(`   💿 Unique Software: ${cacheStats.software}`);
+    console.log(`   ✅ Total Unique Attributes: ${cacheStats.total}`);
+    console.log(`${'='.repeat(80)}\n`);
+    
     const finalMessage = `Bulk import completed: ${results.imported} new assets created, ${results.failed} failed`;
     console.log(`\n${finalMessage}`);
     logger.info(finalMessage);
@@ -1757,7 +1824,8 @@ const bulkImportAssets = async (req, res, next) => {
       failed: results.failed,
       errors: results.errors.slice(0, 50), // Limit errors to first 50
       total: assets.length,
-      mode: detectedMode
+      mode: detectedMode,
+      deduplication: cacheStats // Include cache stats in response
     });
 
   } catch (error) {
