@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Search, Filter, Edit, Trash2, Download, Plus, Upload, FileText, Columns, AlertTriangle, X, Settings2, Eye, Trash, Edit2 } from 'lucide-react';
+import { Search, Filter, Edit, Trash2, Download, Plus, Upload, FileText, Columns, AlertTriangle, X, Settings2, Eye, Trash, Edit2, Boxes } from 'lucide-react';
 import Pagination from '../components/Pagination';
 import apiService from '../services/apiService';
 import ColumnFilterPopup from '../components/ColumnFilterPopup';
@@ -53,6 +53,29 @@ const Assets = ({ onDelete }) => {
   const [resizingColumn, setResizingColumn] = useState(null);
   const [startX, setStartX] = useState(0);
   const [startWidth, setStartWidth] = useState(0);
+
+  const headerButtonStyle = {
+    background: 'white',
+    color: '#667eea',
+    border: 'none',
+    padding: '12px 24px',
+    fontSize: '16px',
+    fontWeight: '600',
+    boxShadow: '0 4px 15px rgba(0, 0, 0, 0.2)',
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '8px',
+    textDecoration: 'none',
+    transition: 'all 0.3s ease'
+  };
+
+  const handleHeaderButtonHover = (event, isHover) => {
+    const target = event.currentTarget;
+    target.style.transform = isHover ? 'translateY(-2px)' : 'translateY(0)';
+    target.style.boxShadow = isHover
+      ? '0 6px 20px rgba(0, 0, 0, 0.25)'
+      : '0 4px 15px rgba(0, 0, 0, 0.2)';
+  };
 
   // Load column configuration on mount
   useEffect(() => {
@@ -539,76 +562,58 @@ const Assets = ({ onDelete }) => {
 
   return (
     <div style={{ padding: '0' }}>
-      {/* Header Section with Gradient */}
       <div style={{
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-        padding: '30px 20px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: '12px',
         marginBottom: '30px',
-        borderRadius: '0 0 20px 20px',
-        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)',
-        width: '100%',
-        boxSizing: 'border-box'
+        paddingBottom: '15px',
+        borderBottom: '3px solid #667eea',
+        padding: '0 20px 15px 20px'
       }}>
-        <div style={{ 
-          display: 'flex', 
-          justifyContent: 'space-between', 
-          alignItems: 'center',
-          flexWrap: 'wrap',
-          gap: '15px',
-          width: '100%'
-        }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <Boxes size={28} color="#667eea" />
           <div>
-            <h1 style={{ 
-              color: 'white', 
-              margin: '0 0 10px 0',
-              fontSize: '32px',
-              fontWeight: '700'
-            }}>
-              Asset Inventory Management
-            </h1>
-            <p style={{ 
-              color: 'rgba(255, 255, 255, 0.9)', 
-              margin: 0,
-              fontSize: '16px'
-            }}>
+            <h2 style={{ margin: 0, color: '#2c3e50', fontSize: '1.4rem' }}>
+              Assets
+            </h2>
+            <p style={{ margin: '5px 0 0 0', color: '#7f8c8d', fontSize: '0.9rem' }}>
               View complete asset information including project, customer, and maintenance details
             </p>
           </div>
-          <div className="actions">
-            <button 
-              onClick={() => navigate('/assets/import')}
-              className="btn btn-secondary" 
-              style={{
-                backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                color: 'white',
-                border: '1px solid rgba(255, 255, 255, 0.3)',
-                backdropFilter: 'blur(10px)',
-                marginRight: '10px'
-              }}
-            >
-              <Download size={16} style={{ marginRight: '5px' }} />
-              Import CSV
-            </button>
-            <button onClick={handleExportCSV} className="btn btn-secondary" style={{
-              backgroundColor: 'rgba(255, 255, 255, 0.2)',
-              color: 'white',
-              border: '1px solid rgba(255, 255, 255, 0.3)',
-              backdropFilter: 'blur(10px)',
-              marginRight: '10px'
-            }}>
-              <Upload size={16} style={{ marginRight: '5px' }} />
-              Export CSV
-            </button>
-            <Link to="/add-asset" className="btn btn-primary" style={{
-              backgroundColor: 'rgba(255, 255, 255, 0.9)',
-              color: '#667eea',
-              border: 'none',
-              fontWeight: '600'
-            }}>
-              <Plus size={16} style={{ marginRight: '5px' }} />
-              Add New Asset
-            </Link>
-          </div>
+        </div>
+        <div className="actions" style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+          <button
+            onClick={() => navigate('/assets/import')}
+            className="btn btn-secondary"
+            style={headerButtonStyle}
+            onMouseEnter={(e) => handleHeaderButtonHover(e, true)}
+            onMouseLeave={(e) => handleHeaderButtonHover(e, false)}
+          >
+            <Download size={16} />
+            Import CSV
+          </button>
+          <button
+            onClick={handleExportCSV}
+            className="btn btn-secondary"
+            style={headerButtonStyle}
+            onMouseEnter={(e) => handleHeaderButtonHover(e, true)}
+            onMouseLeave={(e) => handleHeaderButtonHover(e, false)}
+          >
+            <Upload size={16} />
+            Export CSV
+          </button>
+          <Link
+            to="/add-asset"
+            className="btn btn-primary"
+            style={headerButtonStyle}
+            onMouseEnter={(e) => handleHeaderButtonHover(e, true)}
+            onMouseLeave={(e) => handleHeaderButtonHover(e, false)}
+          >
+            <Plus size={16} />
+            Add New Asset
+          </Link>
         </div>
       </div>
 

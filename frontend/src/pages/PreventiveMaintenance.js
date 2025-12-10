@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Calendar, Clock, CheckCircle, AlertTriangle, Wrench, Filter, Building2, MapPin, Package, FileText, X, ClipboardCheck, Edit, Trash2, Plus, Save, Search, Download, ChevronRight, ChevronLeft, Copy, ArrowLeft, GripVertical } from 'lucide-react';
+import { Calendar, Clock, CheckCircle, AlertTriangle, Wrench, Filter, Building2, MapPin, Package, FileText, X, ClipboardCheck, Edit, Trash2, Plus, Save, Search, Download, ChevronRight, ChevronLeft, Copy, ArrowLeft, GripVertical, Hammer } from 'lucide-react';
 import { API_URL } from '../config/api';
 
 const PreventiveMaintenance = () => {
@@ -8,6 +8,36 @@ const PreventiveMaintenance = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const isInitialMount = useRef(true);
   const savedBranch = useRef(null);
+
+  // Color palette for categories (matching Dashboard)
+  const categoryColorPalette = [
+    '#60a5fa', // Light Blue
+    '#34d399', // Green
+    '#a78bfa', // Purple
+    '#f87171', // Red
+    '#fbbf24', // Yellow
+    '#fb923c', // Orange
+    '#ec4899', // Pink
+    '#14b8a6', // Teal
+    '#8b5cf6', // Violet
+    '#10b981', // Emerald
+    '#f59e0b', // Amber
+    '#6366f1', // Indigo
+    '#ef4444', // Rose
+    '#06b6d4', // Cyan
+    '#84cc16', // Lime
+    '#d946ef', // Fuchsia
+  ];
+
+  // Function to get colors for categories
+  const getCategoryColors = (categories) => {
+    const categoryColors = {};
+    categories.sort().forEach((category, index) => {
+      categoryColors[category] = categoryColorPalette[index % categoryColorPalette.length];
+    });
+    return categoryColors;
+  };
+
   const [selectedCustomer, setSelectedCustomer] = useState('');
   const [selectedBranch, setSelectedBranch] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
@@ -48,6 +78,29 @@ const PreventiveMaintenance = () => {
   const [showCopyChecklist, setShowCopyChecklist] = useState(false);
   const [sourceCategoryForCopy, setSourceCategoryForCopy] = useState('');
   const [sourceChecklistItems, setSourceChecklistItems] = useState([]);
+
+  const headerButtonStyle = {
+    background: 'white',
+    color: '#667eea',
+    border: 'none',
+    padding: '12px 24px',
+    fontSize: '16px',
+    fontWeight: '600',
+    boxShadow: '0 4px 15px rgba(0, 0, 0, 0.2)',
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '8px',
+    textDecoration: 'none',
+    transition: 'all 0.3s ease'
+  };
+
+  const handleHeaderButtonHover = (event, isHover) => {
+    const target = event.currentTarget;
+    target.style.transform = isHover ? 'translateY(-2px)' : 'translateY(0)';
+    target.style.boxShadow = isHover
+      ? '0 6px 20px rgba(0, 0, 0, 0.25)'
+      : '0 4px 15px rgba(0, 0, 0, 0.2)';
+  };
   const [selectedItemsToCopy, setSelectedItemsToCopy] = useState([]);
   const [showCopyConfirm, setShowCopyConfirm] = useState(false);
   const [loadingSourceChecklist, setLoadingSourceChecklist] = useState(false);
@@ -66,6 +119,9 @@ const PreventiveMaintenance = () => {
   const [selectedAssets, setSelectedAssets] = useState([]); // Assets selected (left box)
   const [selectedPMRecords, setSelectedPMRecords] = useState({}); // PM records selected per asset {assetId: [pmId1, pmId2]}
   const [downloadingPDF, setDownloadingPDF] = useState(false);
+
+  // Combined PM Table Category Filter State
+  const [selectedCategoryFilter, setSelectedCategoryFilter] = useState('all');
 
   // Initialize from URL parameters on mount
   useEffect(() => {
@@ -794,51 +850,34 @@ const PreventiveMaintenance = () => {
 
   return (
     <div style={{ padding: '0' }}>
-      {/* Header Section with Gradient */}
       <div style={{
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-        padding: '30px 20px',
-        marginBottom: '30px',
-        borderRadius: '0 0 20px 20px',
-        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)',
         display: 'flex',
-        justifyContent: 'space-between',
         alignItems: 'center',
-        flexWrap: 'wrap',
-        gap: '20px'
+        justifyContent: 'space-between',
+        gap: '12px',
+        marginBottom: '30px',
+        paddingBottom: '15px',
+        borderBottom: '3px solid #27ae60',
+        padding: '0 20px 15px 20px'
       }}>
-        <div>
-          <h1 style={{ 
-            color: 'white', 
-            margin: '0 0 10px 0',
-            fontSize: '32px',
-            fontWeight: '700'
-          }}>
-            Preventive Maintenance
-          </h1>
-          <p style={{ 
-            color: 'rgba(255, 255, 255, 0.9)', 
-            margin: 0,
-            fontSize: '16px'
-          }}>
-            Monitor and manage preventive maintenance schedules with detailed checklists
-          </p>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <Hammer size={28} color="#27ae60" />
+          <div>
+            <h2 style={{ margin: 0, color: '#2c3e50', fontSize: '1.4rem' }}>
+              Preventive Maintenance
+            </h2>
+            <p style={{ margin: '5px 0 0 0', color: '#7f8c8d', fontSize: '0.9rem' }}>
+              Monitor and manage preventive maintenance schedules with detailed checklists
+            </p>
+          </div>
         </div>
-        <div className="actions">
+        <div className="actions" style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
           <button
             onClick={handleOpenChecklistManager}
             className="btn btn-primary"
-            style={{
-              backgroundColor: 'rgba(255, 255, 255, 0.9)',
-              color: '#667eea',
-              border: 'none',
-              fontWeight: '600',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              padding: '12px 20px',
-              fontSize: '1rem'
-            }}
+            style={headerButtonStyle}
+            onMouseEnter={(e) => handleHeaderButtonHover(e, true)}
+            onMouseLeave={(e) => handleHeaderButtonHover(e, false)}
           >
             <Edit size={18} />
             Edit Checklist Items
@@ -1084,6 +1123,416 @@ const PreventiveMaintenance = () => {
           </p>
         </div>
       ) : (
+        // Combined table with horizontal category filter
+        (() => {
+          // Merge all categories into single flat list
+          const allRecords = [];
+          const allChecklistItems = new Map();
+          
+          Object.keys(groupedByCategory).forEach((category) => {
+            const { assets = {}, checklistItems = [] } = groupedByCategory[category] || {};
+            const assetsList = Object.values(assets);
+            
+            assetsList.forEach(asset => {
+              allRecords.push({
+                ...asset,
+                categoryName: category
+              });
+            });
+            
+            checklistItems.forEach(item => {
+              if (!allChecklistItems.has(item.Checklist_ID)) {
+                allChecklistItems.set(item.Checklist_ID, item);
+              }
+            });
+          });
+          
+          // Filter by selected category
+          const filteredRecords = selectedCategoryFilter === 'all'
+            ? allRecords
+            : allRecords.filter(r => r.categoryName === selectedCategoryFilter);
+          
+          const uniqueChecklistItems = Array.from(allChecklistItems.values())
+            .sort((a, b) => a.Checklist_ID - b.Checklist_ID);
+          
+          const uniqueCategories = [...new Set(allRecords.map(r => r.categoryName))].sort();
+          const categoryColors = getCategoryColors(uniqueCategories);
+          
+          return (
+            <div key="combined-table-container" style={{ marginBottom: '30px' }}>
+              {/* Header */}
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                marginBottom: '20px',
+                paddingBottom: '15px',
+                borderBottom: '3px solid #27ae60'
+              }}>
+                <Wrench size={28} color="#27ae60" />
+                <div>
+                  <h2 style={{ margin: 0, color: '#2c3e50', fontSize: '1.4rem' }}>
+                    Preventive Maintenance Records
+                  </h2>
+                  <p style={{ margin: '5px 0 0 0', color: '#7f8c8d', fontSize: '0.9rem' }}>
+                    {filteredRecords.length} record{filteredRecords.length !== 1 ? 's' : ''} shown
+                  </p>
+                </div>
+              </div>
+
+              {/* Horizontal Category Filter */}
+              <div style={{ marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                <span style={{ fontWeight: '600', color: '#2c3e50', fontSize: '0.95rem', marginRight: '10px' }}>
+                  Category:
+                </span>
+                
+                {/* "All" Button */}
+                <button
+                  onClick={() => setSelectedCategoryFilter('all')}
+                  style={{
+                    padding: '8px 16px',
+                    border: selectedCategoryFilter === 'all' ? '2px solid #27ae60' : '2px solid #bdc3c7',
+                    backgroundColor: selectedCategoryFilter === 'all' ? '#d5f4e6' : '#f8f9fa',
+                    color: selectedCategoryFilter === 'all' ? '#27ae60' : '#2c3e50',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    fontSize: '0.9rem',
+                    fontWeight: '600',
+                    transition: 'all 0.2s',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px'
+                  }}
+                  onMouseOver={(e) => {
+                    if (selectedCategoryFilter === 'all') {
+                      e.target.style.opacity = '0.9';
+                    }
+                  }}
+                  onMouseOut={(e) => {
+                    if (selectedCategoryFilter === 'all') {
+                      e.target.style.opacity = '1';
+                    }
+                  }}
+                  title="Show all categories"
+                >
+                  ✓ All ({allRecords.length})
+                </button>
+
+                {/* Category Buttons with Different Colors */}
+                {uniqueCategories.map(cat => {
+                  const count = allRecords.filter(r => r.categoryName === cat).length;
+                  const isSelected = selectedCategoryFilter === cat;
+                  const categoryColor = categoryColors[cat];
+                  const lighterColor = categoryColor + '20'; // Add transparency
+                  
+                  return (
+                    <button
+                      key={cat}
+                      onClick={() => setSelectedCategoryFilter(cat)}
+                      style={{
+                        padding: '8px 16px',
+                        border: isSelected ? `2px solid ${categoryColor}` : `2px solid #bdc3c7`,
+                        backgroundColor: isSelected ? categoryColor : '#f8f9fa',
+                        color: isSelected ? 'white' : '#2c3e50',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        fontSize: '0.9rem',
+                        fontWeight: '600',
+                        transition: 'all 0.2s',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        boxShadow: isSelected ? `0 2px 6px ${categoryColor}40` : 'none'
+                      }}
+                      onMouseOver={(e) => {
+                        if (isSelected) {
+                          e.target.style.opacity = '0.9';
+                          e.target.style.transform = 'translateY(-2px)';
+                        } else {
+                          e.target.style.borderColor = categoryColor;
+                          e.target.style.backgroundColor = lighterColor;
+                        }
+                      }}
+                      onMouseOut={(e) => {
+                        if (isSelected) {
+                          e.target.style.opacity = '1';
+                          e.target.style.transform = 'translateY(0)';
+                        } else {
+                          e.target.style.borderColor = '#bdc3c7';
+                          e.target.style.backgroundColor = '#f8f9fa';
+                        }
+                      }}
+                      title={`Show only ${cat} (${count} items)`}
+                    >
+                      {cat} ({count})
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* No Results */}
+              {filteredRecords.length === 0 ? (
+                <div style={{
+                  textAlign: 'center',
+                  padding: '60px 20px',
+                  backgroundColor: '#f8f9fa',
+                  borderRadius: '8px'
+                }}>
+                  <p style={{ color: '#7f8c8d', fontSize: '1rem' }}>
+                    No records found for the selected category
+                  </p>
+                </div>
+              ) : (
+                /* Combined Table */
+                <div style={{ overflowX: 'auto' }} className="card">
+                  <table className="table" style={{ minWidth: '100%' }}>
+                    <thead>
+                      <tr>
+                        <th style={{
+                          position: 'sticky',
+                          left: 0,
+                          top: 0,
+                          background: 'linear-gradient(135deg, #2c3e50, #34495e)',
+                          zIndex: 20,
+                          minWidth: '100px',
+                          textAlign: 'center',
+                          padding: '16px 12px',
+                          color: 'white',
+                          fontWeight: '600',
+                          boxShadow: '2px 2px 4px rgba(0, 0, 0, 0.2)'
+                        }}>
+                          Category
+                        </th>
+                        <th style={{
+                          position: 'sticky',
+                          left: '100px',
+                          top: 0,
+                          background: 'linear-gradient(135deg, #2c3e50, #34495e)',
+                          zIndex: 20,
+                          minWidth: '120px',
+                          textAlign: 'center',
+                          padding: '16px 12px',
+                          color: 'white',
+                          fontWeight: '600',
+                          boxShadow: '2px 2px 4px rgba(0, 0, 0, 0.2)'
+                        }}>
+                          Tag ID
+                        </th>
+                        <th style={{ minWidth: '150px', textAlign: 'center' }}>Item Name</th>
+                        <th style={{ minWidth: '150px', textAlign: 'center' }}>Serial Number</th>
+                        <th style={{ minWidth: '120px', textAlign: 'center' }}>Latest PM Date</th>
+                        <th style={{ minWidth: '80px', textAlign: 'center' }}>PM Count</th>
+                        <th style={{ minWidth: '200px', textAlign: 'center' }}>PM Records</th>
+                        <th style={{ minWidth: '140px', textAlign: 'center' }}>Actions</th>
+                        {uniqueChecklistItems.map((item) => (
+                          <th key={item.Checklist_ID} style={{
+                            minWidth: '120px',
+                            fontSize: '0.85rem',
+                            textAlign: 'center',
+                            padding: '12px 8px'
+                          }}>
+                            {item.Check_Item}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredRecords.map((asset, index) => {
+                        const resultsMap = {};
+                        if (asset.checklist_results && Array.isArray(asset.checklist_results)) {
+                          asset.checklist_results.forEach(result => {
+                            if (result && result.Checklist_ID !== undefined) {
+                              resultsMap[result.Checklist_ID] = result.Is_OK_bool;
+                            }
+                          });
+                        }
+
+                        return (
+                          <tr key={`${asset.categoryName}-${asset.Asset_ID}-${index}`}
+                            style={{
+                              backgroundColor: index % 2 === 0 ? '#fff' : '#f9f9f9',
+                              transition: 'background-color 0.2s'
+                            }}
+                            onMouseEnter={(e) => e.target.parentElement.style.backgroundColor = '#f0f8ff'}
+                            onMouseLeave={(e) => e.target.parentElement.style.backgroundColor = index % 2 === 0 ? '#fff' : '#f9f9f9'}
+                          >
+                            {/* Category Name */}
+                            <td style={{
+                              position: 'sticky',
+                              left: 0,
+                              background: 'white',
+                              zIndex: 5,
+                              textAlign: 'center',
+                              fontWeight: '600',
+                              backgroundColor: 'inherit'
+                            }}>
+                              <span style={{
+                                display: 'inline-block',
+                                padding: '4px 12px',
+                                borderRadius: '12px',
+                                backgroundColor: categoryColors[asset.categoryName] + '30',
+                                color: categoryColors[asset.categoryName],
+                                fontSize: '0.85rem',
+                                fontWeight: '700',
+                                border: `1px solid ${categoryColors[asset.categoryName]}80`
+                              }}>
+                                {asset.categoryName}
+                              </span>
+                            </td>
+
+                            {/* Tag ID */}
+                            <td style={{
+                              position: 'sticky',
+                              left: '100px',
+                              fontFamily: 'monospace',
+                              fontSize: '0.9rem',
+                              fontWeight: '600',
+                              textAlign: 'center',
+                              zIndex: 5,
+                              backgroundColor: 'inherit'
+                            }}>
+                              {asset.Asset_Tag_ID || 'N/A'}
+                            </td>
+
+                            {/* Item Name */}
+                            <td style={{ fontWeight: '500', textAlign: 'center' }}>
+                              {asset.Item_Name || 'N/A'}
+                            </td>
+
+                            {/* Serial Number */}
+                            <td style={{ fontFamily: 'monospace', fontSize: '0.85rem', color: '#666', textAlign: 'center' }}>
+                              {asset.Asset_Serial_Number || 'N/A'}
+                            </td>
+
+                            {/* Latest PM Date */}
+                            <td style={{ textAlign: 'center' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '5px', justifyContent: 'center' }}>
+                                <Calendar size={14} color="#666" />
+                                {asset.latestPMDate ? formatDate(asset.latestPMDate) : (
+                                  <span style={{ color: '#999', fontStyle: 'italic' }}>No PM Yet</span>
+                                )}
+                              </div>
+                            </td>
+
+                            {/* PM Count */}
+                            <td style={{ textAlign: 'center' }}>
+                              <span style={{
+                                padding: '6px 12px',
+                                borderRadius: '12px',
+                                fontSize: '0.9rem',
+                                fontWeight: '700',
+                                background: asset.pmCount > 0 ? '#e3f2fd' : '#f5f5f5',
+                                color: asset.pmCount > 0 ? '#1565c0' : '#999',
+                                border: asset.pmCount > 0 ? '1px solid #90caf9' : '1px solid #ddd',
+                                minWidth: '35px',
+                                display: 'inline-block'
+                              }}>
+                                {asset.pmCount}
+                              </span>
+                            </td>
+
+                            {/* PM Records */}
+                            <td style={{ textAlign: 'center' }}>
+                              <div style={{ display: 'flex', gap: '6px', justifyContent: 'center', flexWrap: 'wrap' }}>
+                                {asset.allPMRecords && asset.allPMRecords.length > 0 ? (
+                                  asset.allPMRecords
+                                    .sort((a, b) => new Date(a.PM_Date) - new Date(b.PM_Date))
+                                    .map((pm, pmIndex) => (
+                                    <button
+                                      key={pm.PM_ID}
+                                      onClick={() => navigate(`/maintenance/detail/${pm.PM_ID}`)}
+                                      style={{
+                                        padding: '6px 12px',
+                                        background: '#27ae60',
+                                        color: 'white',
+                                        border: 'none',
+                                        borderRadius: '6px',
+                                        cursor: 'pointer',
+                                        fontSize: '0.85rem',
+                                        fontWeight: '600',
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: '5px',
+                                        transition: 'all 0.2s',
+                                        minWidth: '70px',
+                                        boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                                      }}
+                                      onMouseOver={(e) => {
+                                        e.currentTarget.style.background = '#229954';
+                                        e.currentTarget.style.transform = 'translateY(-1px)';
+                                        e.currentTarget.style.boxShadow = '0 4px 6px rgba(0,0,0,0.15)';
+                                      }}
+                                      onMouseOut={(e) => {
+                                        e.currentTarget.style.background = '#27ae60';
+                                        e.currentTarget.style.transform = 'translateY(0)';
+                                        e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
+                                      }}
+                                      title={`View PM ${pmIndex + 1} details - ${new Date(pm.PM_Date).toLocaleDateString('en-MY', { year: 'numeric', month: 'short', day: 'numeric' })}`}
+                                    >
+                                      <FileText size={14} />
+                                      PM{pmIndex + 1}
+                                    </button>
+                                  ))
+                                ) : (
+                                  <span style={{ color: '#999', fontStyle: 'italic', fontSize: '0.9rem' }}>
+                                    No records
+                                  </span>
+                                )}
+                              </div>
+                            </td>
+
+                            {/* Actions */}
+                            <td style={{ textAlign: 'center' }}>
+                              <button
+                                onClick={() => handleOpenPMForm(asset)}
+                                style={{
+                                  padding: '8px 16px',
+                                  background: '#3498db',
+                                  color: 'white',
+                                  border: 'none',
+                                  borderRadius: '6px',
+                                  cursor: 'pointer',
+                                  fontSize: '0.9rem',
+                                  fontWeight: '600',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '6px',
+                                  transition: 'background 0.2s'
+                                }}
+                                onMouseOver={(e) => e.target.style.background = '#2980b9'}
+                                onMouseOut={(e) => e.target.style.background = '#3498db'}
+                              >
+                                <ClipboardCheck size={16} />
+                                PM
+                              </button>
+                            </td>
+
+                            {/* Checklist Results */}
+                            {uniqueChecklistItems.map((item) => (
+                              <td key={item.Checklist_ID} style={{
+                                textAlign: 'center',
+                                background: resultsMap[item.Checklist_ID] === 1 ? '#f0f9f4' : '#fef2f2'
+                              }}>
+                                {resultsMap[item.Checklist_ID] !== undefined ? (
+                                  getCheckResultIcon(resultsMap[item.Checklist_ID])
+                                ) : (
+                                  <span style={{ color: '#95a5a6', fontSize: '0.85rem' }}>-</span>
+                                )}
+                              </td>
+                            ))}
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          );
+        })()
+      )}
+      {/* OLD MULTIPLE TABLES CODE - DISABLED */}
+      {false && (
         Object.keys(groupedByCategory).map((category) => {
           const { assets = {}, checklistItems = [] } = groupedByCategory[category] || {};
           const assetsList = Object.values(assets);
@@ -1320,7 +1769,8 @@ const PreventiveMaintenance = () => {
             </div>
           );
         })
-      )}
+      )
+      } {/* End of OLD disabled multiple tables code */}
       </div> {/* End of padding wrapper (0 20px) */}
 
       {/* PM Form Modal */}

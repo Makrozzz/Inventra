@@ -352,8 +352,26 @@ const AccountSettings = () => {
 
   return (
     <div>
-      <div className="page-header">
-        <h1 className="page-title">Account Settings</h1>
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '12px',
+        marginBottom: '30px',
+        paddingBottom: '15px',
+        borderBottom: '3px solid #3498db',
+        marginLeft: '20px',
+        marginRight: '20px',
+        padding: '0 0 15px 0'
+      }}>
+        <User size={28} color="#3498db" />
+        <div>
+          <h2 style={{ margin: 0, color: '#2c3e50', fontSize: '1.4rem' }}>
+            Account Settings
+          </h2>
+          <p style={{ margin: '5px 0 0 0', color: '#7f8c8d', fontSize: '0.9rem' }}>
+            Manage your profile and preferences
+          </p>
+        </div>
       </div>
 
       {updateMessage.text && (

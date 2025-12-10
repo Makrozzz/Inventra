@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, Package, Users, TrendingUp, BarChart3 } from 'lucide-react';
+import { Plus, Package, Users, TrendingUp, BarChart3, LayoutDashboard } from 'lucide-react';
 import apiService from '../services/apiService';
 import './Dashboard.css';
 
@@ -8,6 +8,29 @@ const Dashboard = () => {
   const [dashboardData, setDashboardData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  const headerButtonStyle = {
+    background: 'white',
+    color: '#667eea',
+    border: 'none',
+    padding: '12px 24px',
+    fontSize: '16px',
+    fontWeight: '600',
+    boxShadow: '0 4px 15px rgba(0, 0, 0, 0.2)',
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '8px',
+    textDecoration: 'none',
+    transition: 'all 0.3s ease'
+  };
+
+  const handleHeaderButtonHover = (event, isHover) => {
+    const target = event.currentTarget;
+    target.style.transform = isHover ? 'translateY(-2px)' : 'translateY(0)';
+    target.style.boxShadow = isHover
+      ? '0 6px 20px rgba(0, 0, 0, 0.25)'
+      : '0 4px 15px rgba(0, 0, 0, 0.2)';
+  };
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -90,8 +113,23 @@ const Dashboard = () => {
   if (loading) {
     return (
       <div className="dashboard-container">
-        <div className="page-header">
-          <h1 className="page-title">Dashboard</h1>
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px',
+          marginBottom: '30px',
+          paddingBottom: '15px',
+          borderBottom: '3px solid #3498db'
+        }}>
+          <LayoutDashboard size={28} color="#3498db" />
+          <div>
+            <h2 style={{ margin: 0, color: '#2c3e50', fontSize: '1.4rem' }}>
+              Dashboard
+            </h2>
+            <p style={{ margin: '5px 0 0 0', color: '#7f8c8d', fontSize: '0.9rem' }}>
+              System overview and statistics
+            </p>
+          </div>
         </div>
         <div className="loading-container">
           <div className="loading-spinner"></div>
@@ -105,8 +143,23 @@ const Dashboard = () => {
   if (error) {
     return (
       <div className="dashboard-container">
-        <div className="page-header">
-          <h1 className="page-title">Dashboard</h1>
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px',
+          marginBottom: '30px',
+          paddingBottom: '15px',
+          borderBottom: '3px solid #3498db'
+        }}>
+          <LayoutDashboard size={28} color="#3498db" />
+          <div>
+            <h2 style={{ margin: 0, color: '#2c3e50', fontSize: '1.4rem' }}>
+              Dashboard
+            </h2>
+            <p style={{ margin: '5px 0 0 0', color: '#7f8c8d', fontSize: '0.9rem' }}>
+              System overview and statistics
+            </p>
+          </div>
         </div>
         <div className="error-container">
           <div className="error-icon">⚠️</div>
@@ -176,11 +229,36 @@ const Dashboard = () => {
 
   return (
     <div className="dashboard-container">
-      <div className="page-header">
-        <h1 className="page-title">Dashboard</h1>
-        <div className="actions">
-          <Link to="/add-asset" className="btn btn-primary">
-            <Plus size={16} style={{ marginRight: '5px' }} />
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: '12px',
+        marginBottom: '30px',
+        paddingBottom: '15px',
+        borderBottom: '3px solid #3498db',
+        padding: '0 20px 15px 20px'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <LayoutDashboard size={28} color="#3498db" />
+          <div>
+            <h2 style={{ margin: 0, color: '#2c3e50', fontSize: '1.4rem' }}>
+              Dashboard
+            </h2>
+            <p style={{ margin: '5px 0 0 0', color: '#7f8c8d', fontSize: '0.9rem' }}>
+              System overview and statistics
+            </p>
+          </div>
+        </div>
+        <div className="actions" style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+          <Link
+            to="/add-asset"
+            className="btn btn-primary"
+            style={headerButtonStyle}
+            onMouseEnter={(e) => handleHeaderButtonHover(e, true)}
+            onMouseLeave={(e) => handleHeaderButtonHover(e, false)}
+          >
+            <Plus size={16} />
             Add New Asset
           </Link>
         </div>

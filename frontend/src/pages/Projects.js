@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Filter, Plus, Eye, Edit, Trash2, Users, Calendar, Package, Award, Shield, Wrench, Clock, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
+import { Search, Filter, Plus, Eye, Edit, Trash2, Users, Calendar, Package, Award, Shield, Wrench, Clock, CheckCircle, XCircle, AlertCircle, FolderOpen } from 'lucide-react';
 import { API_URL } from '../config/api';
 
 const Projects = () => {
@@ -158,9 +158,28 @@ const Projects = () => {
   // Show loading state
   if (loading) {
     return (
-      <div>
-        <div className="page-header">
-          <h1 className="page-title">Projects</h1>
+      <div style={{ padding: '0' }}>
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '12px',
+          marginBottom: '30px',
+          paddingBottom: '15px',
+          borderBottom: '3px solid #667eea',
+          padding: '30px 20px 15px 20px'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <FolderOpen size={28} color="#667eea" />
+            <div>
+              <h2 style={{ margin: 0, color: '#2c3e50', fontSize: '1.4rem' }}>
+                Projects
+              </h2>
+              <p style={{ margin: '5px 0 0 0', color: '#7f8c8d', fontSize: '0.9rem' }}>
+                Manage all projects
+              </p>
+            </div>
+          </div>
           <div className="actions">
             <button className="btn btn-primary" onClick={() => navigate('/projects/add')} disabled>
               <Plus size={16} style={{ marginRight: '5px' }} />
@@ -173,47 +192,34 @@ const Projects = () => {
             Loading projects...
           </div>
         </div>
-      </div>
+        </div>
     );
   }
 
   return (
     <div style={{ padding: '0' }}>
-      {/* Header Section with Gradient */}
       <div style={{
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-        padding: '30px 20px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: '12px',
         marginBottom: '30px',
-        borderRadius: '0 0 20px 20px',
-        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)',
-        width: '100%',
-        boxSizing: 'border-box'
+        paddingBottom: '15px',
+        borderBottom: '3px solid #667eea',
+        padding: '0 20px 15px 20px'
       }}>
-        <div style={{ 
-          display: 'flex', 
-          justifyContent: 'space-between', 
-          alignItems: 'center',
-          flexWrap: 'wrap',
-          gap: '15px',
-          width: '100%'
-        }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <FolderOpen size={28} color="#667eea" />
           <div>
-            <h1 style={{ 
-              color: 'white', 
-              margin: '0 0 10px 0',
-              fontSize: '32px',
-              fontWeight: '700'
-            }}>
-              Projects Management
-            </h1>
-            <p style={{ 
-              color: 'rgba(255, 255, 255, 0.9)', 
-              margin: 0,
-              fontSize: '16px'
-            }}>
+            <h2 style={{ margin: 0, color: '#2c3e50', fontSize: '1.4rem' }}>
+              Projects
+            </h2>
+            <p style={{ margin: '5px 0 0 0', color: '#7f8c8d', fontSize: '0.9rem' }}>
               Total Projects: <strong>{projects.length}</strong> | Active: <strong>{projects.filter(p => getProjectStatus(p.End_Date) === 'Active').length}</strong>
             </p>
           </div>
+        </div>
+        <div className="actions">
           <button 
             className="btn btn-primary" 
             onClick={() => navigate('/projects/add')}
@@ -242,6 +248,7 @@ const Projects = () => {
         </div>
       </div>
 
+      <div style={{ padding: '0 20px' }}>
       {/* Full Width Search and Content Section */}
       <div style={{ padding: '0 20px', width: '100%', boxSizing: 'border-box' }}>
         {/* Search and Filter Section */}
@@ -638,6 +645,8 @@ const Projects = () => {
             })}
           </div>
         )}
+      </div>
+
       </div>
 
       {/* Delete Confirmation Modal - Enhanced */}
