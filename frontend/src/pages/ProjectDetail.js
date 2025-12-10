@@ -5,6 +5,7 @@ import {
   Wrench, User, Package, Eye, Edit, Trash2, Printer, Monitor, Search 
 } from 'lucide-react';
 import { API_URL } from '../config/api';
+import Pagination from '../components/Pagination';
 
 const ProjectDetail = () => {
   const { id } = useParams();
@@ -16,6 +17,8 @@ const ProjectDetail = () => {
   const [selectedBranch, setSelectedBranch] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [error, setError] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
   useEffect(() => {
     fetchProjectDetails();
@@ -27,6 +30,7 @@ const ProjectDetail = () => {
     } else {
       fetchAllProjectAssets();
     }
+    setCurrentPage(1); // Reset to first page when branch changes
   }, [selectedBranch]);
 
   const fetchProjectDetails = async () => {
@@ -619,275 +623,298 @@ const ProjectDetail = () => {
                 No assets match your search "{searchTerm}". Try different keywords.
               </p>
             </div>
-          ) : (
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{
-                width: '100%',
-                borderCollapse: 'separate',
-                borderSpacing: '0',
-                fontSize: '14px'
-              }}>
-                <thead>
-                  <tr style={{ backgroundColor: '#f9fafb' }}>
-                    <th style={{
-                      padding: '12px 16px',
-                      textAlign: 'left',
-                      fontWeight: '600',
-                      color: '#374151',
-                      borderBottom: '2px solid #e5e7eb',
-                      fontSize: '13px',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.5px'
-                    }}>
-                      Serial Number
-                    </th>
-                    <th style={{
-                      padding: '12px 16px',
-                      textAlign: 'left',
-                      fontWeight: '600',
-                      color: '#374151',
-                      borderBottom: '2px solid #e5e7eb',
-                      fontSize: '13px',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.5px'
-                    }}>
-                      Tag ID
-                    </th>
-                    <th style={{
-                      padding: '12px 16px',
-                      textAlign: 'left',
-                      fontWeight: '600',
-                      color: '#374151',
-                      borderBottom: '2px solid #e5e7eb',
-                      fontSize: '13px',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.5px'
-                    }}>
-                      Item Name
-                    </th>
-                    <th style={{
-                      padding: '12px 16px',
-                      textAlign: 'left',
-                      fontWeight: '600',
-                      color: '#374151',
-                      borderBottom: '2px solid #e5e7eb',
-                      fontSize: '13px',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.5px'
-                    }}>
-                      Category
-                    </th>
-                    <th style={{
-                      padding: '12px 16px',
-                      textAlign: 'left',
-                      fontWeight: '600',
-                      color: '#374151',
-                      borderBottom: '2px solid #e5e7eb',
-                      fontSize: '13px',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.5px'
-                    }}>
-                      Model
-                    </th>
-                    <th style={{
-                      padding: '12px 16px',
-                      textAlign: 'left',
-                      fontWeight: '600',
-                      color: '#374151',
-                      borderBottom: '2px solid #e5e7eb',
-                      fontSize: '13px',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.5px'
-                    }}>
-                      Branch
-                    </th>
-                    <th style={{
-                      padding: '12px 16px',
-                      textAlign: 'left',
-                      fontWeight: '600',
-                      color: '#374151',
-                      borderBottom: '2px solid #e5e7eb',
-                      fontSize: '13px',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.5px'
-                    }}>
-                      Recipient Name
-                    </th>
-                    <th style={{
-                      padding: '12px 16px',
-                      textAlign: 'left',
-                      fontWeight: '600',
-                      color: '#374151',
-                      borderBottom: '2px solid #e5e7eb',
-                      fontSize: '13px',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.5px'
-                    }}>
-                      Department
-                    </th>
-                    <th style={{
-                      padding: '12px 16px',
-                      textAlign: 'center',
-                      fontWeight: '600',
-                      color: '#374151',
-                      borderBottom: '2px solid #e5e7eb',
-                      fontSize: '13px',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.5px'
-                    }}>
-                      Status
-                    </th>
-                    <th style={{
-                      padding: '12px 16px',
-                      textAlign: 'center',
-                      fontWeight: '600',
-                      color: '#374151',
-                      borderBottom: '2px solid #e5e7eb',
-                      fontSize: '13px',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.5px'
-                    }}>
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {assets
-                    .filter(asset => {
-                      const searchLower = searchTerm.toLowerCase();
-                      return (
-                        asset.Asset_Serial_Number?.toLowerCase().includes(searchLower) ||
-                        asset.Asset_Tag_ID?.toLowerCase().includes(searchLower) ||
-                        asset.Item_Name?.toLowerCase().includes(searchLower) ||
-                        asset.Category?.toLowerCase().includes(searchLower) ||
-                        asset.Model?.toLowerCase().includes(searchLower) ||
-                        asset.Branch?.toLowerCase().includes(searchLower) ||
-                        asset.Recipient_Name?.toLowerCase().includes(searchLower) ||
-                        asset.Department?.toLowerCase().includes(searchLower)
-                      );
-                    })
-                    .map((asset, index) => (
-                    <tr 
-                      key={asset.Asset_ID}
-                      style={{
-                        backgroundColor: index % 2 === 0 ? 'white' : '#f9fafb',
-                        transition: 'background-color 0.2s ease'
-                      }}
-                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f3f4f6'}
-                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = index % 2 === 0 ? 'white' : '#f9fafb'}
-                    >
-                      <td style={{ padding: '14px 16px', borderBottom: '1px solid #e5e7eb', fontWeight: '500', color: '#1f2937' }}>
-                        {asset.Asset_Serial_Number || 'N/A'}
-                      </td>
-                      <td style={{ padding: '14px 16px', borderBottom: '1px solid #e5e7eb', color: '#4b5563' }}>
-                        {asset.Asset_Tag_ID || 'N/A'}
-                      </td>
-                      <td style={{ padding: '14px 16px', borderBottom: '1px solid #e5e7eb', color: '#1f2937', fontWeight: '500' }}>
-                        {asset.Item_Name || 'N/A'}
-                      </td>
-                      <td style={{ padding: '14px 16px', borderBottom: '1px solid #e5e7eb', color: '#4b5563' }}>
-                        {asset.Category || 'N/A'}
-                      </td>
-                      <td style={{ padding: '14px 16px', borderBottom: '1px solid #e5e7eb', color: '#4b5563' }}>
-                        {asset.Model || 'N/A'}
-                      </td>
-                      <td style={{ padding: '14px 16px', borderBottom: '1px solid #e5e7eb', color: '#4b5563' }}>
-                        {asset.Branch || 'N/A'}
-                      </td>
-                      <td style={{ padding: '14px 16px', borderBottom: '1px solid #e5e7eb', color: '#1f2937', fontWeight: '500' }}>
-                        {asset.Recipient_Name || 'N/A'}
-                      </td>
-                      <td style={{ padding: '14px 16px', borderBottom: '1px solid #e5e7eb', color: '#4b5563' }}>
-                        {asset.Department || 'N/A'}
-                      </td>
-                      <td style={{ padding: '14px 16px', borderBottom: '1px solid #e5e7eb', textAlign: 'center' }}>
-                        <span style={{
-                          padding: '4px 12px',
-                          borderRadius: '12px',
-                          fontSize: '12px',
+          ) : (() => {
+            // Filter assets based on search
+            const filteredAssets = assets.filter(asset => {
+              const searchLower = searchTerm.toLowerCase();
+              return (
+                asset.Asset_Serial_Number?.toLowerCase().includes(searchLower) ||
+                asset.Asset_Tag_ID?.toLowerCase().includes(searchLower) ||
+                asset.Item_Name?.toLowerCase().includes(searchLower) ||
+                asset.Category?.toLowerCase().includes(searchLower) ||
+                asset.Model?.toLowerCase().includes(searchLower) ||
+                asset.Branch?.toLowerCase().includes(searchLower) ||
+                asset.Recipient_Name?.toLowerCase().includes(searchLower) ||
+                asset.Department?.toLowerCase().includes(searchLower)
+              );
+            });
+
+            // Calculate pagination
+            const totalPages = Math.ceil(filteredAssets.length / itemsPerPage);
+            const startIndex = (currentPage - 1) * itemsPerPage;
+            const endIndex = startIndex + itemsPerPage;
+            const paginatedAssets = filteredAssets.slice(startIndex, endIndex);
+
+            return (
+              <>
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{
+                    width: '100%',
+                    borderCollapse: 'separate',
+                    borderSpacing: '0',
+                    fontSize: '14px'
+                  }}>
+                    <thead>
+                      <tr style={{ backgroundColor: '#f9fafb' }}>
+                        <th style={{
+                          padding: '12px 16px',
+                          textAlign: 'left',
                           fontWeight: '600',
-                          backgroundColor: asset.Status === 'Active' ? '#d1fae5' : '#fee2e2',
-                          color: asset.Status === 'Active' ? '#065f46' : '#991b1b'
+                          color: '#374151',
+                          borderBottom: '2px solid #e5e7eb',
+                          fontSize: '13px',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.5px'
                         }}>
-                          {asset.Status || 'Unknown'}
-                        </span>
-                      </td>
-                      <td style={{ padding: '14px 16px', borderBottom: '1px solid #e5e7eb', textAlign: 'center' }}>
-                        <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
-                          <button
-                            onClick={() => navigate(`/asset-detail/${asset.Asset_ID}`)}
-                            style={{
-                              padding: '6px 12px',
-                              backgroundColor: '#667eea',
-                              color: 'white',
-                              border: 'none',
-                              borderRadius: '6px',
-                              cursor: 'pointer',
-                              fontSize: '13px',
+                          Serial Number
+                        </th>
+                        <th style={{
+                          padding: '12px 16px',
+                          textAlign: 'left',
+                          fontWeight: '600',
+                          color: '#374151',
+                          borderBottom: '2px solid #e5e7eb',
+                          fontSize: '13px',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.5px'
+                        }}>
+                          Tag ID
+                        </th>
+                        <th style={{
+                          padding: '12px 16px',
+                          textAlign: 'left',
+                          fontWeight: '600',
+                          color: '#374151',
+                          borderBottom: '2px solid #e5e7eb',
+                          fontSize: '13px',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.5px'
+                        }}>
+                          Item Name
+                        </th>
+                        <th style={{
+                          padding: '12px 16px',
+                          textAlign: 'left',
+                          fontWeight: '600',
+                          color: '#374151',
+                          borderBottom: '2px solid #e5e7eb',
+                          fontSize: '13px',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.5px'
+                        }}>
+                          Category
+                        </th>
+                        <th style={{
+                          padding: '12px 16px',
+                          textAlign: 'left',
+                          fontWeight: '600',
+                          color: '#374151',
+                          borderBottom: '2px solid #e5e7eb',
+                          fontSize: '13px',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.5px'
+                        }}>
+                          Model
+                        </th>
+                        <th style={{
+                          padding: '12px 16px',
+                          textAlign: 'left',
+                          fontWeight: '600',
+                          color: '#374151',
+                          borderBottom: '2px solid #e5e7eb',
+                          fontSize: '13px',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.5px'
+                        }}>
+                          Branch
+                        </th>
+                        <th style={{
+                          padding: '12px 16px',
+                          textAlign: 'left',
+                          fontWeight: '600',
+                          color: '#374151',
+                          borderBottom: '2px solid #e5e7eb',
+                          fontSize: '13px',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.5px'
+                        }}>
+                          Recipient Name
+                        </th>
+                        <th style={{
+                          padding: '12px 16px',
+                          textAlign: 'left',
+                          fontWeight: '600',
+                          color: '#374151',
+                          borderBottom: '2px solid #e5e7eb',
+                          fontSize: '13px',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.5px'
+                        }}>
+                          Department
+                        </th>
+                        <th style={{
+                          padding: '12px 16px',
+                          textAlign: 'center',
+                          fontWeight: '600',
+                          color: '#374151',
+                          borderBottom: '2px solid #e5e7eb',
+                          fontSize: '13px',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.5px'
+                        }}>
+                          Status
+                        </th>
+                        <th style={{
+                          padding: '12px 16px',
+                          textAlign: 'center',
+                          fontWeight: '600',
+                          color: '#374151',
+                          borderBottom: '2px solid #e5e7eb',
+                          fontSize: '13px',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.5px'
+                        }}>
+                          Actions
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {paginatedAssets.map((asset, index) => (
+                        <tr 
+                          key={asset.Asset_ID}
+                          style={{
+                            backgroundColor: index % 2 === 0 ? 'white' : '#f9fafb',
+                            transition: 'background-color 0.2s ease'
+                          }}
+                          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f3f4f6'}
+                          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = index % 2 === 0 ? 'white' : '#f9fafb'}
+                        >
+                          <td style={{ padding: '14px 16px', borderBottom: '1px solid #e5e7eb', fontWeight: '500', color: '#1f2937' }}>
+                            {asset.Asset_Serial_Number || 'N/A'}
+                          </td>
+                          <td style={{ padding: '14px 16px', borderBottom: '1px solid #e5e7eb', color: '#4b5563' }}>
+                            {asset.Asset_Tag_ID || 'N/A'}
+                          </td>
+                          <td style={{ padding: '14px 16px', borderBottom: '1px solid #e5e7eb', color: '#1f2937', fontWeight: '500' }}>
+                            {asset.Item_Name || 'N/A'}
+                          </td>
+                          <td style={{ padding: '14px 16px', borderBottom: '1px solid #e5e7eb', color: '#4b5563' }}>
+                            {asset.Category || 'N/A'}
+                          </td>
+                          <td style={{ padding: '14px 16px', borderBottom: '1px solid #e5e7eb', color: '#4b5563' }}>
+                            {asset.Model || 'N/A'}
+                          </td>
+                          <td style={{ padding: '14px 16px', borderBottom: '1px solid #e5e7eb', color: '#4b5563' }}>
+                            {asset.Branch || 'N/A'}
+                          </td>
+                          <td style={{ padding: '14px 16px', borderBottom: '1px solid #e5e7eb', color: '#1f2937', fontWeight: '500' }}>
+                            {asset.Recipient_Name || 'N/A'}
+                          </td>
+                          <td style={{ padding: '14px 16px', borderBottom: '1px solid #e5e7eb', color: '#4b5563' }}>
+                            {asset.Department || 'N/A'}
+                          </td>
+                          <td style={{ padding: '14px 16px', borderBottom: '1px solid #e5e7eb', textAlign: 'center' }}>
+                            <span style={{
+                              padding: '4px 12px',
+                              borderRadius: '12px',
+                              fontSize: '12px',
                               fontWeight: '600',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '4px',
-                              transition: 'all 0.2s ease'
-                            }}
-                            onMouseEnter={(e) => e.target.style.backgroundColor = '#5568d3'}
-                            onMouseLeave={(e) => e.target.style.backgroundColor = '#667eea'}
-                          >
-                            <Eye size={14} />
-                            View
-                          </button>
-                          <button
-                            onClick={() => navigate(`/edit-asset/${asset.Asset_ID}`)}
-                            style={{
-                              padding: '6px 12px',
-                              backgroundColor: '#10b981',
-                              color: 'white',
-                              border: 'none',
-                              borderRadius: '6px',
-                              cursor: 'pointer',
-                              fontSize: '13px',
-                              fontWeight: '600',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '4px',
-                              transition: 'all 0.2s ease'
-                            }}
-                            onMouseEnter={(e) => e.target.style.backgroundColor = '#059669'}
-                            onMouseLeave={(e) => e.target.style.backgroundColor = '#10b981'}
-                          >
-                            <Edit size={14} />
-                            Edit
-                          </button>
-                          <button
-                            onClick={() => handleDeleteAsset(asset.Asset_ID)}
-                            style={{
-                              padding: '6px 12px',
-                              backgroundColor: '#ef4444',
-                              color: 'white',
-                              border: 'none',
-                              borderRadius: '6px',
-                              cursor: 'pointer',
-                              fontSize: '13px',
-                              fontWeight: '600',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '4px',
-                              transition: 'all 0.2s ease'
-                            }}
-                            onMouseEnter={(e) => e.target.style.backgroundColor = '#dc2626'}
-                            onMouseLeave={(e) => e.target.style.backgroundColor = '#ef4444'}
-                          >
-                            <Trash2 size={14} />
-                            Delete
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+                              backgroundColor: asset.Status === 'Active' ? '#d1fae5' : '#fee2e2',
+                              color: asset.Status === 'Active' ? '#065f46' : '#991b1b'
+                            }}>
+                              {asset.Status || 'Unknown'}
+                            </span>
+                          </td>
+                          <td style={{ padding: '14px 16px', borderBottom: '1px solid #e5e7eb', textAlign: 'center' }}>
+                            <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
+                              <button
+                                onClick={() => navigate(`/asset-detail/${asset.Asset_ID}`)}
+                                style={{
+                                  padding: '6px 12px',
+                                  backgroundColor: '#667eea',
+                                  color: 'white',
+                                  border: 'none',
+                                  borderRadius: '6px',
+                                  cursor: 'pointer',
+                                  fontSize: '13px',
+                                  fontWeight: '600',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '4px',
+                                  transition: 'all 0.2s ease'
+                                }}
+                                onMouseEnter={(e) => e.target.style.backgroundColor = '#5568d3'}
+                                onMouseLeave={(e) => e.target.style.backgroundColor = '#667eea'}
+                              >
+                                <Eye size={14} />
+                                View
+                              </button>
+                              <button
+                                onClick={() => navigate(`/edit-asset/${asset.Asset_ID}`)}
+                                style={{
+                                  padding: '6px 12px',
+                                  backgroundColor: '#10b981',
+                                  color: 'white',
+                                  border: 'none',
+                                  borderRadius: '6px',
+                                  cursor: 'pointer',
+                                  fontSize: '13px',
+                                  fontWeight: '600',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '4px',
+                                  transition: 'all 0.2s ease'
+                                }}
+                                onMouseEnter={(e) => e.target.style.backgroundColor = '#059669'}
+                                onMouseLeave={(e) => e.target.style.backgroundColor = '#10b981'}
+                              >
+                                <Edit size={14} />
+                                Edit
+                              </button>
+                              <button
+                                onClick={() => handleDeleteAsset(asset.Asset_ID)}
+                                style={{
+                                  padding: '6px 12px',
+                                  backgroundColor: '#ef4444',
+                                  color: 'white',
+                                  border: 'none',
+                                  borderRadius: '6px',
+                                  cursor: 'pointer',
+                                  fontSize: '13px',
+                                  fontWeight: '600',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '4px',
+                                  transition: 'all 0.2s ease'
+                                }}
+                                onMouseEnter={(e) => e.target.style.backgroundColor = '#dc2626'}
+                                onMouseLeave={(e) => e.target.style.backgroundColor = '#ef4444'}
+                              >
+                                <Trash2 size={14} />
+                                Delete
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Pagination Component */}
+                <div style={{ marginTop: '20px' }}>
+                  <Pagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    onPageChange={setCurrentPage}
+                    itemsPerPage={itemsPerPage}
+                    onItemsPerPageChange={setItemsPerPage}
+                    totalItems={filteredAssets.length}
+                  />
+                </div>
+              </>
+            );
+          })()}
         </div>
       </div>
     </div>
