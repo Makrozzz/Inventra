@@ -82,6 +82,28 @@ const initializeDatabase = async () => {
     
     console.log('\n⚠️ Server will continue with limited functionality...');
     console.log('Some API endpoints may not work without database connection.');
+  } else {
+    // Create SOLUTION_PRINCIPAL table if it doesn't exist
+    try {
+      const createTableQuery = `
+        CREATE TABLE IF NOT EXISTS SOLUTION_PRINCIPAL (
+          Solution_Principal_ID INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+          Solution_Principal_Name VARCHAR(255) NOT NULL,
+          Description LONGTEXT,
+          Equipment_Type VARCHAR(255),
+          Quantity INT DEFAULT 0,
+          Created_Date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          Updated_Date TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+          INDEX idx_name (Solution_Principal_Name),
+          INDEX idx_created_date (Created_Date)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+      `;
+      
+      await executeQuery(createTableQuery);
+      console.log('✅ SOLUTION_PRINCIPAL table ready');
+    } catch (error) {
+      console.warn('⚠️ Could not create SOLUTION_PRINCIPAL table:', error.message);
+    }
   }
 };
 

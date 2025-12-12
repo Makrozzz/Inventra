@@ -446,12 +446,49 @@ const Projects = () => {
                         borderRadius: '10px'
                       }}>
                         <Users size={18} style={{ color: '#10b981', marginTop: '2px', flexShrink: 0 }} />
-                        <div style={{ flex: 1 }}>
+                        <div style={{ flex: 1, overflow: 'hidden' }}>
                           <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '4px', fontWeight: '600' }}>
                             Solution Principal
                           </div>
                           <div style={{ fontSize: '14px', color: '#1f2937', fontWeight: '500' }}>
-                            {project.Solution_Principal || 'Not Assigned'}
+                            {(() => {
+                              if (!project.Solution_Principals) return 'Not Assigned';
+                              
+                              // Parse the concatenated solution principals
+                              // Format: "SP_Name1|Support_Type1||SP_Name2|Support_Type2"
+                              const spList = project.Solution_Principals.split('||').filter(Boolean);
+                              
+                              if (spList.length === 0) return 'Not Assigned';
+                              
+                              return (
+                                <div style={{ 
+                                  display: 'flex', 
+                                  gap: '6px',
+                                  flexWrap: 'nowrap',
+                                  overflow: 'hidden'
+                                }}>
+                                  {spList.map((sp, idx) => {
+                                    const [name] = sp.split('|'); // Only get the name, ignore support type
+                                    return (
+                                      <span key={idx} style={{ 
+                                        display: 'inline-block',
+                                        fontWeight: '600', 
+                                        color: '#10b981',
+                                        backgroundColor: '#ffffff',
+                                        padding: '4px 12px',
+                                        borderRadius: '12px',
+                                        border: '1px solid #d1fae5',
+                                        fontSize: '13px',
+                                        whiteSpace: 'nowrap',
+                                        flexShrink: 0
+                                      }}>
+                                        {name}
+                                      </span>
+                                    );
+                                  })}
+                                </div>
+                              );
+                            })()}
                           </div>
                         </div>
                       </div>

@@ -35,6 +35,22 @@ class Project {
         GROUP BY p.Project_ID
         ORDER BY p.Project_ID DESC
       `);
+      
+      // For each project, fetch solution principals separately
+      for (let project of rows) {
+        const [spRows] = await pool.execute(`
+          SELECT sp.SP_Name, psb.\`Support Type\`
+          FROM PROJECT_SP_BRIDGE psb
+          JOIN SOLUTION_PRINCIPAL sp ON psb.SP_ID = sp.SP_ID
+          WHERE psb.Project_ID = ?
+        `, [project.Project_ID]);
+        
+        // Format as "SP_Name1|Support_Type1||SP_Name2|Support_Type2"
+        project.Solution_Principals = spRows
+          .map(sp => `${sp.SP_Name}|${sp['Support Type'] || ''}`)
+          .join('||');
+      }
+      
       return rows;
     } catch (error) {
       console.error('Error in Project.findAll:', error);
@@ -42,27 +58,48 @@ class Project {
     }
   }
 
-  // Get project by ID
+  // Get project by ID (with customer + solution principals)
   static async findById(id) {
     try {
       const [rows] = await pool.execute(`
         SELECT 
-          Project_ID,
-          Project_Ref_Number,
-          Project_Title,
-          Warranty,
-          Preventive_Maintenance,
-          Start_Date,
-          End_Date,
-          Antivirus
-        FROM PROJECT
-        WHERE Project_ID = ?
+          p.Project_ID,
+          p.Project_Ref_Number,
+          p.Project_Title,
+          p.Warranty,
+          p.Preventive_Maintenance,
+          p.Start_Date,
+          p.End_Date,
+          p.Antivirus,
+          c.Customer_Name,
+          c.Customer_Ref_Number
+        FROM PROJECT p
+        LEFT JOIN INVENTORY i ON p.Project_ID = i.Project_ID
+        LEFT JOIN CUSTOMER c ON i.Customer_ID = c.Customer_ID
+        WHERE p.Project_ID = ?
+        GROUP BY p.Project_ID
+        LIMIT 1
       `, [id]);
-      
-      if (rows.length > 0) {
-        return new Project(rows[0]);
+
+      if (!rows.length) {
+        return null;
       }
-      return null;
+
+      const project = rows[0];
+
+      // Fetch solution principals for this project
+      const [spRows] = await pool.execute(`
+        SELECT sp.SP_Name, psb.\`Support Type\`
+        FROM PROJECT_SP_BRIDGE psb
+        JOIN SOLUTION_PRINCIPAL sp ON psb.SP_ID = sp.SP_ID
+        WHERE psb.Project_ID = ?
+      `, [id]);
+
+      project.Solution_Principals = spRows
+        .map(sp => `${sp.SP_Name}|${sp['Support Type'] || ''}`)
+        .join('||');
+
+      return project;
     } catch (error) {
       console.error('Error in Project.findById:', error);
       throw error;

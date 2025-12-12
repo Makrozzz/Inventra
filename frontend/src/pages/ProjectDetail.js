@@ -312,64 +312,72 @@ const ProjectDetail = () => {
             gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
             gap: '20px'
           }}>
-            {/* Project Title */}
+            {/* Project Title + Reference row */}
             <div style={{
-              gridColumn: '1 / -1',
-              padding: '20px',
-              backgroundColor: '#f9fafb',
-              borderRadius: '12px',
-              border: '1px solid #e5e7eb'
+              display: 'grid',
+              gridTemplateColumns: '3fr 1fr',
+              gap: '20px',
+              gridColumn: '1 / -1'
             }}>
+              {/* Project Title */}
               <div style={{
-                fontSize: '12px',
-                color: '#6b7280',
-                fontWeight: '600',
-                marginBottom: '8px',
-                textTransform: 'uppercase',
-                letterSpacing: '0.5px'
+                padding: '20px',
+                backgroundColor: '#f9fafb',
+                borderRadius: '12px',
+                border: '1px solid #e5e7eb'
               }}>
-                Project Title
-              </div>
-              <div style={{
-                fontSize: '16px',
-                color: '#1f2937',
-                fontWeight: '500',
-                lineHeight: '1.6'
-              }}>
-                {project.Project_Title || 'N/A'}
-              </div>
-            </div>
-
-            {/* Project Ref Number */}
-            <div style={{
-              padding: '18px',
-              backgroundColor: '#f9fafb',
-              borderRadius: '12px',
-              border: '1px solid #e5e7eb'
-            }}>
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '10px',
-                marginBottom: '8px'
-              }}>
-                <Package size={18} style={{ color: '#667eea' }} />
                 <div style={{
                   fontSize: '12px',
                   color: '#6b7280',
                   fontWeight: '600',
-                  textTransform: 'uppercase'
+                  marginBottom: '8px',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.5px'
                 }}>
-                  Project Reference
+                  Project Title
+                </div>
+                <div style={{
+                  fontSize: '16px',
+                  color: '#1f2937',
+                  fontWeight: '500',
+                  lineHeight: '1.6'
+                }}>
+                  {project.Project_Title || 'N/A'}
                 </div>
               </div>
-              <div style={{ fontSize: '15px', color: '#1f2937', fontWeight: '500' }}>
-                {project.Project_Ref_Number || 'N/A'}
+
+              {/* Project Ref Number */}
+              <div style={{
+                padding: '18px',
+                backgroundColor: '#f9fafb',
+                borderRadius: '12px',
+                border: '1px solid #e5e7eb'
+              }}>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '10px',
+                  marginBottom: '8px'
+                }}>
+                  <Package size={18} style={{ color: '#667eea' }} />
+                  <div style={{
+                    fontSize: '12px',
+                    color: '#6b7280',
+                    fontWeight: '600',
+                    textTransform: 'uppercase'
+                  }}>
+                    Project Reference
+                  </div>
+                </div>
+                <div style={{ fontSize: '15px', color: '#1f2937', fontWeight: '500' }}>
+                  {project.Project_Ref_Number || 'N/A'}
+                </div>
               </div>
             </div>
 
             {/* Solution Principal */}
             <div style={{
+              gridColumn: '1 / -1',
               padding: '18px',
               backgroundColor: '#f9fafb',
               borderRadius: '12px',
@@ -379,7 +387,7 @@ const ProjectDetail = () => {
                 display: 'flex',
                 alignItems: 'center',
                 gap: '10px',
-                marginBottom: '8px'
+                marginBottom: '12px'
               }}>
                 <User size={18} style={{ color: '#10b981' }} />
                 <div style={{
@@ -391,8 +399,51 @@ const ProjectDetail = () => {
                   Solution Principal
                 </div>
               </div>
-              <div style={{ fontSize: '15px', color: '#1f2937', fontWeight: '500' }}>
-                {project.Solution_Principal || 'N/A'}
+              <div style={{ 
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '8px'
+              }}>
+                {project.Solution_Principals && project.Solution_Principals.trim() !== '' ? (
+                  project.Solution_Principals.split('||').map((sp, index) => {
+                    const [name, supportType] = sp.split('|');
+                    return (
+                      <div key={index} style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '10px',
+                        padding: '8px 12px',
+                        backgroundColor: '#ffffff',
+                        borderRadius: '8px',
+                        border: '1px solid #e5e7eb'
+                      }}>
+                        <div style={{
+                          fontSize: '15px',
+                          color: '#1f2937',
+                          fontWeight: '600'
+                        }}>
+                          {name}
+                        </div>
+                        {supportType && (
+                          <div style={{
+                            padding: '4px 12px',
+                            backgroundColor: '#d1fae5',
+                            color: '#065f46',
+                            borderRadius: '6px',
+                            fontSize: '13px',
+                            fontWeight: '500'
+                          }}>
+                            {supportType}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div style={{ fontSize: '15px', color: '#9ca3af', fontStyle: 'italic' }}>
+                    No solution principals assigned
+                  </div>
+                )}
               </div>
             </div>
 
