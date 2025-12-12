@@ -4,7 +4,7 @@ const helmet = require('helmet');
 const compression = require('compression');
 const rateLimit = require('express-rate-limit');
 const path = require('path');
-require('dotenv').config();
+require('dotenv').config({ path: __dirname + '/.env' });
 
 const logger = require('./utils/logger');
 const errorHandler = require('./middleware/errorHandler');
