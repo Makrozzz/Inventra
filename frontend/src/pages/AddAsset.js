@@ -50,6 +50,7 @@ const AddAsset = () => {
   const [officeOptions, setOfficeOptions] = useState([]);
   const [antivirusOptions, setAntivirusOptions] = useState([]);
   const [softwareOptions, setSoftwareOptions] = useState([]);
+  const [newSoftwarePrice, setNewSoftwarePrice] = useState('');
   
   // Form data
   const [selectedBranch, setSelectedBranch] = useState('');
@@ -434,7 +435,7 @@ const AddAsset = () => {
 
   const fetchSoftwareOptions = async () => {
     try {
-      const response = await fetch('${API_URL}/options/software');
+      const response = await fetch(`${API_URL}/options/software`);
       const result = await response.json();
       const optionsData = result.data || [];
       setSoftwareOptions(optionsData);
@@ -450,6 +451,7 @@ const AddAsset = () => {
   const handleOpenAddModal = (type) => {
     setModalType(type);
     setNewOptionValue('');
+    setNewSoftwarePrice('');
     setShowAddModal(true);
   };
 
@@ -457,6 +459,7 @@ const AddAsset = () => {
     setShowAddModal(false);
     setModalType('');
     setNewOptionValue('');
+    setNewSoftwarePrice('');
     setAddingOption(false);
   };
 
@@ -472,6 +475,7 @@ const AddAsset = () => {
       let updateStateFunction = null;
       let autoSelectField = '';
       let requestBody = {};
+      let selectedPrice = null;
 
       // Determine endpoint and state update function based on modalType
       if (modalType === 'category') {
@@ -508,7 +512,10 @@ const AddAsset = () => {
         endpoint = '/options/software';
         updateStateFunction = setSoftwareOptions;
         autoSelectField = 'software';
-        requestBody = { value: newOptionValue.trim() };
+        requestBody = { 
+          value: newOptionValue.trim(),
+          price: newSoftwarePrice ? Number(newSoftwarePrice) : null
+        };
       }
 
       const response = await fetch(`${API_URL}${endpoint}`, {
@@ -570,15 +577,31 @@ const AddAsset = () => {
               selectedValue = matchingItem.Category || matchingItem.Model_Name || matchingItem.Model || matchingItem.Peripheral_Type_Name || matchingItem.name;
               console.log(`✅ Found matching ${modalType}:`, selectedValue);
             }
+          } else if (modalType === 'software') {
+            const matchingItem = refreshedData.find(item => {
+              const itemName = item.Software_Name || item.name || '';
+              return itemName.toLowerCase() === selectedValue.toLowerCase();
+            });
+
+            if (matchingItem) {
+              selectedValue = matchingItem.Software_Name || matchingItem.name;
+              selectedPrice = matchingItem.Price ?? matchingItem.price ?? null;
+              console.log(`✅ Found matching software:`, selectedValue, 'price:', selectedPrice);
+            }
           }
         } else {
           // Success case - add new option to dropdown
           const newOption = result.data;
           
           // For simple string arrays (windows, office, antivirus, software)
-          if (['windows', 'office', 'antivirus', 'software'].includes(modalType)) {
+          if (['windows', 'office', 'antivirus'].includes(modalType)) {
             updateStateFunction(prev => [...prev, newOption]);
             selectedValue = newOption;
+          } else if (modalType === 'software') {
+            const softwareEntry = newOption || { Software_Name: newOptionValue.trim(), Price: newSoftwarePrice ? Number(newSoftwarePrice) : null };
+            updateStateFunction(prev => [...prev, softwareEntry]);
+            selectedValue = softwareEntry.Software_Name || softwareEntry.name || newOptionValue.trim();
+            selectedPrice = softwareEntry.Price ?? softwareEntry.price ?? null;
           } else {
             // For object arrays (category, model, peripheral)
             updateStateFunction(prev => [...prev, newOption]);
@@ -1033,6 +1056,35 @@ const AddAsset = () => {
               </small>
             </div>
 
+            {modalType === 'software' && (
+              <div style={{ marginBottom: '20px' }}>
+                <label style={{ display: 'block', marginBottom: '8px', color: '#555', fontWeight: '600' }}>
+                  Software Price (RM) <span style={{ color: '#f44336' }}>*</span>
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={newSoftwarePrice}
+                  onChange={(e) => setNewSoftwarePrice(e.target.value)}
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter' && !addingOption) {
+                      handleAddNewOption();
+                    }
+                  }}
+                  placeholder="e.g., 150.00"
+                  style={{
+                    width: '100%',
+                    padding: '10px',
+                    border: '1px solid #ddd',
+                    borderRadius: '4px',
+                    fontSize: '14px',
+                    boxSizing: 'border-box'
+                  }}
+                  disabled={addingOption}
+                />
+              </div>
+            )}
+
             {/* Auto-populated Project Data (Read-only) */}
             {projectData.customer_name && (
               <div style={{ 
@@ -1226,36 +1278,46 @@ const AddAsset = () => {
                       type="button"
                       onClick={() => handleOpenAddModal('category')}
                       style={{
-                        background: '#4caf50',
+                        background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
                         color: 'white',
                         border: 'none',
-                        padding: '4px 8px',
-                        borderRadius: '4px',
+                        borderRadius: '6px',
+                        padding: '5px 10px',
                         cursor: 'pointer',
-                        fontSize: '12px',
                         display: 'flex',
                         alignItems: 'center',
-                        gap: '4px'
+                        gap: '4px',
+                        fontSize: '12px',
+                        fontWeight: '600',
+                        transition: 'all 0.2s ease',
+                        boxShadow: '0 2px 4px rgba(16, 185, 129, 0.3)'
+                      }}
+                      title="Add new Category"
+                      onMouseOver={(e) => {
+                        e.currentTarget.style.transform = 'translateY(-1px)';
+                        e.currentTarget.style.boxShadow = '0 3px 6px rgba(16, 185, 129, 0.4)';
+                      }}
+                      onMouseOut={(e) => {
+                        e.currentTarget.style.transform = 'translateY(0)';
+                        e.currentTarget.style.boxShadow = '0 2px 4px rgba(16, 185, 129, 0.3)';
                       }}
                     >
                       <Plus size={14} /> 
                     </button>
                   </label>
-                  <select
+                  <SearchableDropdown
+                    options={categories.map(cat => ({
+                      value: cat.Category || cat,
+                      label: cat.Category || cat
+                    }))}
                     value={asset.category}
-                    onChange={(e) => setAsset({ ...asset, category: e.target.value })}
+                    onChange={(selectedValue) => setAsset({ ...asset, category: selectedValue || '' })}
+                    placeholder="Type to search or select category..."
+                    searchPlaceholder="Search categories..."
+                    getOptionLabel={(option) => option.label}
+                    getOptionValue={(option) => option.value}
                     required
-                  >
-                    <option value="">Select category</option>
-                    {categories.map((cat, index) => {
-                      const catValue = cat.Category || cat;
-                      return (
-                        <option key={`cat-${catValue}-${index}`} value={catValue}>
-                          {catValue}
-                        </option>
-                      );
-                    })}
-                  </select>
+                  />
                 </div>
 
                 <div className="form-group">
@@ -1263,22 +1325,50 @@ const AddAsset = () => {
                     <span>
                       Model <span style={{ color: '#f44336' }}>*</span>
                     </span>
+                    <button
+                      type="button"
+                      onClick={() => handleOpenAddModal('model')}
+                      style={{
+                        background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '6px',
+                        padding: '5px 10px',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        fontSize: '12px',
+                        fontWeight: '600',
+                        transition: 'all 0.2s ease',
+                        boxShadow: '0 2px 4px rgba(16, 185, 129, 0.3)'
+                      }}
+                      title="Add new Model"
+                      onMouseOver={(e) => {
+                        e.currentTarget.style.transform = 'translateY(-1px)';
+                        e.currentTarget.style.boxShadow = '0 3px 6px rgba(16, 185, 129, 0.4)';
+                      }}
+                      onMouseOut={(e) => {
+                        e.currentTarget.style.transform = 'translateY(0)';
+                        e.currentTarget.style.boxShadow = '0 2px 4px rgba(16, 185, 129, 0.3)';
+                      }}
+                    >
+                      <Plus size={14} /> 
+                    </button>
                   </label>
-                  <select
+                  <SearchableDropdown
+                    options={models.map(mod => ({
+                      value: mod.Model_Name || mod.Model || mod,
+                      label: mod.Model_Name || mod.Model || mod
+                    }))}
                     value={asset.model}
-                    onChange={(e) => setAsset({ ...asset, model: e.target.value })}
+                    onChange={(selectedValue) => setAsset({ ...asset, model: selectedValue || '' })}
+                    placeholder="Type to search or select model..."
+                    searchPlaceholder="Search models..."
+                    getOptionLabel={(option) => option.label}
+                    getOptionValue={(option) => option.value}
                     required
-                  >
-                    <option value="">Select model</option>
-                    {models.map((mod, index) => {
-                      const modValue = mod.Model_Name || mod.Model || mod;
-                      return (
-                        <option key={`mod-${modValue}-${index}`} value={modValue}>
-                          {modValue}
-                        </option>
-                      );
-                    })}
-                  </select>
+                  />
                 </div>
 
                 <div className="form-group">
@@ -1318,24 +1408,88 @@ const AddAsset = () => {
                 </div>
 
                 <div className="form-group">
-                  <label>Software</label>
-                  <input
-                    type="text"
-                    name="software"
-                    value={asset.software}
-                    onChange={handleAssetChange}
-                    placeholder="e.g., Visual Studio Code, Adobe Reader"
-                  />
-                </div>
-
-                <div className="form-group">
                   <label>Monthly Price</label>
                   <input
-                    type="text"
+                    type="number"
+                    step="0.01"
                     name="monthly_prices"
                     value={asset.monthly_prices}
                     onChange={handleAssetChange}
                     placeholder="e.g., 150.00"
+                  />
+                </div>
+
+                <div
+                  style={{
+                    gridColumn: '1 / -1',
+                    borderTop: '1px solid #e0e0e0',
+                    margin: '8px 6px 12px 6px'
+                  }}
+                />
+
+                <div className="form-group">
+                  <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span>Software</span>
+                    <button
+                      type="button"
+                      onClick={() => handleOpenAddModal('software')}
+                      style={{
+                        background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '6px',
+                        padding: '5px 10px',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        fontSize: '12px',
+                        fontWeight: '600',
+                        transition: 'all 0.2s ease',
+                        boxShadow: '0 2px 4px rgba(16, 185, 129, 0.3)'
+                      }}
+                      title="Add new Software"
+                      onMouseOver={(e) => {
+                        e.currentTarget.style.transform = 'translateY(-1px)';
+                        e.currentTarget.style.boxShadow = '0 3px 6px rgba(16, 185, 129, 0.4)';
+                      }}
+                      onMouseOut={(e) => {
+                        e.currentTarget.style.transform = 'translateY(0)';
+                        e.currentTarget.style.boxShadow = '0 2px 4px rgba(16, 185, 129, 0.3)';
+                      }}
+                    >
+                      <Plus size={14} />
+                    </button>
+                  </label>
+                  <SearchableDropdown
+                    options={softwareOptions.map(opt => {
+                      const name = opt.Software_Name || opt.name || opt;
+                      const price = opt.Price ?? opt.price;
+                      return {
+                        value: name,
+                        label: name,
+                        price
+                      };
+                    })}
+                    value={asset.software}
+                    onChange={(selectedValue) => {
+                      setAsset({
+                        ...asset,
+                        software: selectedValue || ''
+                      });
+                    }}
+                    placeholder="Type to search or select software..."
+                    searchPlaceholder="Search software..."
+                    getOptionLabel={(option) => option.label}
+                    getOptionValue={(option) => option.value}
+                    renderOption={(option) => (
+                      <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
+                        <span>{option.label}</span>
+                        {option.price != null && option.price !== '' && (
+                          <span style={{ color: '#555' }}>RM {option.price}</span>
+                        )}
+                      </div>
+                    )}
                   />
                 </div>
               </div>
@@ -1747,6 +1901,35 @@ const AddAsset = () => {
               />
             </div>
 
+            {modalType === 'software' && (
+              <div style={{ marginBottom: '20px' }}>
+                <label style={{ display: 'block', marginBottom: '8px', color: '#555', fontWeight: '600' }}>
+                  Software Price (RM) <span style={{ color: '#f44336' }}>*</span>
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={newSoftwarePrice}
+                  onChange={(e) => setNewSoftwarePrice(e.target.value)}
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter' && !addingOption) {
+                      handleAddNewOption();
+                    }
+                  }}
+                  placeholder="e.g., 150.00"
+                  style={{
+                    width: '100%',
+                    padding: '10px',
+                    border: '1px solid #ddd',
+                    borderRadius: '4px',
+                    fontSize: '14px',
+                    boxSizing: 'border-box'
+                  }}
+                  disabled={addingOption}
+                />
+              </div>
+            )}
+
             <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
               <button
                 type="button"
@@ -1768,12 +1951,12 @@ const AddAsset = () => {
               <button
                 type="button"
                 onClick={handleAddNewOption}
-                disabled={addingOption || !newOptionValue.trim()}
+                disabled={addingOption || !newOptionValue.trim() || (modalType === 'software' && !newSoftwarePrice.trim())}
                 style={{
                   padding: '10px 20px',
                   border: 'none',
                   borderRadius: '4px',
-                  backgroundColor: addingOption || !newOptionValue.trim() ? '#ccc' : '#4caf50',
+                  backgroundColor: addingOption || !newOptionValue.trim() || (modalType === 'software' && !newSoftwarePrice.trim()) ? '#ccc' : '#4caf50',
                   color: 'white',
                   cursor: addingOption || !newOptionValue.trim() ? 'not-allowed' : 'pointer',
                   fontSize: '14px',

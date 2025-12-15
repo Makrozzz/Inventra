@@ -247,9 +247,10 @@ const SearchableDropdown = ({
           outline: none;
           font-size: 14px;
         }
-        
-        .search-input:focus {
-          border-color: #007bff;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 8px;
           box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
         }
         
@@ -353,10 +354,22 @@ const SearchableDropdown = ({
 
           <div className="options-container">
             {filteredOptions.length > 0 ? (
-              filteredOptions.map((option, index) => 
-                renderOption ? renderOption(option, index, highlightedIndex === index) 
-                             : defaultRenderOption(option, index)
-              )
+              filteredOptions.map((option, index) => {
+                const isHighlighted = highlightedIndex === index;
+                return (
+                  <div
+                    key={getOptionValue(option)}
+                    ref={el => optionRefs.current[index] = el}
+                    className={`dropdown-option ${isHighlighted ? 'highlighted' : ''}`}
+                    onClick={() => handleSelectOption(option)}
+                    onMouseEnter={() => setHighlightedIndex(index)}
+                  >
+                    {renderOption 
+                      ? renderOption(option, index, isHighlighted)
+                      : getOptionLabel(option)}
+                  </div>
+                );
+              })
             ) : (
               <div className="empty-message">{emptyMessage}</div>
             )}

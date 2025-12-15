@@ -451,7 +451,10 @@ class ApiService {
     try {
       const response = await fetch(url, { headers });
       if (!response.ok) throw new Error('Failed to fetch models');
-      return await response.json();
+
+      // Some endpoints return an array, others wrap in { data }
+      const data = await response.json();
+      return Array.isArray(data) ? { data } : data;
     } catch (error) {
       console.warn('Models endpoint not available, using fallback data');
       // Return fallback data if endpoint doesn't exist

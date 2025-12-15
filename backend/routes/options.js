@@ -92,16 +92,20 @@ router.post('/office', async (req, res) => {
   }
 });
 
-// Get all Software options
+// Get all Software options (with price)
 router.get('/software', async (req, res) => {
   try {
     const [rows] = await pool.execute(
-      'SELECT Software_ID, Software_Name FROM SOFTWARE ORDER BY Software_Name'
+      'SELECT Software_ID, Software_Name, Price FROM SOFTWARE ORDER BY Software_Name'
     );
     // Filter out 'None' entries - these shouldn't be in the dropdown
     const software = rows
       .filter(row => row.Software_Name.toLowerCase() !== 'none')
-      .map(row => row.Software_Name);
+      .map(row => ({
+        Software_ID: row.Software_ID,
+        Software_Name: row.Software_Name,
+        Price: row.Price
+      }));
     
     res.json({ success: true, data: software });
   } catch (error) {
@@ -110,13 +114,18 @@ router.get('/software', async (req, res) => {
   }
 });
 
-// Add new Software
+// Add new Software (with price)
 router.post('/software', async (req, res) => {
   try {
-    const { value } = req.body;
+    const { value, price } = req.body;
     
     if (!value || !value.trim()) {
       return res.status(400).json({ success: false, error: 'Value is required' });
+    }
+
+    // Validate price (optional but if provided must be a number)
+    if (price !== null && price !== undefined && price !== '' && isNaN(Number(price))) {
+      return res.status(400).json({ success: false, error: 'Price must be a number' });
     }
 
     // Prevent 'None' from being added as a software option
@@ -126,24 +135,32 @@ router.post('/software', async (req, res) => {
 
     // Check if it already exists
     const [existing] = await pool.execute(
-      'SELECT Software_ID FROM SOFTWARE WHERE Software_Name = ?',
+      'SELECT Software_ID, Price FROM SOFTWARE WHERE Software_Name = ?',
       [value.trim()]
     );
 
     if (existing.length > 0) {
-      return res.json({ success: true, message: 'Software already exists', data: value.trim() });
+      return res.json({ success: true, message: 'Software already exists', data: {
+        Software_ID: existing[0].Software_ID,
+        Software_Name: value.trim(),
+        Price: existing[0].Price
+      } });
     }
 
     // Insert new software
     const [result] = await pool.execute(
-      'INSERT INTO SOFTWARE (Software_Name) VALUES (?)',
-      [value.trim()]
+      'INSERT INTO SOFTWARE (Software_Name, Price) VALUES (?, ?)',
+      [value.trim(), price !== '' && price !== null && price !== undefined ? Number(price) : null]
     );
 
     res.json({ 
       success: true, 
       message: 'Software added successfully', 
-      data: value.trim(),
+      data: {
+        Software_ID: result.insertId,
+        Software_Name: value.trim(),
+        Price: price !== '' && price !== null && price !== undefined ? Number(price) : null
+      },
       id: result.insertId 
     });
   } catch (error) {
