@@ -273,7 +273,7 @@ class ApiService {
     }
   }
 
-  async bulkImportAssets(assets) {
+  async bulkImportAssets(assets, upsert = false) {
     try {
       const url = `${this.baseURL}/assets/bulk-import`;
       const response = await fetch(url, {
@@ -281,7 +281,7 @@ class ApiService {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ assets })
+        body: JSON.stringify({ assets, upsert })
       });
 
       if (!response.ok) {

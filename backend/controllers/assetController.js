@@ -1446,10 +1446,194 @@ const normalizeStatus = (status) => {
 };
 
 /**
+ * Compare two asset objects to detect if there are actual changes
+ * Returns true if there are differences, false if identical
+ */
+const hasAssetChanges = (existingAsset, newData) => {
+  const changes = [];
+  
+  // Compare basic fields
+  if (newData.tag_id && String(newData.tag_id).trim() !== String(existingAsset.Asset_Tag_ID || '').trim()) {
+    changes.push({ field: 'tag_id', old: existingAsset.Asset_Tag_ID, new: newData.tag_id });
+  }
+  
+  if (newData.item_name && String(newData.item_name).trim() !== String(existingAsset.Item_Name || '').trim()) {
+    changes.push({ field: 'item_name', old: existingAsset.Item_Name, new: newData.item_name });
+  }
+  
+  if (newData.status && normalizeStatus(newData.status) !== String(existingAsset.Status || '').trim()) {
+    changes.push({ field: 'status', old: existingAsset.Status, new: normalizeStatus(newData.status) });
+  }
+  
+  if (newData.category && String(newData.category).trim().toLowerCase() !== String(existingAsset.Category || '').trim().toLowerCase()) {
+    changes.push({ field: 'category', old: existingAsset.Category, new: newData.category });
+  }
+  
+  if (newData.model && String(newData.model).trim().toLowerCase() !== String(existingAsset.Model || '').trim().toLowerCase()) {
+    changes.push({ field: 'model', old: existingAsset.Model, new: newData.model });
+  }
+  
+  if (newData.recipient_name && String(newData.recipient_name).trim() !== String(existingAsset.Recipient_Name || '').trim()) {
+    changes.push({ field: 'recipient_name', old: existingAsset.Recipient_Name, new: newData.recipient_name });
+  }
+  
+  if (newData.department_name && String(newData.department_name).trim() !== String(existingAsset.Department || '').trim()) {
+    changes.push({ field: 'department', old: existingAsset.Department, new: newData.department_name });
+  }
+  
+  if (newData.position !== undefined && String(newData.position || '').trim() !== String(existingAsset.Position || '').trim()) {
+    changes.push({ field: 'position', old: existingAsset.Position, new: newData.position });
+  }
+  
+  if (newData.branch && String(newData.branch).trim() !== String(existingAsset.Branch || '').trim()) {
+    changes.push({ field: 'branch', old: existingAsset.Branch, new: newData.branch });
+  }
+  
+  if (newData.windows !== undefined && String(newData.windows || '').trim() !== String(existingAsset.Windows || '').trim()) {
+    changes.push({ field: 'windows', old: existingAsset.Windows, new: newData.windows });
+  }
+  
+  if (newData.microsoft_office !== undefined && String(newData.microsoft_office || '').trim() !== String(existingAsset.Microsoft_Office || '').trim()) {
+    changes.push({ field: 'microsoft_office', old: existingAsset.Microsoft_Office, new: newData.microsoft_office });
+  }
+  
+  if (newData.monthly_prices !== undefined) {
+    const newPrice = (newData.monthly_prices === null || newData.monthly_prices === '' || newData.monthly_prices === 'N/A') 
+      ? null 
+      : parseFloat(newData.monthly_prices);
+    const oldPrice = (existingAsset.Monthly_Prices === null || existingAsset.Monthly_Prices === '') 
+      ? null 
+      : parseFloat(existingAsset.Monthly_Prices);
+    
+    // Handle NaN values from parseFloat
+    const newPriceValue = (newPrice !== null && !isNaN(newPrice)) ? newPrice : null;
+    const oldPriceValue = (oldPrice !== null && !isNaN(oldPrice)) ? oldPrice : null;
+    
+    if (newPriceValue !== oldPriceValue) {
+      changes.push({ field: 'monthly_prices', old: oldPriceValue, new: newPriceValue });
+    }
+  }
+  
+  return { hasChanges: changes.length > 0, changes };
+};
+
+/**
+ * Update an existing asset with new data from bulk import
+ */
+const updateExistingAsset = async (existingAsset, newData, importCache) => {
+  try {
+    const assetId = existingAsset.Asset_ID;
+    console.log(`   🔄 Updating existing asset: ${existingAsset.Asset_Serial_Number}`);
+    
+    const updateData = {};
+  
+  // Update basic fields
+  if (newData.tag_id) updateData.Asset_Tag_ID = String(newData.tag_id).trim();
+  if (newData.item_name) updateData.Item_Name = String(newData.item_name).trim();
+  if (newData.status) updateData.Status = normalizeStatus(newData.status);
+  if (newData.windows !== undefined) updateData.Windows = newData.windows;
+  if (newData.microsoft_office !== undefined) updateData.Microsoft_Office = newData.microsoft_office;
+  
+  // Handle monthly_prices with proper parsing
+  if (newData.monthly_prices !== undefined) {
+    const newPrice = (newData.monthly_prices === null || newData.monthly_prices === '' || newData.monthly_prices === 'N/A') 
+      ? null 
+      : parseFloat(newData.monthly_prices);
+    updateData.Monthly_Prices = (newPrice !== null && !isNaN(newPrice)) ? newPrice : null;
+    console.log(`   💰 Updating Monthly_Prices: ${existingAsset.Monthly_Prices} → ${updateData.Monthly_Prices}`);
+  }
+  
+  // Handle recipient update
+  if (newData.recipient_name || newData.department_name || newData.position !== undefined) {
+    const recipientId = await Asset.updateRecipientInfo(
+      newData.recipient_name || existingAsset.Recipient_Name,
+      newData.department_name || existingAsset.Department,
+      newData.position !== undefined ? newData.position : existingAsset.Position,
+      existingAsset.Recipients_ID
+    );
+    if (recipientId) updateData.Recipients_ID = recipientId;
+  }
+  
+  // Handle category update
+  if (newData.category) {
+    const categoryId = await Asset.getOrCreateCategory(newData.category, importCache);
+    if (categoryId) updateData.Category_ID = categoryId;
+  }
+  
+  // Handle model update
+  if (newData.model) {
+    const categoryIdForModel = updateData.Category_ID || existingAsset.Category_ID;
+    const modelId = await Asset.getOrCreateModel(newData.model, categoryIdForModel, importCache);
+    if (modelId) updateData.Model_ID = modelId;
+  }
+  
+  // Update the asset in database
+  if (Object.keys(updateData).length > 0) {
+    console.log(`   🔧 Applying updates to asset ${assetId}:`, updateData);
+    const asset = new Asset(existingAsset);
+    Object.assign(asset, updateData);
+    await asset.update();
+    console.log(`   ✅ Asset updated successfully: ${asset.Asset_Serial_Number}`);
+  } else {
+    console.log(`   ℹ️  No database updates needed (only software/customer changes)`);
+  }
+  
+  // Handle software update
+  if (newData.software && newData.software.toLowerCase() !== 'none') {
+    await Asset.linkSoftwareToAsset(assetId, newData.software);
+  }
+  
+  // Handle customer/branch update through inventory
+  if (newData.customer_name || newData.branch) {
+    const { pool } = require('../config/database');
+    const [inventoryRows] = await pool.execute(
+      'SELECT Inventory_ID, Customer_ID FROM INVENTORY WHERE Asset_ID = ? LIMIT 1',
+      [assetId]
+    );
+    
+    if (inventoryRows.length > 0) {
+      const customerName = newData.customer_name || existingAsset.Customer_Name;
+      const branch = newData.branch || existingAsset.Branch;
+      
+      if (customerName && branch) {
+        const [customerRows] = await pool.execute(
+          'SELECT Customer_ID FROM CUSTOMER WHERE Customer_Name = ? AND Branch = ?',
+          [customerName, branch]
+        );
+        
+        let customerId;
+        if (customerRows.length > 0) {
+          customerId = customerRows[0].Customer_ID;
+        } else {
+          const [result] = await pool.execute(
+            'INSERT INTO CUSTOMER (Customer_Name, Branch) VALUES (?, ?)',
+            [customerName, branch]
+          );
+          customerId = result.insertId;
+        }
+        
+        await pool.execute(
+          'UPDATE INVENTORY SET Customer_ID = ? WHERE Inventory_ID = ?',
+          [customerId, inventoryRows[0].Inventory_ID]
+        );
+      }
+    }
+  }
+  
+  return assetId;
+  
+  } catch (error) {
+    console.error(`   ❌ Error in updateExistingAsset:`, error);
+    throw new Error(`Update failed: ${error.message}`);
+  }
+};
+
+/**
  * Bulk import assets with comprehensive validation and processing
- * Supports two modes:
+ * Supports multiple modes:
  * 1. Create new assets (default)
- * 2. Add peripherals to existing assets (when assets already exist)
+ * 2. Add peripherals to existing assets
+ * 3. Update existing assets (when upsert=true)
  * 
  * Features deduplication to ensure only first occurrence of new models,
  * categories, Windows versions, MS Office versions, and software are accepted.
@@ -1460,7 +1644,7 @@ const bulkImportAssets = async (req, res, next) => {
   const importCache = new ImportCache();
   
   try {
-    const { assets, importMode } = req.body; // importMode can be 'auto', 'new_assets', or 'add_peripherals'
+    const { assets, importMode, upsert } = req.body; // upsert=true enables update mode
 
     if (!Array.isArray(assets) || assets.length === 0) {
       return res.status(400).json({
@@ -1474,6 +1658,7 @@ const bulkImportAssets = async (req, res, next) => {
     console.log(`\n${'='.repeat(80)}`);
     console.log(`🚀 BULK IMPORT STARTED - ${assets.length} assets to process`);
     console.log(`📦 Import Mode: ${importMode || 'auto'}`);
+    console.log(`🔄 Update Mode (Upsert): ${upsert ? 'ENABLED' : 'DISABLED'}`);
     console.log(`🔄 Deduplication Cache: ENABLED`);
     console.log(`${'='.repeat(80)}\n`);    console.log(`\n${'='.repeat(60)}`);
     console.log(`Starting bulk import of ${assets.length} assets...`);
@@ -1532,10 +1717,15 @@ const bulkImportAssets = async (req, res, next) => {
     const PeripheralImporter = require('../utils/peripheralImporter');
 
     // Detect import mode if not explicitly specified
+    // When upsert mode is enabled, always use 'new_assets' mode to allow sequential processing
     let detectedMode = importMode || 'auto';
     let modeAnalysis = null;
     
-    if (detectedMode === 'auto') {
+    if (upsert) {
+      // In upsert mode, force sequential processing to enable update logic
+      console.log('🔄 Upsert mode enabled - using sequential processing for create/update');
+      detectedMode = 'new_assets';
+    } else if (detectedMode === 'auto') {
       console.log('🔍 Running import mode detection...');
       modeAnalysis = await ImportModeDetector.detectImportMode(assets);
       detectedMode = modeAnalysis.mode;
@@ -1553,6 +1743,8 @@ const bulkImportAssets = async (req, res, next) => {
       failed: 0,
       peripheralsAdded: 0,
       assetsCreated: 0,
+      updated: 0,
+      duplicates: 0,
       errors: [],
       warnings: [],
       mode: detectedMode,
@@ -1660,14 +1852,50 @@ const bulkImportAssets = async (req, res, next) => {
           }
         }
 
-        // Check for duplicate serial number in database (only in new_assets mode)
+        // Check for duplicate serial number in database
         const existingBySerial = await Asset.findBySerialNumber(assetData.serial_number);
-        if (existingBySerial && detectedMode === 'new_assets') {
-          throw new Error(`Asset with serial number '${assetData.serial_number}' already exists`);
+        
+        if (existingBySerial) {
+          // If upsert mode is enabled, check for changes and update if needed
+          if (upsert) {
+            console.log(`   🔍 Found existing asset with serial number: ${assetData.serial_number}`);
+            
+            // Get full asset details for comparison
+            const existingFullAsset = await Asset.findById(existingBySerial.Asset_ID);
+            console.log(`   📊 Comparing data for asset ID: ${existingFullAsset.Asset_ID}`);
+            console.log(`   📊 Old monthly_prices: ${existingFullAsset.Monthly_Prices}`);
+            console.log(`   📊 New monthly_prices: ${assetData.monthly_prices}`);
+            
+            const { hasChanges, changes } = hasAssetChanges(existingFullAsset, assetData);
+            
+            if (!hasChanges) {
+              console.log(`   ⏭️  No changes detected - skipping as duplicate`);
+              results.duplicates = (results.duplicates || 0) + 1;
+              continue;
+            }
+            
+            console.log(`   📝 Changes detected (${changes.length} fields):`);
+            changes.forEach(change => {
+              console.log(`      - ${change.field}: "${change.old}" → "${change.new}"`);
+            });
+            
+            try {
+              await updateExistingAsset(existingFullAsset, assetData, importCache);
+              results.updated = (results.updated || 0) + 1;
+              results.imported++;
+              console.log(`   ✅ Update completed for ${assetData.serial_number}`);
+            } catch (updateError) {
+              console.error(`   ❌ Update failed for ${assetData.serial_number}:`, updateError.message);
+              throw new Error(`Failed to update asset: ${updateError.message}`);
+            }
+            
+            processedCount++;
+            continue;
+          } else if (detectedMode === 'new_assets') {
+            // In new_assets mode without upsert, reject duplicates
+            throw new Error(`Asset with serial number '${assetData.serial_number}' already exists`);
+          }
         }
-
-        // Check for duplicate tag ID (you'd need to implement this check in Asset model)
-        // For now, we'll skip this check but it should be added
 
         // Convert flat peripheral fields to array if needed
         if (!assetData.peripherals && (assetData.peripheral_name || assetData.serial_code)) {
@@ -1822,6 +2050,7 @@ const bulkImportAssets = async (req, res, next) => {
 
       } catch (error) {
         console.error(`❌ Failed to process asset ${rowNumber}:`, error.message);
+        console.error(`   Stack trace:`, error.stack);
         results.failed++;
         results.errors.push({
           row: rowNumber,
@@ -1838,7 +2067,7 @@ const bulkImportAssets = async (req, res, next) => {
       }
     }
 
-    results.assetsCreated = results.imported;
+    results.assetsCreated = results.imported - (results.updated || 0);
     
     // Get cache statistics
     const cacheStats = importCache.getStats();
@@ -1852,7 +2081,9 @@ const bulkImportAssets = async (req, res, next) => {
     console.log(`   ✅ Total Unique Attributes: ${cacheStats.total}`);
     console.log(`${'='.repeat(80)}\n`);
     
-    const finalMessage = `Bulk import completed: ${results.imported} new assets created, ${results.failed} failed`;
+    const finalMessage = upsert 
+      ? `Bulk import completed: ${results.assetsCreated} created, ${results.updated || 0} updated, ${results.duplicates || 0} duplicates skipped, ${results.failed} failed`
+      : `Bulk import completed: ${results.imported} new assets created, ${results.failed} failed`;
     console.log(`\n${finalMessage}`);
     logger.info(finalMessage);
 
@@ -1861,7 +2092,9 @@ const bulkImportAssets = async (req, res, next) => {
       success: results.imported > 0,
       message: finalMessage,
       imported: results.imported,
-      assetsCreated: results.imported,
+      assetsCreated: results.assetsCreated,
+      updated: results.updated || 0,
+      duplicates: results.duplicates || 0,
       peripheralsAdded: 0,
       failed: results.failed,
       errors: results.errors.slice(0, 50), // Limit errors to first 50
