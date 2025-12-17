@@ -315,19 +315,30 @@ const createAssetWithDetails = async (req, res, next, importCache = null) => {
     }
 
     console.log('Linking software...');
-    // Step 5.5: Link software to asset if provided (skip if 'None') with cache support
-    if (completeData.software && completeData.software.trim()) {
-      if (completeData.software.toLowerCase() !== 'none') {
-        try {
-          await Asset.linkSoftwareToAsset(newAsset.Asset_ID, completeData.software.trim(), importCache);
-          console.log(`✅ Linked software: ${completeData.software}`);
-        } catch (softwareError) {
-          console.log('Failed to link software:', softwareError.message);
-          // Continue anyway
+    // Step 5.5: Link software to asset if provided (supports both single string and array) with cache support
+    if (completeData.software) {
+      // Handle both array (new format) and string (legacy format)
+      const softwareList = Array.isArray(completeData.software) 
+        ? completeData.software 
+        : [completeData.software];
+      
+      console.log(`Processing ${softwareList.length} software item(s):`, softwareList);
+      
+      for (const softwareName of softwareList) {
+        if (softwareName && softwareName.trim() && softwareName.toLowerCase() !== 'none') {
+          try {
+            await Asset.linkSoftwareToAsset(newAsset.Asset_ID, softwareName.trim(), importCache);
+            console.log(`✅ Linked software: ${softwareName}`);
+          } catch (softwareError) {
+            console.log(`Failed to link software "${softwareName}":`, softwareError.message);
+            // Continue with other software
+          }
+        } else if (softwareName && softwareName.toLowerCase() === 'none') {
+          console.log('✅ Software set to None - skipping');
         }
-      } else {
-        console.log('✅ Software set to None - asset has no software');
       }
+    } else {
+      console.log('No software to link');
     }
 
     console.log('Linking to project...');

@@ -55,6 +55,10 @@ const AddAsset = () => {
   // Form data
   const [selectedBranch, setSelectedBranch] = useState('');
   
+  // Multiple software selection (similar to branches in AddProject)
+  const [selectedSoftware, setSelectedSoftware] = useState([]);
+  const [softwareInput, setSoftwareInput] = useState('');
+  
   // Main asset form data
   const [asset, setAsset] = useState({
     serial_number: '',
@@ -69,7 +73,6 @@ const AddAsset = () => {
     windows: '',
     microsoft_office: '',
     antivirus: '',
-    software: '',
     monthly_prices: ''
   });
 
@@ -696,7 +699,7 @@ const AddAsset = () => {
         // New fields
         windows: asset.windows || null,
         microsoft_office: asset.microsoft_office || null,
-        software: asset.software || null,
+        software: selectedSoftware.length > 0 ? selectedSoftware : null, // Changed to array
         monthly_prices: asset.monthly_prices || null,
         
         // Include only valid peripherals (those with both name and serial code)
@@ -858,6 +861,25 @@ const AddAsset = () => {
     if (peripherals.length > 1) {
       const updatedPeripherals = peripherals.filter((_, i) => i !== index);
       setPeripherals(updatedPeripherals);
+    }
+  };
+
+  // Software handlers (similar to branches in AddProject)
+  const addSoftware = () => {
+    if (softwareInput && !selectedSoftware.includes(softwareInput)) {
+      setSelectedSoftware([...selectedSoftware, softwareInput]);
+      setSoftwareInput('');
+    }
+  };
+
+  const removeSoftware = (index) => {
+    setSelectedSoftware(selectedSoftware.filter((_, i) => i !== index));
+  };
+
+  const handleSoftwareKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      addSoftware();
     }
   };
 
@@ -1461,36 +1483,99 @@ const AddAsset = () => {
                       <Plus size={14} />
                     </button>
                   </label>
-                  <SearchableDropdown
-                    options={softwareOptions.map(opt => {
-                      const name = opt.Software_Name || opt.name || opt;
-                      const price = opt.Price ?? opt.price;
-                      return {
-                        value: name,
-                        label: name,
-                        price
-                      };
-                    })}
-                    value={asset.software}
-                    onChange={(selectedValue) => {
-                      setAsset({
-                        ...asset,
-                        software: selectedValue || ''
-                      });
-                    }}
-                    placeholder="Type to search or select software..."
-                    searchPlaceholder="Search software..."
-                    getOptionLabel={(option) => option.label}
-                    getOptionValue={(option) => option.value}
-                    renderOption={(option) => (
-                      <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
-                        <span>{option.label}</span>
-                        {option.price != null && option.price !== '' && (
-                          <span style={{ color: '#555' }}>RM {option.price}</span>
-                        )}
-                      </div>
-                    )}
-                  />
+                  <div style={{ display: 'flex', gap: '10px' }}>
+                    <SearchableDropdown
+                      options={softwareOptions.map(opt => {
+                        const name = opt.Software_Name || opt.name || opt;
+                        const price = opt.Price ?? opt.price;
+                        return {
+                          value: name,
+                          label: name,
+                          price
+                        };
+                      })}
+                      value={softwareInput}
+                      onChange={(selectedValue) => {
+                        setSoftwareInput(selectedValue || '');
+                      }}
+                      placeholder="Type to search or select software..."
+                      searchPlaceholder="Search software..."
+                      getOptionLabel={(option) => option.label}
+                      getOptionValue={(option) => option.value}
+                      renderOption={(option) => (
+                        <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
+                          <span>{option.label}</span>
+                          {option.price != null && option.price !== '' && (
+                            <span style={{ color: '#555' }}>RM {option.price}</span>
+                          )}
+                        </div>
+                      )}
+                      style={{ flex: 1 }}
+                    />
+                    <button 
+                      type="button" 
+                      onClick={addSoftware}
+                      className="btn btn-secondary"
+                      style={{ whiteSpace: 'nowrap' }}
+                    >
+                      Add Software
+                    </button>
+                  </div>
+                  
+                  {/* Display selected software */}
+                  {selectedSoftware.length > 0 && (
+                    <div style={{ 
+                      marginTop: '15px', 
+                      display: 'flex', 
+                      flexWrap: 'wrap', 
+                      gap: '10px' 
+                    }}>
+                      {selectedSoftware.map((software, index) => {
+                        const softwareOption = softwareOptions.find(opt => 
+                          (opt.Software_Name || opt.name || opt) === software
+                        );
+                        const price = softwareOption?.Price ?? softwareOption?.price;
+                        
+                        return (
+                          <div 
+                            key={index}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '8px',
+                              padding: '8px 12px',
+                              backgroundColor: '#e3f2fd',
+                              border: '1px solid #2196F3',
+                              borderRadius: '20px',
+                              fontSize: '14px'
+                            }}
+                          >
+                            <Package size={14} color="#2196F3" />
+                            <span>{software}</span>
+                            {price != null && price !== '' && (
+                              <span style={{ color: '#666', fontSize: '12px' }}>
+                                (RM {price})
+                              </span>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => removeSoftware(index)}
+                              style={{
+                                background: 'none',
+                                border: 'none',
+                                cursor: 'pointer',
+                                padding: '2px',
+                                display: 'flex',
+                                alignItems: 'center'
+                              }}
+                            >
+                              <Trash2 size={16} color="#666" />
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
