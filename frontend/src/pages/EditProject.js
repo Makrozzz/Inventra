@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Save, ArrowLeft, Calendar, FileText, User, Shield, Wrench, Building2, MapPin, X, Plus, Trash2, Edit2 } from 'lucide-react';
 import { API_URL } from '../config/api';
+import SearchableDropdown from '../components/SearchableDropdown';
 
 const EditProject = () => {
   const { id } = useParams();
@@ -31,10 +32,30 @@ const EditProject = () => {
   const [originalBranches, setOriginalBranches] = useState([]); // Track original branches
   const [newBranchInput, setNewBranchInput] = useState('');
   const [branchesModified, setBranchesModified] = useState(false);
+  
+  // Solution Principals
+  const [solutionPrincipals, setSolutionPrincipals] = useState([]);
+  const [selectedSolutionPrincipals, setSelectedSolutionPrincipals] = useState([]);
+  const [originalSolutionPrincipals, setOriginalSolutionPrincipals] = useState([]);
+  const [solutionPrincipalsModified, setSolutionPrincipalsModified] = useState(false);
 
   useEffect(() => {
     fetchProjectData();
+    fetchSolutionPrincipals();
   }, [id]);
+
+  const fetchSolutionPrincipals = async () => {
+    try {
+      const response = await fetch(`${API_URL}/solution-principals`);
+      if (response.ok) {
+        const data = await response.json();
+        console.log('Solution Principals fetched:', data);
+        setSolutionPrincipals(data || []);
+      }
+    } catch (error) {
+      console.error('Error fetching solution principals:', error);
+    }
+  };
 
   const fetchProjectData = async () => {
     try {
@@ -71,6 +92,16 @@ const EditProject = () => {
         const uniqueBranches = [...new Set(inventoryData.map(item => item.Branch))];
         setBranches(uniqueBranches);
         setOriginalBranches([...uniqueBranches]); // Store original branches for comparison
+      }
+
+      // Fetch solution principals for this project
+      const spResponse = await fetch(`${API_URL}/projects/${id}/solution-principals`);
+      if (spResponse.ok) {
+        const spData = await spResponse.json();
+        const spIds = spData.map(sp => sp.SP_ID);
+        setSelectedSolutionPrincipals(spIds);
+        setOriginalSolutionPrincipals([...spIds]);
+        console.log('Loaded solution principals:', spIds);
       }
 
     } catch (error) {
@@ -134,6 +165,28 @@ const EditProject = () => {
 
         const branchResult = await branchResponse.json();
         console.log('Branches updated:', branchResult);
+      }
+      
+      // Update solution principals if they were modified
+      if (solutionPrincipalsModified) {
+        console.log('Updating solution principals:', selectedSolutionPrincipals);
+        const spResponse = await fetch(`${API_URL}/projects/${id}/solution-principals`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            solution_principals: selectedSolutionPrincipals
+          })
+        });
+
+        if (!spResponse.ok) {
+          const errorData = await spResponse.json().catch(() => ({ error: 'Failed to update solution principals' }));
+          throw new Error(errorData.error || 'Failed to update solution principals');
+        }
+
+        const spResult = await spResponse.json();
+        console.log('Solution principals updated:', spResult);
       }
       
       // Navigate back to project detail page
@@ -214,6 +267,24 @@ const EditProject = () => {
       e.preventDefault();
       handleAddBranch();
     }
+  };
+
+  // Solution Principal handlers
+  const handleSolutionPrincipalSelect = (spId) => {
+    if (spId && !selectedSolutionPrincipals.includes(spId)) {
+      setSelectedSolutionPrincipals([...selectedSolutionPrincipals, spId]);
+      setSolutionPrincipalsModified(true);
+    }
+  };
+
+  const removeSolutionPrincipal = (spId) => {
+    setSelectedSolutionPrincipals(selectedSolutionPrincipals.filter(id => id !== spId));
+    setSolutionPrincipalsModified(true);
+  };
+
+  const getSelectedSPName = (spId) => {
+    const sp = solutionPrincipals.find(s => s.SP_ID === spId);
+    return sp ? sp.SP_Name : 'Unknown';
   };
 
   if (loading) {
@@ -613,6 +684,123 @@ const EditProject = () => {
                 }}>
                   No branches yet. Add a branch above.
                 </p>
+              )}
+            </div>
+          </div>
+
+          {/* Solution Principal Section */}
+          <div style={{
+            backgroundColor: 'white',
+            borderRadius: '16px',
+            padding: '30px',
+            marginBottom: '25px',
+            boxShadow: '0 2px 15px rgba(0, 0, 0, 0.08)'
+          }}>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              marginBottom: '25px',
+              paddingBottom: '15px',
+              borderBottom: '2px solid #9C27B0'
+            }}>
+              <User size={24} style={{ color: '#9C27B0' }} />
+              <h2 style={{ margin: 0, fontSize: '20px', fontWeight: '700', color: '#1f2937' }}>
+                Solution Principal
+              </h2>
+            </div>
+
+            <div>
+              <label style={{
+                display: 'block',
+                marginBottom: '8px',
+                fontWeight: '600',
+                color: '#374151',
+                fontSize: '14px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}>
+                <User size={16} style={{ color: '#9C27B0' }} />
+                Select Solution Principals
+              </label>
+              <SearchableDropdown
+                options={solutionPrincipals
+                  .filter(sp => !selectedSolutionPrincipals.includes(sp.SP_ID))
+                  .map(sp => ({
+                    value: sp.SP_ID,
+                    label: sp.SP_Name
+                  }))}
+                value=""
+                onChange={(selectedValue) => handleSolutionPrincipalSelect(selectedValue)}
+                placeholder="Type to search and select solution principals..."
+                searchPlaceholder="Search solution principals..."
+                getOptionLabel={(option) => option.label}
+                getOptionValue={(option) => option.value}
+                clearable={false}
+              />
+              
+              {/* Display selected solution principals */}
+              {selectedSolutionPrincipals.length > 0 && (
+                <div style={{ 
+                  marginTop: '15px',
+                  border: '1px solid #e5e7eb',
+                  borderRadius: '8px',
+                  overflow: 'hidden'
+                }}>
+                  {selectedSolutionPrincipals.map((spId, index) => (
+                    <div 
+                      key={spId}
+                      style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'auto 1fr auto',
+                        alignItems: 'center',
+                        gap: '16px',
+                        padding: '12px 16px',
+                        backgroundColor: index % 2 === 0 ? '#f9fafb' : 'white',
+                        borderBottom: index < selectedSolutionPrincipals.length - 1 ? '1px solid #e5e7eb' : 'none'
+                      }}
+                    >
+                      <div style={{ 
+                        display: 'flex', 
+                        alignItems: 'center',
+                        gap: '8px',
+                        fontWeight: '600',
+                        color: '#9C27B0',
+                        minWidth: '120px'
+                      }}>
+                        <User size={16} color="#9C27B0" />
+                        <span>{getSelectedSPName(spId)}</span>
+                      </div>
+                      <div style={{ 
+                        color: '#6b7280',
+                        fontSize: '14px'
+                      }}>
+                        Support Type: N/A
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => removeSolutionPrincipal(spId)}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          cursor: 'pointer',
+                          padding: '4px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          borderRadius: '4px',
+                          transition: 'background-color 0.2s'
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#fee2e2'}
+                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                        title="Remove solution principal"
+                      >
+                        <X size={18} color="#ef4444" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
               )}
             </div>
           </div>
