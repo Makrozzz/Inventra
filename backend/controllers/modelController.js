@@ -17,7 +17,10 @@ const getAllModels = async (req, res, next) => {
       ORDER BY m.Model_Name ASC
     `);
 
-    res.status(200).json(models);
+    res.status(200).json({
+      success: true,
+      data: models
+    });
   } catch (error) {
     logger.error('Error in getAllModels:', error);
     console.error('Error fetching models:', error);

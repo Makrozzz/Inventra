@@ -135,7 +135,7 @@ const SearchableDropdown = ({
 
   return (
     <div className="searchable-dropdown-container" ref={dropdownRef}>
-      <style jsx>{`
+      <style>{`
         .searchable-dropdown-container {
           position: relative;
           width: 100%;
@@ -229,6 +229,7 @@ const SearchableDropdown = ({
           max-height: ${maxHeight}px;
           display: flex;
           flex-direction: column;
+          overflow: hidden;
         }
         
         .search-container {
@@ -237,6 +238,7 @@ const SearchableDropdown = ({
           display: flex;
           align-items: center;
           gap: 8px;
+          flex-shrink: 0;
         }
         
         .search-input {
@@ -247,16 +249,16 @@ const SearchableDropdown = ({
           outline: none;
           font-size: 14px;
         }
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 8px;
+        
+        .search-input:focus {
+          border-color: #007bff;
           box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
         }
         
         .options-container {
           flex: 1;
           overflow-y: auto;
+          overflow-x: hidden;
           max-height: ${maxHeight - 60}px;
         }
         

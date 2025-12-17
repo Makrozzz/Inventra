@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Save, ArrowLeft, AlertCircle, CheckCircle, X, Plus, Package, Building2, ClipboardList, Edit3 } from 'lucide-react';
 import { API_URL } from '../config/api';
+import SearchableDropdown from '../components/SearchableDropdown';
 
 const EditAsset = () => {
   const navigate = useNavigate();
@@ -20,6 +21,7 @@ const EditAsset = () => {
   const [modelOptions, setModelOptions] = useState([]);
   const [peripheralTypeOptions, setPeripheralTypeOptions] = useState([]);
   const [branchOptions, setBranchOptions] = useState([]);
+  const [categoryOptions, setCategoryOptions] = useState([]);
   
   // Modal states for adding new options
   const [showAddModal, setShowAddModal] = useState(false);
@@ -41,6 +43,7 @@ const EditAsset = () => {
     Asset_Tag_ID: '',
     Item_Name: '',
     Model: '',
+    Category: '',
     Status: 'Active',
     Windows: '',
     Microsoft_Office: '',
@@ -115,6 +118,7 @@ const EditAsset = () => {
         Asset_Tag_ID: data.Asset_Tag_ID || '',
         Item_Name: data.Item_Name || '',
         Model: data.Model || '',
+        Category: data.Category || '',
         Status: data.Status || 'Active',
         Windows: data.Windows || '',
         Microsoft_Office: data.Microsoft_Office || '',
@@ -143,6 +147,14 @@ const EditAsset = () => {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  // Handler for SearchableDropdown components
+  const handleChange = (name, value) => {
     setFormData(prev => ({
       ...prev,
       [name]: value
@@ -186,49 +198,60 @@ const EditAsset = () => {
   const fetchDropdownOptions = async () => {
     try {
       // Fetch Windows versions
-      const windowsRes = await fetch('${API_URL}/options/windows');
+      const windowsRes = await fetch(`${API_URL}/options/windows`);
       if (windowsRes.ok) {
         const windowsData = await windowsRes.json();
         setWindowsOptions(windowsData.data || []);
       }
 
       // Fetch Office versions
-      const officeRes = await fetch('${API_URL}/options/office');
+      const officeRes = await fetch(`${API_URL}/options/office`);
       if (officeRes.ok) {
         const officeData = await officeRes.json();
         setOfficeOptions(officeData.data || []);
       }
 
       // Fetch Antivirus options
-      const antivirusRes = await fetch('${API_URL}/options/antivirus');
+      const antivirusRes = await fetch(`${API_URL}/options/antivirus`);
       if (antivirusRes.ok) {
         const antivirusData = await antivirusRes.json();
         setAntivirusOptions(antivirusData.data || []);
       }
 
       // Fetch Software options
-      const softwareRes = await fetch('${API_URL}/options/software');
+      const softwareRes = await fetch(`${API_URL}/options/software`);
       if (softwareRes.ok) {
         const softwareData = await softwareRes.json();
         setSoftwareOptions(softwareData.data || []);
       }
 
       // Fetch Model options
-      const modelRes = await fetch('${API_URL}/models');
+      const modelRes = await fetch(`${API_URL}/models`);
       if (modelRes.ok) {
         const modelData = await modelRes.json();
-        // Extract model names from the response
-        const models = modelData.data?.map(model => model.Model_Name || model.name) || [];
-        setModelOptions(models);
+        console.log('📋 Models fetched:', modelData.data?.length || 0, 'items');
+        console.log('Sample model:', modelData.data?.[0]);
+        // Store full model objects
+        setModelOptions(modelData.data || []);
       }
       
       // Fetch Peripheral Types
-      const peripheralTypesRes = await fetch('${API_URL}/peripherals/types');
+      const peripheralTypesRes = await fetch(`${API_URL}/peripherals/types`);
       if (peripheralTypesRes.ok) {
         const peripheralTypesData = await peripheralTypesRes.json();
         // Extract peripheral type names from the response
         const types = peripheralTypesData.data?.map(type => type.Peripheral_Type_Name || type.name) || [];
         setPeripheralTypeOptions(types);
+      }
+
+      // Fetch Categories
+      const categoryRes = await fetch(`${API_URL}/categories`);
+      if (categoryRes.ok) {
+        const categoryData = await categoryRes.json();
+        console.log('📋 Categories fetched:', categoryData.data?.length || 0, 'items');
+        console.log('Sample category:', categoryData.data?.[0]);
+        // Store full category objects
+        setCategoryOptions(categoryData.data || []);
       }
     } catch (err) {
       console.error('Error fetching dropdown options:', err);
@@ -289,6 +312,9 @@ const EditAsset = () => {
       } else if (modalType === 'peripheral') {
         endpoint = `${API_URL}/peripherals/types`;
         body = JSON.stringify({ name: newOptionValue.trim() });
+      } else if (modalType === 'category') {
+        endpoint = `${API_URL}/categories`;
+        body = JSON.stringify({ name: newOptionValue.trim() });
       } else {
         endpoint = `${API_URL}/options/${modalType}`;
         body = JSON.stringify({ value: newOptionValue.trim() });
@@ -324,6 +350,9 @@ const EditAsset = () => {
         setFormData(prev => ({ ...prev, Model: newOptionValue.trim() }));
       } else if (modalType === 'peripheral') {
         setPeripheralTypeOptions(prev => [...prev, newOptionValue.trim()]);
+      } else if (modalType === 'category') {
+        setCategoryOptions(prev => [...prev, newOptionValue.trim()]);
+        setFormData(prev => ({ ...prev, Category: newOptionValue.trim() }));
       }
 
       handleCloseAddModal();
@@ -734,18 +763,66 @@ const EditAsset = () => {
                       <Plus size={14} /> 
                     </button>
                   </label>
-                  <select
-                    name="Model"
+                  <SearchableDropdown
+                    options={modelOptions.map(mod => ({
+                      value: mod.Model_Name || mod.Model || mod,
+                      label: mod.Model_Name || mod.Model || mod
+                    }))}
                     value={formData.Model}
-                    onChange={handleInputChange}
-                  >
-                    <option value="">Select Model</option>
-                    {modelOptions.map((option, index) => (
-                      <option key={index} value={option}>
-                        {option}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={(selectedValue) => handleChange('Model', selectedValue || '')}
+                    placeholder={`Type to search or select model... (${modelOptions.length} available)`}
+                    searchPlaceholder="Search models..."
+                    getOptionLabel={(option) => option.label}
+                    getOptionValue={(option) => option.value}
+                  />
+                </div>
+
+                <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+                  <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span>Category</span>
+                    <button
+                      type="button"
+                      onClick={() => handleOpenAddModal('category')}
+                      style={{
+                        background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '6px',
+                        padding: '5px 10px',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        fontSize: '12px',
+                        fontWeight: '600',
+                        transition: 'all 0.2s ease',
+                        boxShadow: '0 2px 4px rgba(16, 185, 129, 0.3)'
+                      }}
+                      title="Add new Category"
+                      onMouseOver={(e) => {
+                        e.currentTarget.style.transform = 'translateY(-1px)';
+                        e.currentTarget.style.boxShadow = '0 3px 6px rgba(16, 185, 129, 0.4)';
+                      }}
+                      onMouseOut={(e) => {
+                        e.currentTarget.style.transform = 'translateY(0)';
+                        e.currentTarget.style.boxShadow = '0 2px 4px rgba(16, 185, 129, 0.3)';
+                      }}
+                    >
+                      <Plus size={14} /> 
+                    </button>
+                  </label>
+                  <SearchableDropdown
+                    options={categoryOptions.map(cat => ({
+                      value: cat.Category || cat,
+                      label: cat.Category || cat
+                    }))}
+                    value={formData.Category}
+                    onChange={(selectedValue) => handleChange('Category', selectedValue || '')}
+                    placeholder={`Type to search or select category... (${categoryOptions.length} available)`}
+                    searchPlaceholder="Search categories..."
+                    getOptionLabel={(option) => option.label}
+                    getOptionValue={(option) => option.value}
+                  />
                 </div>
 
                 <div className="form-group">
@@ -763,103 +840,25 @@ const EditAsset = () => {
                 </div>
 
                 <div className="form-group">
-                  <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span>Windows Version</span>
-                    <button
-                      type="button"
-                      onClick={() => handleOpenAddModal('windows')}
-                      style={{
-                        background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '6px',
-                        padding: '5px 10px',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '4px',
-                        fontSize: '12px',
-                        fontWeight: '600',
-                        transition: 'all 0.2s ease',
-                        boxShadow: '0 2px 4px rgba(16, 185, 129, 0.3)'
-                      }}
-                      title="Add new Windows version"
-                      onMouseOver={(e) => {
-                        e.currentTarget.style.transform = 'translateY(-1px)';
-                        e.currentTarget.style.boxShadow = '0 3px 6px rgba(16, 185, 129, 0.4)';
-                      }}
-                      onMouseOut={(e) => {
-                        e.currentTarget.style.transform = 'translateY(0)';
-                        e.currentTarget.style.boxShadow = '0 2px 4px rgba(16, 185, 129, 0.3)';
-                      }}
-                    >
-                      <Plus size={14} /> 
-                    </button>
-                  </label>
-                  <select
+                  <label>Windows</label>
+                  <input
+                    type="text"
                     name="Windows"
                     value={formData.Windows}
                     onChange={handleInputChange}
-                  >
-                    <option value="">
-                      {originalData?.Windows ? `Current: ${originalData.Windows}` : 'Select Windows Version'}
-                    </option>
-                    {windowsOptions.map((option, index) => (
-                      <option key={index} value={option}>
-                        {option}
-                      </option>
-                    ))}
-                  </select>
+                    placeholder="e.g., Windows 10 Pro"
+                  />
                 </div>
 
                 <div className="form-group">
-                  <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span>Microsoft Office</span>
-                    <button
-                      type="button"
-                      onClick={() => handleOpenAddModal('office')}
-                      style={{
-                        background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '6px',
-                        padding: '5px 10px',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '4px',
-                        fontSize: '12px',
-                        fontWeight: '600',
-                        transition: 'all 0.2s ease',
-                        boxShadow: '0 2px 4px rgba(16, 185, 129, 0.3)'
-                      }}
-                      title="Add new Office version"
-                      onMouseOver={(e) => {
-                        e.currentTarget.style.transform = 'translateY(-1px)';
-                        e.currentTarget.style.boxShadow = '0 3px 6px rgba(16, 185, 129, 0.4)';
-                      }}
-                      onMouseOut={(e) => {
-                        e.currentTarget.style.transform = 'translateY(0)';
-                        e.currentTarget.style.boxShadow = '0 2px 4px rgba(16, 185, 129, 0.3)';
-                      }}
-                    >
-                      <Plus size={14} /> 
-                    </button>
-                  </label>
-                  <select
+                  <label>Microsoft Office</label>
+                  <input
+                    type="text"
                     name="Microsoft_Office"
                     value={formData.Microsoft_Office}
                     onChange={handleInputChange}
-                  >
-                    <option value="">
-                      {originalData?.Microsoft_Office ? `Current: ${originalData.Microsoft_Office}` : 'Select Office Version'}
-                    </option>
-                    {officeOptions.map((option, index) => (
-                      <option key={index} value={option}>
-                        {option}
-                      </option>
-                    ))}
-                  </select>
+                    placeholder="e.g., Microsoft Office 365"
+                  />
                 </div>
 
                 <div className="form-group">
@@ -954,8 +953,8 @@ const EditAsset = () => {
                     <option value="">Select Software</option>
                     <option value="None">None</option>
                     {softwareOptions.map((option, index) => (
-                      <option key={index} value={option}>
-                        {option}
+                      <option key={index} value={option.Software_Name || option}>
+                        {option.Software_Name || option}
                       </option>
                     ))}
                   </select>
@@ -1494,7 +1493,7 @@ const EditAsset = () => {
                 gap: '10px'
               }}>
                 <Plus size={24} strokeWidth={2.5} style={{ color: '#10b981' }} />
-                Add New {modalType === 'windows' ? 'Windows Version' : modalType === 'office' ? 'Office Version' : modalType === 'antivirus' ? 'Antivirus' : modalType === 'software' ? 'Software' : modalType === 'peripheral' ? 'Peripheral Type' : 'Model'}
+                Add New {modalType === 'windows' ? 'Windows Version' : modalType === 'office' ? 'Office Version' : modalType === 'antivirus' ? 'Antivirus' : modalType === 'software' ? 'Software' : modalType === 'peripheral' ? 'Peripheral Type' : modalType === 'category' ? 'Category' : 'Model'}
               </h3>
               <button
                 onClick={handleCloseAddModal}

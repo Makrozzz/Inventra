@@ -333,19 +333,38 @@ const createAssetWithDetails = async (req, res, next, importCache = null) => {
     console.log('Linking to project...');
     // Step 6: Link to project/customer via inventory
     let inventoryId = null;
-    if (completeData.project_reference_num && completeData.customer_name && completeData.branch) {
+    if (completeData.project_reference_num) {
+      // Project reference is the minimum required field
+      const customerName = completeData.customer_name || 'Unknown Customer';
+      const branch = completeData.branch || completeData.customer_reference_number || 'Default Branch';
+      
+      console.log(`📦 Preparing inventory link with:`, {
+        Asset_ID: newAsset.Asset_ID,
+        project_reference_num: completeData.project_reference_num,
+        customer_name: customerName,
+        branch: branch
+      });
+      
       try {
         inventoryId = await Asset.linkToProject(
           newAsset.Asset_ID,
           completeData.project_reference_num,
-          completeData.customer_name,
-          completeData.branch
+          customerName,
+          branch
         );
         console.log(`✅ LINKED TO PROJECT: Asset_ID ${newAsset.Asset_ID} → Inventory_ID ${inventoryId}`);
       } catch (linkError) {
-        console.log('Failed to link to project:', linkError.message);
+        console.error('❌ Failed to link to project:', {
+          error: linkError.message,
+          asset_id: newAsset.Asset_ID,
+          project_ref: completeData.project_reference_num,
+          customer: customerName,
+          branch: branch
+        });
         // Continue anyway
       }
+    } else {
+      console.warn(`⚠️  Cannot link to inventory - missing project_reference_num for asset ${newAsset.Asset_ID}`);
     }
 
     // Step 7: PM record creation - DISABLED (PM records should be created manually only)
