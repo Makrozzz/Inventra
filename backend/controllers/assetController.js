@@ -217,14 +217,16 @@ const createAssetWithDetails = async (req, res, next, importCache = null) => {
     console.log('Processing Windows and MS Office versions...');
     // Step 3.5: Process Windows and MS Office with cache support
     let windowsVersion = null;
-    if (completeData.windows) {
-      windowsVersion = await Asset.getOrCreateWindows(completeData.windows, importCache);
+    const normalizedWindows = normalizeNullValue(completeData.windows);
+    if (normalizedWindows) {
+      windowsVersion = await Asset.getOrCreateWindows(normalizedWindows, importCache);
       console.log('Windows version:', windowsVersion);
     }
     
     let msOfficeVersion = null;
-    if (completeData.microsoft_office) {
-      msOfficeVersion = await Asset.getOrCreateMicrosoftOffice(completeData.microsoft_office, importCache);
+    const normalizedMsOffice = normalizeNullValue(completeData.microsoft_office);
+    if (normalizedMsOffice) {
+      msOfficeVersion = await Asset.getOrCreateMicrosoftOffice(normalizedMsOffice, importCache);
       console.log('MS Office version:', msOfficeVersion);
     }
 
@@ -256,39 +258,42 @@ const createAssetWithDetails = async (req, res, next, importCache = null) => {
       
       for (const peripheral of completeData.peripherals) {
         console.log('Processing peripheral:', JSON.stringify(peripheral, null, 2));
+        
+        // Normalize peripheral name and serial code
+        const normalizedPeripheralName = normalizeNullValue(peripheral.peripheral_name);
+        const normalizedSerialCode = normalizeNullValue(peripheral.serial_code || peripheral.serial_code_name);
+        
         console.log('peripheral.peripheral_name check:', {
-          exists: !!peripheral.peripheral_name,
-          value: peripheral.peripheral_name,
-          type: typeof peripheral.peripheral_name
+          exists: !!normalizedPeripheralName,
+          value: normalizedPeripheralName,
+          type: typeof normalizedPeripheralName
         });
         
-        if (peripheral.peripheral_name) {
+        if (normalizedPeripheralName) {
           try {
             // Check for duplicate peripheral before creating
             const isDuplicate = await PeripheralImporter.checkDuplicatePeripheral(
               newAsset.Asset_ID,
-              peripheral.peripheral_name,
-              peripheral.serial_code || peripheral.serial_code_name
+              normalizedPeripheralName,
+              normalizedSerialCode
             );
             
             if (isDuplicate) {
-              console.log(`⚠️  Skipping duplicate peripheral: ${peripheral.peripheral_name} (${peripheral.serial_code || 'N/A'})`);
+              console.log(`⚠️  Skipping duplicate peripheral: ${normalizedPeripheralName} (${normalizedSerialCode || 'N/A'})`);
               continue; // Skip this peripheral
             }
             
             console.log(`🔧 Creating peripheral with data:`, {
-              peripheral_name: peripheral.peripheral_name,
-              serial_code: peripheral.serial_code,
-              serial_code_name: peripheral.serial_code_name,
+              peripheral_name: normalizedPeripheralName,
+              serial_code: normalizedSerialCode,
               condition: peripheral.condition,
-              remarks: peripheral.remarks,
-              'serial_code || serial_code_name': peripheral.serial_code || peripheral.serial_code_name
+              remarks: peripheral.remarks
             });
             
             const peripheralId = await Asset.createPeripheral(
               newAsset.Asset_ID,
-              peripheral.peripheral_name,
-              peripheral.serial_code || peripheral.serial_code_name, // Support both field names
+              normalizedPeripheralName,
+              normalizedSerialCode,
               peripheral.condition || 'Good',
               peripheral.remarks
             );
@@ -316,11 +321,12 @@ const createAssetWithDetails = async (req, res, next, importCache = null) => {
 
     console.log('Linking software...');
     // Step 5.5: Link software to asset if provided (skip if 'None') with cache support
-    if (completeData.software && completeData.software.trim()) {
-      if (completeData.software.toLowerCase() !== 'none') {
+    const normalizedSoftware = normalizeNullValue(completeData.software);
+    if (normalizedSoftware) {
+      if (normalizedSoftware.toLowerCase() !== 'none') {
         try {
-          await Asset.linkSoftwareToAsset(newAsset.Asset_ID, completeData.software.trim(), importCache);
-          console.log(`✅ Linked software: ${completeData.software}`);
+          await Asset.linkSoftwareToAsset(newAsset.Asset_ID, normalizedSoftware, importCache);
+          console.log(`✅ Linked software: ${normalizedSoftware}`);
         } catch (softwareError) {
           console.log('Failed to link software:', softwareError.message);
           // Continue anyway
@@ -1286,9 +1292,10 @@ const validateImportData = async (req, res, next) => {
           }
         }
 
-        // Check software - only accept FIRST new occurrence (skip 'None')
-        if (asset.software && typeof asset.software === 'string' && asset.software.trim() !== '' && asset.software.trim().toLowerCase() !== 'none') {
-          const softwareName = asset.software.trim();
+        // Check software - only accept FIRST new occurrence (skip 'None' and null-like values)
+        const normalizedSoftware = normalizeNullValue(asset.software);
+        if (normalizedSoftware && normalizedSoftware.toLowerCase() !== 'none') {
+          const softwareName = normalizedSoftware.trim();
           const lowerSoftwareName = softwareName.toLowerCase();
           
           // Only add if: 1) Not in database AND 2) First time seeing it in this import
@@ -1301,9 +1308,10 @@ const validateImportData = async (req, res, next) => {
           }
         }
 
-        // Check Windows - only accept FIRST new occurrence
-        if (asset.windows && typeof asset.windows === 'string' && asset.windows.trim() !== '') {
-          const windowsVersion = asset.windows.trim();
+        // Check Windows - only accept FIRST new occurrence (skip null-like values)
+        const normalizedWindows = normalizeNullValue(asset.windows);
+        if (normalizedWindows) {
+          const windowsVersion = normalizedWindows.trim();
           const lowerWindowsVersion = windowsVersion.toLowerCase();
           
           // Only add if: 1) Not in database AND 2) First time seeing it in this import
@@ -1316,9 +1324,10 @@ const validateImportData = async (req, res, next) => {
           }
         }
 
-        // Check Microsoft Office - only accept FIRST new occurrence
-        if (asset.microsoft_office && typeof asset.microsoft_office === 'string' && asset.microsoft_office.trim() !== '') {
-          const officeVersion = asset.microsoft_office.trim();
+        // Check Microsoft Office - only accept FIRST new occurrence (skip null-like values)
+        const normalizedOffice = normalizeNullValue(asset.microsoft_office);
+        if (normalizedOffice) {
+          const officeVersion = normalizedOffice.trim();
           const lowerOfficeVersion = officeVersion.toLowerCase();
           
           // Only add if: 1) Not in database AND 2) First time seeing it in this import
@@ -1331,12 +1340,13 @@ const validateImportData = async (req, res, next) => {
           }
         }
         
-        // Check peripheral types if asset has peripherals
+        // Check peripheral types if asset has peripherals (skip null-like values)
         if (asset.peripherals && Array.isArray(asset.peripherals)) {
           asset.peripherals.forEach(peripheral => {
-            if (peripheral.peripheral_name && typeof peripheral.peripheral_name === 'string') {
+            const normalizedPeripheralName = normalizeNullValue(peripheral.peripheral_name);
+            if (normalizedPeripheralName) {
               // Split comma-separated peripheral names
-              const peripheralNames = String(peripheral.peripheral_name).split(',').map(s => s.trim()).filter(s => s);
+              const peripheralNames = normalizedPeripheralName.split(',').map(s => s.trim()).filter(s => s);
               peripheralNames.forEach(name => {
                 if (name && !existingPeripheralTypeNames.has(name.toLowerCase())) {
                   newOptions.peripheralTypes.add(name);
@@ -1423,6 +1433,26 @@ const validateImportData = async (req, res, next) => {
 };
 
 /**
+ * Normalize null-like values to actual null
+ * Treats 'n/a', 'N/A', '-', empty strings as null
+ */
+const normalizeNullValue = (value) => {
+  if (value === null || value === undefined) return null;
+  
+  const strValue = String(value).trim();
+  
+  // Check if value is empty or represents "no value"
+  if (strValue === '' || 
+      strValue.toLowerCase() === 'n/a' || 
+      strValue === '-' ||
+      strValue === '--') {
+    return null;
+  }
+  
+  return strValue;
+};
+
+/**
  * Normalize status value to proper case (Active, Inactive, etc.)
  * Handles case-insensitive input from CSV imports
  */
@@ -1489,12 +1519,20 @@ const hasAssetChanges = (existingAsset, newData) => {
     changes.push({ field: 'branch', old: existingAsset.Branch, new: newData.branch });
   }
   
-  if (newData.windows !== undefined && String(newData.windows || '').trim() !== String(existingAsset.Windows || '').trim()) {
-    changes.push({ field: 'windows', old: existingAsset.Windows, new: newData.windows });
+  if (newData.windows !== undefined) {
+    const normalizedNewWindows = normalizeNullValue(newData.windows);
+    const normalizedOldWindows = normalizeNullValue(existingAsset.Windows);
+    if (normalizedNewWindows !== normalizedOldWindows) {
+      changes.push({ field: 'windows', old: existingAsset.Windows, new: normalizedNewWindows });
+    }
   }
   
-  if (newData.microsoft_office !== undefined && String(newData.microsoft_office || '').trim() !== String(existingAsset.Microsoft_Office || '').trim()) {
-    changes.push({ field: 'microsoft_office', old: existingAsset.Microsoft_Office, new: newData.microsoft_office });
+  if (newData.microsoft_office !== undefined) {
+    const normalizedNewOffice = normalizeNullValue(newData.microsoft_office);
+    const normalizedOldOffice = normalizeNullValue(existingAsset.Microsoft_Office);
+    if (normalizedNewOffice !== normalizedOldOffice) {
+      changes.push({ field: 'microsoft_office', old: existingAsset.Microsoft_Office, new: normalizedNewOffice });
+    }
   }
   
   if (newData.monthly_prices !== undefined) {
@@ -1579,8 +1617,9 @@ const updateExistingAsset = async (existingAsset, newData, importCache) => {
   }
   
   // Handle software update
-  if (newData.software && newData.software.toLowerCase() !== 'none') {
-    await Asset.linkSoftwareToAsset(assetId, newData.software);
+  const normalizedSoftware = normalizeNullValue(newData.software);
+  if (normalizedSoftware && normalizedSoftware.toLowerCase() !== 'none') {
+    await Asset.linkSoftwareToAsset(assetId, normalizedSoftware);
   }
   
   // Handle customer/branch update through inventory
