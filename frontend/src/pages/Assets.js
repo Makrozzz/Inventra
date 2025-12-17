@@ -46,6 +46,9 @@ const Assets = ({ onDelete }) => {
     deleting: false
   });
 
+  // Bulk delete state
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+
   // Selection state
   const [selectedAssets, setSelectedAssets] = useState([]);
   const [selectAll, setSelectAll] = useState(false);
@@ -218,13 +221,28 @@ const Assets = ({ onDelete }) => {
       
       if (response.success) {
         console.log('Delete successful:', response);
+
+        const data = response.data || {};
+        const peripheralsDeleted = data.peripherals_deleted ?? 0;
+        const pmRecordsDeleted = data.pm_records_deleted ?? 0;
+        const pmResultsDeleted = data.pm_results_deleted ?? 0;
+        const softwareLinksDeleted = data.software_links_deleted ?? 0;
+        const inventoryDeleted = data.inventory_deleted ?? 0;
+        const inventoryNulled = data.inventory_nulled ?? 0;
+        
+        // Build success message parts
+        const parts = [];
+        if (peripheralsDeleted > 0) parts.push(`Peripherals: ${peripheralsDeleted}`);
+        if (pmRecordsDeleted > 0) parts.push(`PM Records: ${pmRecordsDeleted}`);
+        if (pmResultsDeleted > 0) parts.push(`PM Results: ${pmResultsDeleted}`);
+        if (softwareLinksDeleted > 0) parts.push(`Software Links: ${softwareLinksDeleted}`);
+        if (inventoryDeleted > 0) parts.push(`Inventory Deleted: ${inventoryDeleted}`);
+        if (inventoryNulled > 0) parts.push(`Inventory Preserved: ${inventoryNulled}`);
+        
+        const detailsMessage = parts.length > 0 ? ` (${parts.join(', ')})` : '';
         
         // Show success message
-        setSuccessMessage(
-          `Asset deleted successfully! ` +
-          `(Peripherals: ${response.data.peripherals_deleted}, ` +
-          `PM Records: ${response.data.pm_records_deleted})`
-        );
+        setSuccessMessage(`Asset deleted successfully!${detailsMessage}`);
         
         // Close dialog
         setDeleteDialog({ show: false, asset: null, deleting: false });
@@ -333,15 +351,73 @@ const Assets = ({ onDelete }) => {
     }
   };
 
-  const handleBulkDelete = () => {
+  const handleBulkDelete = async () => {
     if (selectedAssets.length === 0) {
       alert('Please select at least one asset to delete');
       return;
     }
-    if (window.confirm(`Are you sure you want to delete ${selectedAssets.length} asset(s)?`)) {
-      // Handle bulk delete logic here
-      console.log('Deleting assets:', selectedAssets);
-      // You can implement actual bulk delete API call here
+
+    const assetsToDelete = [...selectedAssets];
+
+    const confirmed = window.confirm(
+      `Delete ${assetsToDelete.length} asset(s)? This will remove inventory rows, software links, peripherals, and PM records/results.`
+    );
+    if (!confirmed) return;
+
+    setBulkDeleting(true);
+    try {
+      let successCount = 0;
+      let peripheralsDeleted = 0;
+      let pmRecordsDeleted = 0;
+      let pmResultsDeleted = 0;
+      let softwareLinksDeleted = 0;
+      let inventoryDeleted = 0;
+      let inventoryNulled = 0;
+      const failures = [];
+
+      for (const assetId of assetsToDelete) {
+        try {
+          const response = await apiService.deleteAssetById(assetId);
+          const data = response.data || {};
+          successCount += 1;
+          peripheralsDeleted += data.peripherals_deleted ?? 0;
+          pmRecordsDeleted += data.pm_records_deleted ?? 0;
+          pmResultsDeleted += data.pm_results_deleted ?? 0;
+          softwareLinksDeleted += data.software_links_deleted ?? 0;
+          inventoryDeleted += data.inventory_deleted ?? 0;
+          inventoryNulled += data.inventory_nulled ?? 0;
+        } catch (error) {
+          failures.push({ assetId, message: error.message });
+          console.error(`Failed to delete asset ${assetId}:`, error);
+        }
+      }
+
+      await fetchAssets();
+      setSelectedAssets([]);
+      setSelectAll(false);
+
+      if (successCount > 0) {
+        const parts = [];
+        if (peripheralsDeleted > 0) parts.push(`Peripherals: ${peripheralsDeleted}`);
+        if (pmRecordsDeleted > 0) parts.push(`PM Records: ${pmRecordsDeleted}`);
+        if (pmResultsDeleted > 0) parts.push(`PM Results: ${pmResultsDeleted}`);
+        if (softwareLinksDeleted > 0) parts.push(`Software Links: ${softwareLinksDeleted}`);
+        if (inventoryDeleted > 0) parts.push(`Inventory Deleted: ${inventoryDeleted}`);
+        if (inventoryNulled > 0) parts.push(`Inventory Preserved: ${inventoryNulled}`);
+        
+        const detailsMessage = parts.length > 0 ? ` ${parts.join(', ')}` : '';
+        
+        setSuccessMessage(
+          `Deleted ${successCount}/${assetsToDelete.length} assets.${detailsMessage}`
+        );
+        setTimeout(() => setSuccessMessage(''), 5000);
+      }
+
+      if (failures.length > 0) {
+        alert(`Failed to delete ${failures.length} asset(s): ${failures.map(f => `${f.assetId} (${f.message})`).join(', ')}`);
+      }
+    } finally {
+      setBulkDeleting(false);
     }
   };
 
@@ -815,25 +891,27 @@ const Assets = ({ onDelete }) => {
               
               <button 
                 onClick={handleBulkDelete}
+                disabled={bulkDeleting}
                 style={{
-                  background: 'linear-gradient(135deg, #e74c3c 0%, #c0392b 100%)',
+                  background: bulkDeleting ? '#c0392b' : 'linear-gradient(135deg, #e74c3c 0%, #c0392b 100%)',
                   color: 'white',
                   border: 'none',
                   padding: '8px 14px',
                   borderRadius: '6px',
-                  cursor: 'pointer',
+                  cursor: bulkDeleting ? 'not-allowed' : 'pointer',
                   fontSize: '13px',
                   fontWeight: '600',
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: '6px',
                   transition: 'all 0.2s ease',
-                  boxShadow: '0 2px 6px rgba(231, 76, 60, 0.3)'
+                  boxShadow: bulkDeleting ? 'none' : '0 2px 6px rgba(231, 76, 60, 0.3)',
+                  opacity: bulkDeleting ? 0.8 : 1
                 }}
                 title={`Delete ${selectedAssets.length} selected asset(s)`}
               >
                 <Trash size={14} />
-                Delete ({selectedAssets.length})
+                {bulkDeleting ? 'Deleting...' : `Delete (${selectedAssets.length})`}
               </button>
             </div>
           )}

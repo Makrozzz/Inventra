@@ -851,7 +851,7 @@ const deleteAssetById = async (req, res, next) => {
       });
     }
 
-    logger.info(`Asset deleted: ID ${id}, Serial: ${existingAsset.Asset_Serial_Number}, Peripherals: ${result.peripheralsDeleted}, PM Records: ${result.pmRecordsDeleted}`);
+    logger.info(`Asset deleted: ID ${id}, Serial: ${existingAsset.Asset_Serial_Number}, Peripherals: ${result.peripheralsDeleted}, PM Records: ${result.pmRecordsDeleted}, PM Results: ${result.pmResultsDeleted}, Software Links: ${result.softwareLinksDeleted}, Inventory Rows Deleted: ${result.inventoryDeleted}, Inventory Rows Nulled: ${result.inventoryNulled}`);
 
     res.status(200).json({
       success: true,
@@ -861,6 +861,11 @@ const deleteAssetById = async (req, res, next) => {
         serial_number: existingAsset.Asset_Serial_Number,
         peripherals_deleted: result.peripheralsDeleted,
         pm_records_deleted: result.pmRecordsDeleted,
+        pm_results_deleted: result.pmResultsDeleted,
+        software_links_deleted: result.softwareLinksDeleted,
+        inventory_deleted: result.inventoryDeleted,
+        inventory_nulled: result.inventoryNulled,
+        // Backwards compatibility (previous field name)
         inventory_updated: result.inventoryUpdated
       }
     });

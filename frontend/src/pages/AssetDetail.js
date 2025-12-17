@@ -6,6 +6,7 @@ import {
   Keyboard, Cable, Shield, Eye, ClipboardList
 } from 'lucide-react';
 import { API_URL } from '../config/api';
+import apiService from '../services/apiService';
 
 const AssetDetail = () => {
   const { assetId } = useParams();
@@ -15,6 +16,7 @@ const AssetDetail = () => {
   const [loadingPM, setLoadingPM] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     fetchAssetDetail();
@@ -113,6 +115,44 @@ const AssetDetail = () => {
       'Power Cable': <Cable size={20} />
     };
     return icons[type] || <Package size={20} />;
+  };
+
+  const handleDeleteAsset = async () => {
+    if (!assetData?.Asset_ID) return;
+
+    const confirmed = window.confirm('Delete this asset? This will remove inventory rows, software links, peripherals, and PM records/results.');
+    if (!confirmed) return;
+
+    setDeleting(true);
+    try {
+      const response = await apiService.deleteAssetById(assetData.Asset_ID);
+      const data = response.data || {};
+
+      const parts = [];
+      if (data.peripherals_deleted > 0) parts.push(`Peripherals: ${data.peripherals_deleted}`);
+      if (data.pm_records_deleted > 0) parts.push(`PM Records: ${data.pm_records_deleted}`);
+      if (data.pm_results_deleted > 0) parts.push(`PM Results: ${data.pm_results_deleted}`);
+      if (data.software_links_deleted > 0) parts.push(`Software Links: ${data.software_links_deleted}`);
+      if (data.inventory_deleted > 0) parts.push(`Inventory Deleted: ${data.inventory_deleted}`);
+      if (data.inventory_nulled > 0) parts.push(`Inventory Preserved: ${data.inventory_nulled}`);
+
+      const message = parts.length > 0 
+        ? `Deleted asset. ${parts.join(', ')}` 
+        : 'Deleted asset successfully';
+
+      navigate('/assets', {
+        state: {
+          refresh: true,
+          message
+        },
+        replace: false
+      });
+    } catch (err) {
+      console.error('Error deleting asset:', err);
+      alert(err.message || 'Failed to delete asset');
+    } finally {
+      setDeleting(false);
+    }
   };
 
   if (loading) {
@@ -924,6 +964,43 @@ const AssetDetail = () => {
           </p>
         </div>
       )}
+
+      {/* Delete action at very bottom, after peripherals */}
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'center',
+          marginTop: '40px',
+          paddingTop: '20px',
+          paddingBottom: '40px',
+          borderTop: '1px solid #e0e0e0'
+        }}
+      >
+        <button
+          onClick={handleDeleteAsset}
+          disabled={deleting}
+          style={{
+            background: deleting ? '#c0392b' : 'linear-gradient(135deg, #e74c3c 0%, #c0392b 100%)',
+            color: 'white',
+            border: 'none',
+            padding: '12px 22px',
+            borderRadius: '8px',
+            cursor: deleting ? 'not-allowed' : 'pointer',
+            fontSize: '15px',
+            fontWeight: '700',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '8px',
+            boxShadow: deleting ? 'none' : '0 3px 8px rgba(231, 76, 60, 0.35)',
+            opacity: deleting ? 0.85 : 1,
+            minWidth: '200px',
+            justifyContent: 'center'
+          }}
+          title="Delete this asset"
+        >
+          {deleting ? 'Deleting...' : 'Delete Asset'}
+        </button>
+      </div>
     </div>
   );
 };

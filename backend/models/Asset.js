@@ -480,6 +480,7 @@ class Asset {
 
       let pmRecordsDeleted = 0;
       let pmResultsDeleted = 0;
+      let softwareLinksDeleted = 0;
 
       // 1. Try to delete PM records and their results (handle missing tables gracefully)
       try {
@@ -530,20 +531,67 @@ class Asset {
         console.log(`Warning: Could not delete peripherals: ${peripheralError.message}`);
       }
 
-      // 3. Update inventory records (set Asset_ID to NULL instead of deleting)
-      let inventoryUpdated = 0;
+      // 3. Delete software links for this asset
       try {
-        const [inventoryResult] = await connection.execute(
-          'UPDATE INVENTORY SET Asset_ID = NULL WHERE Asset_ID = ?',
+        const [softwareResult] = await connection.execute(
+          'DELETE FROM ASSET_SOFTWARE_BRIDGE WHERE Asset_ID = ?',
           [assetId]
         );
-        inventoryUpdated = inventoryResult.affectedRows;
-        console.log(`Updated ${inventoryUpdated} inventory records`);
-      } catch (inventoryError) {
-        console.log(`Warning: Could not update inventory: ${inventoryError.message}`);
+        softwareLinksDeleted = softwareResult.affectedRows;
+        console.log(`Deleted ${softwareLinksDeleted} software link(s)`);
+      } catch (softwareError) {
+        console.log(`Warning: Could not delete software links: ${softwareError.message}`);
       }
 
-      // 4. Finally, delete the asset (this is the critical operation)
+      // 4. Handle inventory records linked to this asset
+      // Check if this is the last asset for each project-customer combination
+      // If yes, set Asset_ID to NULL instead of deleting (preserve project-customer link)
+      // If no, delete the inventory row normally
+      let inventoryDeleted = 0;
+      let inventoryNulled = 0;
+      try {
+        // Get all inventory records for this asset
+        const [inventoryRecords] = await connection.execute(
+          'SELECT Inventory_ID, Project_ID, Customer_ID FROM INVENTORY WHERE Asset_ID = ?',
+          [assetId]
+        );
+        console.log(`Found ${inventoryRecords.length} inventory record(s) for Asset_ID: ${assetId}`);
+
+        for (const invRecord of inventoryRecords) {
+          // Check if there are other assets for same Project_ID + Customer_ID
+          const [otherAssets] = await connection.execute(
+            `SELECT COUNT(*) as count FROM INVENTORY 
+             WHERE Project_ID = ? AND Customer_ID = ? AND Asset_ID IS NOT NULL AND Asset_ID != ?`,
+            [invRecord.Project_ID, invRecord.Customer_ID, assetId]
+          );
+
+          const hasOtherAssets = otherAssets[0].count > 0;
+
+          if (hasOtherAssets) {
+            // Not the last asset - safe to delete this inventory row
+            await connection.execute(
+              'DELETE FROM INVENTORY WHERE Inventory_ID = ?',
+              [invRecord.Inventory_ID]
+            );
+            inventoryDeleted++;
+            console.log(`✓ Deleted INVENTORY row ${invRecord.Inventory_ID} (Project ${invRecord.Project_ID}, Customer ${invRecord.Customer_ID} has other assets)`);
+          } else {
+            // This is the last asset - preserve project-customer link by setting Asset_ID to NULL
+            await connection.execute(
+              'UPDATE INVENTORY SET Asset_ID = NULL WHERE Inventory_ID = ?',
+              [invRecord.Inventory_ID]
+            );
+            inventoryNulled++;
+            console.log(`✓ Set Asset_ID to NULL in INVENTORY row ${invRecord.Inventory_ID} (last asset for Project ${invRecord.Project_ID}, Customer ${invRecord.Customer_ID})`);
+          }
+        }
+
+        console.log(`INVENTORY processing: ${inventoryDeleted} deleted, ${inventoryNulled} set to NULL`);
+      } catch (inventoryError) {
+        console.log(`Warning: Could not process inventory records: ${inventoryError.message}`);
+      }
+
+      // 5. Finally, delete the asset (this is the critical operation)
       const [assetResult] = await connection.execute(
         'DELETE FROM ASSET WHERE Asset_ID = ?',
         [assetId]
@@ -565,7 +613,12 @@ class Asset {
         success: true,
         peripheralsDeleted: peripheralsDeleted,
         pmRecordsDeleted: pmRecordsDeleted,
-        inventoryUpdated: inventoryUpdated
+        pmResultsDeleted: pmResultsDeleted,
+        softwareLinksDeleted: softwareLinksDeleted,
+        inventoryDeleted: inventoryDeleted,
+        inventoryNulled: inventoryNulled,
+        // Backwards compatibility (previous name used by callers)
+        inventoryUpdated: inventoryDeleted + inventoryNulled
       };
     } catch (error) {
       await connection.rollback();
