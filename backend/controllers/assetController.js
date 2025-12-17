@@ -234,7 +234,7 @@ const createAssetWithDetails = async (req, res, next, importCache = null) => {
       Asset_Serial_Number: completeData.serial_number,
       Asset_Tag_ID: completeData.tag_id,
       Item_Name: completeData.item_name,
-      Status: completeData.status || 'Active',
+      Status: normalizeStatus(completeData.status),
       Recipients_ID: recipientId,
       Category_ID: categoryId,
       Model_ID: modelId,
@@ -1013,7 +1013,7 @@ const processNewAssets = async (assets) => {
         Asset_Serial_Number: assetData.serial_number,
         Asset_Tag_ID: assetData.tag_id,
         Item_Name: assetData.item_name,
-        Status: assetData.status || 'Active',
+        Status: normalizeStatus(assetData.status),
         Recipients_ID: recipientId,
         Category_ID: categoryId,
         Model_ID: modelId,
@@ -1423,6 +1423,29 @@ const validateImportData = async (req, res, next) => {
 };
 
 /**
+ * Normalize status value to proper case (Active, Inactive, etc.)
+ * Handles case-insensitive input from CSV imports
+ */
+const normalizeStatus = (status) => {
+  if (!status) return 'Active';
+  
+  const statusLower = String(status).toLowerCase().trim();
+  
+  // Map common status values to proper case
+  const statusMap = {
+    'active': 'Active',
+    'inactive': 'Inactive',
+    'maintenance': 'Maintenance',
+    'retired': 'Retired',
+    'damaged': 'Damaged',
+    'lost': 'Lost',
+    'disposed': 'Disposed'
+  };
+  
+  return statusMap[statusLower] || 'Active';
+};
+
+/**
  * Bulk import assets with comprehensive validation and processing
  * Supports two modes:
  * 1. Create new assets (default)
@@ -1729,7 +1752,7 @@ const bulkImportAssets = async (req, res, next) => {
             item_name: String(assetData.item_name).trim(),
             category: assetData.category || 'Uncategorized',
             model: assetData.model || 'Unknown',
-            status: assetData.status || 'Active',
+            status: normalizeStatus(assetData.status),
             recipient_name: assetData.recipient_name || '',
             department_name: assetData.department_name || assetData.department || '',
             position: assetData.position || '',

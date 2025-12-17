@@ -222,12 +222,20 @@ const CSVImport = () => {
         }
       }
 
-      // Check status value
-      if (row.status && !validStatuses.includes(row.status)) {
-        errors.push({
-          field: 'status',
-          message: `Status must be one of: ${validStatuses.join(', ')}`
-        });
+      // Check status value (case-insensitive)
+      if (row.status) {
+        const normalizedStatus = validStatuses.find(
+          validStatus => validStatus.toLowerCase() === String(row.status).toLowerCase().trim()
+        );
+        if (!normalizedStatus) {
+          errors.push({
+            field: 'status',
+            message: `Status must be one of: ${validStatuses.join(', ')} (case-insensitive)`
+          });
+        } else if (normalizedStatus !== row.status) {
+          // Normalize the status value in the data
+          row.status = normalizedStatus;
+        }
       }
 
       // Check data formats
