@@ -1784,14 +1784,21 @@ input[type="checkbox"] {
   background: #f8f9fa;
   border: 2px solid transparent;
   border-radius: 8px;
-  cursor: move;
-  transition: all 0.2s;
+  cursor: grab;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   user-select: none;
+  position: relative;
 }
 
 .column-filter-item:hover {
   background: #e9ecef;
   border-color: #dee2e6;
+  transform: translateX(2px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.column-filter-item:active {
+  cursor: grabbing;
 }
 
 .column-filter-item-visible {
@@ -1804,26 +1811,55 @@ input[type="checkbox"] {
 }
 
 .column-filter-item-dragging {
-  opacity: 0.5;
-  transform: scale(0.98);
+  opacity: 0.6;
+  transform: scale(0.97) rotate(2deg);
+  cursor: grabbing;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  z-index: 1000;
+  transition: transform 0.15s ease, opacity 0.15s ease;
 }
 
 .column-filter-item-drag-over {
   border-color: #667eea;
   border-style: dashed;
   background: #f0f4ff;
+  transition: all 0.2s ease;
 }
 
 .column-filter-item-drag-over-top {
-  border-top: 3px solid #667eea;
+  border-top: 4px solid #667eea;
   border-top-style: solid;
-  box-shadow: 0 -2px 8px rgba(102, 126, 234, 0.3);
+  box-shadow: 0 -4px 12px rgba(102, 126, 234, 0.4);
+  animation: pulse-top 0.6s ease-in-out infinite;
 }
 
 .column-filter-item-drag-over-bottom {
-  border-bottom: 3px solid #667eea;
+  border-bottom: 4px solid #667eea;
   border-bottom-style: solid;
-  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+  animation: pulse-bottom 0.6s ease-in-out infinite;
+}
+
+@keyframes pulse-top {
+  0%, 100% {
+    border-top-color: #667eea;
+    box-shadow: 0 -4px 12px rgba(102, 126, 234, 0.4);
+  }
+  50% {
+    border-top-color: #5a67d8;
+    box-shadow: 0 -6px 16px rgba(102, 126, 234, 0.6);
+  }
+}
+
+@keyframes pulse-bottom {
+  0%, 100% {
+    border-bottom-color: #667eea;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+  }
+  50% {
+    border-bottom-color: #5a67d8;
+    box-shadow: 0 6px 16px rgba(102, 126, 234, 0.6);
+  }
 }
 
 /* Drag handle */
@@ -1833,6 +1869,12 @@ input[type="checkbox"] {
   cursor: grab;
   user-select: none;
   line-height: 1;
+  transition: color 0.2s ease, transform 0.2s ease;
+}
+
+.column-filter-item:hover .column-filter-drag-handle {
+  color: #667eea;
+  transform: scale(1.1);
 }
 
 .column-filter-drag-handle:active {
