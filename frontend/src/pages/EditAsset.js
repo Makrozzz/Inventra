@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Save, ArrowLeft, AlertCircle, CheckCircle, X, Plus, Package, Building2, ClipboardList, Edit3 } from 'lucide-react';
 import { API_URL } from '../config/api';
+import apiService from '../services/apiService';
 
 const EditAsset = () => {
   const navigate = useNavigate();
@@ -17,13 +18,18 @@ const EditAsset = () => {
   const [officeOptions, setOfficeOptions] = useState([]);
   const [antivirusOptions, setAntivirusOptions] = useState([]);
   const [softwareOptions, setSoftwareOptions] = useState([]);
+  const [softwareOptionsRaw, setSoftwareOptionsRaw] = useState([]);
+  const [categoryOptions, setCategoryOptions] = useState([]);
   const [modelOptions, setModelOptions] = useState([]);
   const [peripheralTypeOptions, setPeripheralTypeOptions] = useState([]);
   const [branchOptions, setBranchOptions] = useState([]);
+  const [softwareLinks, setSoftwareLinks] = useState([]);
+  const [newSoftwareSelection, setNewSoftwareSelection] = useState('');
+    const [projectAntivirusName, setProjectAntivirusName] = useState('');
   
   // Modal states for adding new options
   const [showAddModal, setShowAddModal] = useState(false);
-  const [modalType, setModalType] = useState(''); // 'windows', 'office', 'antivirus', 'software', 'model', or 'peripheral'
+  const [modalType, setModalType] = useState(''); // 'windows', 'office', 'antivirus', 'software', 'category', 'model', or 'peripheral'
   const [newOptionValue, setNewOptionValue] = useState('');
   const [addingOption, setAddingOption] = useState(false);
   
@@ -40,6 +46,7 @@ const EditAsset = () => {
     Asset_Serial_Number: '',
     Asset_Tag_ID: '',
     Item_Name: '',
+    Category: '',
     Model: '',
     Status: 'Active',
     Windows: '',
@@ -108,17 +115,29 @@ const EditAsset = () => {
       
       // Store original data for comparison
       setOriginalData(data);
+
+      // Build antivirus dropdown based on AV flag and project antivirus name
+      const avName = data.Project_Antivirus || data.Antivirus || 'Antivirus';
+      setProjectAntivirusName(avName);
+      setAntivirusOptions([
+        `Yes (${avName})`,
+        'No'
+      ]);
+
+      // Store linked software list (with IDs and prices)
+      setSoftwareLinks(data.SoftwareList || []);
       
       // Populate form with current data
       setFormData({
         Asset_Serial_Number: data.Asset_Serial_Number || '',
         Asset_Tag_ID: data.Asset_Tag_ID || '',
         Item_Name: data.Item_Name || '',
+        Category: data.Category || '',
         Model: data.Model || '',
         Status: data.Status || 'Active',
         Windows: data.Windows || '',
         Microsoft_Office: data.Microsoft_Office || '',
-        Antivirus: data.Antivirus || '',
+        Antivirus: data.AV === 1 ? `Yes (${avName})` : 'No',
         Software: data.Software || '',
         Monthly_Prices: data.Monthly_Prices || '',
         Customer_Name: data.Customer_Name || '',
@@ -147,6 +166,28 @@ const EditAsset = () => {
       ...prev,
       [name]: value
     }));
+  };
+
+  // Software linkage handlers
+  const handleAddSoftware = () => {
+    if (!newSoftwareSelection) return;
+    const selected = softwareOptionsRaw.find(
+      s => String(s.Software_ID) === String(newSoftwareSelection)
+    );
+    if (!selected) return;
+    setSoftwareLinks(prev => {
+      if (prev.some(s => s.Software_ID === selected.Software_ID)) return prev;
+      return [...prev, {
+        Software_ID: selected.Software_ID,
+        Software_Name: selected.Software_Name || selected.name || '',
+        Price: selected.Price
+      }];
+    });
+    setNewSoftwareSelection('');
+  };
+
+  const handleRemoveSoftware = (softwareId) => {
+    setSoftwareLinks(prev => prev.filter(s => s.Software_ID !== softwareId));
   };
 
   // Peripheral handlers
@@ -185,53 +226,94 @@ const EditAsset = () => {
 
   const fetchDropdownOptions = async () => {
     try {
+      console.log('📥 Fetching dropdown options...');
+      
       // Fetch Windows versions
-      const windowsRes = await fetch('${API_URL}/options/windows');
+      const windowsRes = await fetch(`${API_URL}/options/windows`);
       if (windowsRes.ok) {
         const windowsData = await windowsRes.json();
-        setWindowsOptions(windowsData.data || []);
+        const windows = (windowsData.data || []).map(w => w.Windows_Version || w.name || '');
+        setWindowsOptions(windows);
       }
 
       // Fetch Office versions
-      const officeRes = await fetch('${API_URL}/options/office');
+      const officeRes = await fetch(`${API_URL}/options/office`);
       if (officeRes.ok) {
         const officeData = await officeRes.json();
-        setOfficeOptions(officeData.data || []);
-      }
-
-      // Fetch Antivirus options
-      const antivirusRes = await fetch('${API_URL}/options/antivirus');
-      if (antivirusRes.ok) {
-        const antivirusData = await antivirusRes.json();
-        setAntivirusOptions(antivirusData.data || []);
+        const office = (officeData.data || []).map(o => o.Office_Version || o.name || '');
+        setOfficeOptions(office);
       }
 
       // Fetch Software options
-      const softwareRes = await fetch('${API_URL}/options/software');
+      const softwareRes = await fetch(`${API_URL}/options/software`);
       if (softwareRes.ok) {
         const softwareData = await softwareRes.json();
-        setSoftwareOptions(softwareData.data || []);
+        const softwareRaw = softwareData.data || [];
+        setSoftwareOptionsRaw(softwareRaw);
+        const software = softwareRaw.map(s => s.Software_Name || s.name || '');
+        setSoftwareOptions(software);
       }
 
-      // Fetch Model options
-      const modelRes = await fetch('${API_URL}/models');
-      if (modelRes.ok) {
-        const modelData = await modelRes.json();
-        // Extract model names from the response
-        const models = modelData.data?.map(model => model.Model_Name || model.name) || [];
-        setModelOptions(models);
+      // Fetch Category options using apiService
+      try {
+        console.log('📥 Fetching categories...');
+        const categoryRes = await apiService.getCategories();
+        console.log('✅ Category response:', categoryRes);
+        
+        if (categoryRes.data && Array.isArray(categoryRes.data)) {
+          // Extract category names for the dropdown
+          const categories = categoryRes.data.map(cat => cat.Category || cat.name || '');
+          console.log('📋 Categories extracted:', categories);
+          setCategoryOptions(categories);
+        } else {
+          console.warn('⚠️ No category data returned:', categoryRes);
+          setCategoryOptions([]);
+        }
+      } catch (err) {
+        console.error('❌ Error fetching categories:', err);
+        setCategoryOptions([]);
+      }
+
+      // Fetch Model options using apiService
+      try {
+        console.log('📥 Fetching models...');
+        const modelRes = await apiService.getModels();
+        console.log('✅ Model response:', modelRes);
+        
+        if (modelRes.data && Array.isArray(modelRes.data)) {
+          // Extract model names for the dropdown
+          const models = modelRes.data.map(model => model.Model_Name || model.name || '');
+          console.log('📋 Models extracted:', models);
+          setModelOptions(models);
+        } else {
+          console.warn('⚠️ No model data returned:', modelRes);
+          setModelOptions([]);
+        }
+      } catch (err) {
+        console.error('❌ Error fetching models:', err);
+        setModelOptions([]);
       }
       
-      // Fetch Peripheral Types
-      const peripheralTypesRes = await fetch('${API_URL}/peripherals/types');
-      if (peripheralTypesRes.ok) {
-        const peripheralTypesData = await peripheralTypesRes.json();
-        // Extract peripheral type names from the response
-        const types = peripheralTypesData.data?.map(type => type.Peripheral_Type_Name || type.name) || [];
-        setPeripheralTypeOptions(types);
+      // Fetch Peripheral Types using apiService
+      try {
+        console.log('📥 Fetching peripheral types...');
+        const peripheralTypesRes = await apiService.getPeripheralTypes();
+        console.log('✅ Peripheral types response:', peripheralTypesRes);
+        
+        if (peripheralTypesRes.data && Array.isArray(peripheralTypesRes.data)) {
+          const types = peripheralTypesRes.data.map(type => type.Peripheral_Type_Name || type.name || '');
+          console.log('📋 Peripheral types extracted:', types);
+          setPeripheralTypeOptions(types);
+        } else {
+          console.warn('⚠️ No peripheral type data returned:', peripheralTypesRes);
+          setPeripheralTypeOptions([]);
+        }
+      } catch (err) {
+        console.error('❌ Error fetching peripheral types:', err);
+        setPeripheralTypeOptions([]);
       }
     } catch (err) {
-      console.error('Error fetching dropdown options:', err);
+      console.error('❌ Error fetching dropdown options:', err);
       // Set default options as fallback
       setWindowsOptions(['Windows 10', 'Windows 11', 'Windows Server', 'None']);
       setOfficeOptions(['Office 2019', 'Office 2021', 'Microsoft 365', 'None']);
@@ -282,12 +364,15 @@ const EditAsset = () => {
     try {
       let endpoint, body;
       
-      // Use different endpoint for model and peripheral
+      // Use different endpoint for model, peripheral, and category
       if (modalType === 'model') {
         endpoint = `${API_URL}/models`;
         body = JSON.stringify({ name: newOptionValue.trim() });
       } else if (modalType === 'peripheral') {
         endpoint = `${API_URL}/peripherals/types`;
+        body = JSON.stringify({ name: newOptionValue.trim() });
+      } else if (modalType === 'category') {
+        endpoint = `${API_URL}/categories`;
         body = JSON.stringify({ name: newOptionValue.trim() });
       } else {
         endpoint = `${API_URL}/options/${modalType}`;
@@ -319,6 +404,9 @@ const EditAsset = () => {
       } else if (modalType === 'software') {
         setSoftwareOptions(prev => [...prev, newOptionValue.trim()]);
         setFormData(prev => ({ ...prev, Software: newOptionValue.trim() }));
+      } else if (modalType === 'category') {
+        setCategoryOptions(prev => [...prev, newOptionValue.trim()]);
+        setFormData(prev => ({ ...prev, Category: newOptionValue.trim() }));
       } else if (modalType === 'model') {
         setModelOptions(prev => [...prev, newOptionValue.trim()]);
         setFormData(prev => ({ ...prev, Model: newOptionValue.trim() }));
@@ -355,9 +443,16 @@ const EditAsset = () => {
       // Include peripherals in the request body
       const updateData = {
         ...formData,
+        // Convert Antivirus dropdown value back to AV boolean
+        AV: formData.Antivirus.startsWith('Yes') ? 1 : 0,
         peripherals: peripherals.filter(p => 
           p.Peripheral_Type_Name || p.Serial_Code || p.Condition || p.Remarks
-        )
+        ),
+        softwareLinks: softwareLinks.map(s => ({
+          Software_ID: s.Software_ID,
+          Software_Name: s.Software_Name,
+          Price: s.Price
+        }))
       };
       
       const response = await fetch(`${API_URL}/assets/id/${id}`, {
@@ -666,7 +761,8 @@ const EditAsset = () => {
                 </span>
                 Asset Information
               </h3>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                {/* Row 1: Serial Number | Tag ID */}
                 <div className="form-group">
                   <label>Serial Number <span style={{ color: '#e74c3c' }}>*</span></label>
                   <input
@@ -689,7 +785,8 @@ const EditAsset = () => {
                   />
                 </div>
 
-                <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+                {/* Row 2: Item Name | Status */}
+                <div className="form-group">
                   <label>Item Name <span style={{ color: '#e74c3c' }}>*</span></label>
                   <input
                     type="text"
@@ -700,7 +797,70 @@ const EditAsset = () => {
                   />
                 </div>
 
-                <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+                <div className="form-group">
+                  <label>Status</label>
+                  <select
+                    name="Status"
+                    value={formData.Status}
+                    onChange={handleInputChange}
+                  >
+                    <option value="Active">Active</option>
+                    <option value="Inactive">Inactive</option>
+                    <option value="Maintenance">Maintenance</option>
+                    <option value="Retired">Retired</option>
+                  </select>
+                </div>
+
+                {/* Row 3: Category | Model */}
+                <div className="form-group">
+                  <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span>Category</span>
+                    <button
+                      type="button"
+                      onClick={() => handleOpenAddModal('category')}
+                      style={{
+                        background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '6px',
+                        padding: '5px 10px',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        fontSize: '12px',
+                        fontWeight: '600',
+                        transition: 'all 0.2s ease',
+                        boxShadow: '0 2px 4px rgba(16, 185, 129, 0.3)'
+                      }}
+                      title="Add new Category"
+                      onMouseOver={(e) => {
+                        e.currentTarget.style.transform = 'translateY(-1px)';
+                        e.currentTarget.style.boxShadow = '0 3px 6px rgba(16, 185, 129, 0.4)';
+                      }}
+                      onMouseOut={(e) => {
+                        e.currentTarget.style.transform = 'translateY(0)';
+                        e.currentTarget.style.boxShadow = '0 2px 4px rgba(16, 185, 129, 0.3)';
+                      }}
+                    >
+                      <Plus size={14} /> 
+                    </button>
+                  </label>
+                  <select
+                    name="Category"
+                    value={formData.Category || ''}
+                    onChange={handleInputChange}
+                  >
+                    <option value="">Select Category</option>
+                    {categoryOptions.map((option, index) => (
+                      <option key={index} value={option}>
+                        {option}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="form-group">
                   <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <span>Model</span>
                     <button
@@ -748,213 +908,41 @@ const EditAsset = () => {
                   </select>
                 </div>
 
+                {/* Row 4: Windows | Microsoft Office */}
                 <div className="form-group">
-                  <label>Status</label>
-                  <select
-                    name="Status"
-                    value={formData.Status}
-                    onChange={handleInputChange}
-                  >
-                    <option value="Active">Active</option>
-                    <option value="Inactive">Inactive</option>
-                    <option value="Maintenance">Maintenance</option>
-                    <option value="Retired">Retired</option>
-                  </select>
-                </div>
-
-                <div className="form-group">
-                  <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span>Windows Version</span>
-                    <button
-                      type="button"
-                      onClick={() => handleOpenAddModal('windows')}
-                      style={{
-                        background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '6px',
-                        padding: '5px 10px',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '4px',
-                        fontSize: '12px',
-                        fontWeight: '600',
-                        transition: 'all 0.2s ease',
-                        boxShadow: '0 2px 4px rgba(16, 185, 129, 0.3)'
-                      }}
-                      title="Add new Windows version"
-                      onMouseOver={(e) => {
-                        e.currentTarget.style.transform = 'translateY(-1px)';
-                        e.currentTarget.style.boxShadow = '0 3px 6px rgba(16, 185, 129, 0.4)';
-                      }}
-                      onMouseOut={(e) => {
-                        e.currentTarget.style.transform = 'translateY(0)';
-                        e.currentTarget.style.boxShadow = '0 2px 4px rgba(16, 185, 129, 0.3)';
-                      }}
-                    >
-                      <Plus size={14} /> 
-                    </button>
-                  </label>
-                  <select
+                  <label>Windows</label>
+                  <input
+                    type="text"
                     name="Windows"
                     value={formData.Windows}
                     onChange={handleInputChange}
-                  >
-                    <option value="">
-                      {originalData?.Windows ? `Current: ${originalData.Windows}` : 'Select Windows Version'}
-                    </option>
-                    {windowsOptions.map((option, index) => (
-                      <option key={index} value={option}>
-                        {option}
-                      </option>
-                    ))}
-                  </select>
+                    placeholder="e.g., Windows 10 Pro"
+                  />
                 </div>
 
                 <div className="form-group">
-                  <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span>Microsoft Office</span>
-                    <button
-                      type="button"
-                      onClick={() => handleOpenAddModal('office')}
-                      style={{
-                        background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '6px',
-                        padding: '5px 10px',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '4px',
-                        fontSize: '12px',
-                        fontWeight: '600',
-                        transition: 'all 0.2s ease',
-                        boxShadow: '0 2px 4px rgba(16, 185, 129, 0.3)'
-                      }}
-                      title="Add new Office version"
-                      onMouseOver={(e) => {
-                        e.currentTarget.style.transform = 'translateY(-1px)';
-                        e.currentTarget.style.boxShadow = '0 3px 6px rgba(16, 185, 129, 0.4)';
-                      }}
-                      onMouseOut={(e) => {
-                        e.currentTarget.style.transform = 'translateY(0)';
-                        e.currentTarget.style.boxShadow = '0 2px 4px rgba(16, 185, 129, 0.3)';
-                      }}
-                    >
-                      <Plus size={14} /> 
-                    </button>
-                  </label>
-                  <select
+                  <label>Microsoft Office</label>
+                  <input
+                    type="text"
                     name="Microsoft_Office"
                     value={formData.Microsoft_Office}
                     onChange={handleInputChange}
-                  >
-                    <option value="">
-                      {originalData?.Microsoft_Office ? `Current: ${originalData.Microsoft_Office}` : 'Select Office Version'}
-                    </option>
-                    {officeOptions.map((option, index) => (
-                      <option key={index} value={option}>
-                        {option}
-                      </option>
-                    ))}
-                  </select>
+                    placeholder="e.g., Microsoft Office 365"
+                  />
                 </div>
 
+                {/* Row 5: Antivirus | Monthly Price */}
                 <div className="form-group">
                   <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <span>Antivirus</span>
-                    <button
-                      type="button"
-                      onClick={() => handleOpenAddModal('antivirus')}
-                      style={{
-                        background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '6px',
-                        padding: '5px 10px',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '4px',
-                        fontSize: '12px',
-                        fontWeight: '600',
-                        transition: 'all 0.2s ease',
-                        boxShadow: '0 2px 4px rgba(16, 185, 129, 0.3)'
-                      }}
-                      title="Add new Antivirus"
-                      onMouseOver={(e) => {
-                        e.currentTarget.style.transform = 'translateY(-1px)';
-                        e.currentTarget.style.boxShadow = '0 3px 6px rgba(16, 185, 129, 0.4)';
-                      }}
-                      onMouseOut={(e) => {
-                        e.currentTarget.style.transform = 'translateY(0)';
-                        e.currentTarget.style.boxShadow = '0 2px 4px rgba(16, 185, 129, 0.3)';
-                      }}
-                    >
-                      <Plus size={14} /> 
-                    </button>
                   </label>
                   <select
                     name="Antivirus"
                     value={formData.Antivirus}
                     onChange={handleInputChange}
                   >
-                    <option value="">
-                      {originalData?.Antivirus ? `Current: ${originalData.Antivirus}` : 'Select Antivirus'}
-                    </option>
                     {antivirusOptions.map((option, index) => (
                       <option key={`av-${option}-${index}`} value={option}>
-                        {option}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="form-group">
-                  <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span>Software</span>
-                    <button
-                      type="button"
-                      onClick={() => handleOpenAddModal('software')}
-                      style={{
-                        background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '6px',
-                        padding: '5px 10px',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '4px',
-                        fontSize: '12px',
-                        fontWeight: '600',
-                        transition: 'all 0.2s ease',
-                        boxShadow: '0 2px 4px rgba(16, 185, 129, 0.3)'
-                      }}
-                      title="Add new Software"
-                      onMouseOver={(e) => {
-                        e.currentTarget.style.transform = 'translateY(-1px)';
-                        e.currentTarget.style.boxShadow = '0 3px 6px rgba(16, 185, 129, 0.4)';
-                      }}
-                      onMouseOut={(e) => {
-                        e.currentTarget.style.transform = 'translateY(0)';
-                        e.currentTarget.style.boxShadow = '0 2px 4px rgba(16, 185, 129, 0.3)';
-                      }}
-                    >
-                      <Plus size={14} /> 
-                    </button>
-                  </label>
-                  <select
-                    name="Software"
-                    value={formData.Software}
-                    onChange={handleInputChange}
-                  >
-                    <option value="">Select Software</option>
-                    <option value="None">None</option>
-                    {softwareOptions.map((option, index) => (
-                      <option key={index} value={option}>
                         {option}
                       </option>
                     ))}
@@ -971,6 +959,113 @@ const EditAsset = () => {
                     onChange={handleInputChange}
                     placeholder="0.00"
                   />
+                </div>
+
+                {/* Divider before Software */}
+                <div style={{ gridColumn: '1 / -1', borderTop: '1px solid #e0e0e0', margin: '8px 0 12px 0' }} />
+
+                {/* Row 6: Software (full width) */}
+                <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+                  <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span>Software</span>
+                  </label>
+
+                  {/* Add software linkage (dropdown at top) */}
+                  <div style={{ display: 'flex', gap: '10px', alignItems: 'center', marginBottom: '12px' }}>
+                    <select
+                      name="SoftwareAdd"
+                      value={newSoftwareSelection}
+                      onChange={(e) => setNewSoftwareSelection(e.target.value)}
+                      style={{ flex: 1 }}
+                    >
+                      <option value="">Select software to link</option>
+                      {softwareOptionsRaw.map((option) => (
+                        <option key={`swopt-${option.Software_ID}`} value={option.Software_ID}>
+                          {option.Software_Name || option.name || 'Untitled'}
+                          {option.Price !== undefined && option.Price !== null && option.Price !== ''
+                            ? `  (RM ${option.Price})`
+                            : ''}
+                        </option>
+                      ))}
+                    </select>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button
+                        type="button"
+                        onClick={handleAddSoftware}
+                        style={{
+                          background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '6px',
+                          padding: '8px 12px',
+                          cursor: 'pointer',
+                          fontWeight: '600'
+                        }}
+                      >
+                        Link
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleOpenAddModal('software')}
+                        style={{
+                          background: '#3b82f6',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '6px',
+                          padding: '8px 10px',
+                          cursor: 'pointer',
+                          fontWeight: '700'
+                        }}
+                        title="Add new software with price"
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Linked software list (below dropdown) */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '4px' }}>
+                    {softwareLinks.length === 0 && (
+                      <div style={{ color: '#666', fontStyle: 'italic' }}>No software linked</div>
+                    )}
+                    {softwareLinks.map((s) => (
+                      <div
+                        key={`sw-${s.Software_ID}`}
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          padding: '10px',
+                          border: '1px solid #e5e7eb',
+                          borderRadius: '8px',
+                          background: '#fafafa'
+                        }}
+                      >
+                        <div>
+                          <div style={{ fontWeight: 600 }}>{s.Software_Name}</div>
+                          {s.Price !== undefined && s.Price !== null && s.Price !== '' && (
+                            <div style={{ color: '#666', fontSize: '12px' }}>Price: {s.Price}</div>
+                          )}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveSoftware(s.Software_ID)}
+                          style={{
+                            background: '#f87171',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '6px',
+                            padding: '6px 10px',
+                            cursor: 'pointer',
+                            fontSize: '12px',
+                            fontWeight: '600'
+                          }}
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    ))}
+                  </div>
                 </div>
 
                 {/* Peripheral Information Section */}
@@ -1494,7 +1589,7 @@ const EditAsset = () => {
                 gap: '10px'
               }}>
                 <Plus size={24} strokeWidth={2.5} style={{ color: '#10b981' }} />
-                Add New {modalType === 'windows' ? 'Windows Version' : modalType === 'office' ? 'Office Version' : modalType === 'antivirus' ? 'Antivirus' : modalType === 'software' ? 'Software' : modalType === 'peripheral' ? 'Peripheral Type' : 'Model'}
+                Add New {modalType === 'windows' ? 'Windows Version' : modalType === 'office' ? 'Office Version' : modalType === 'antivirus' ? 'Antivirus' : modalType === 'software' ? 'Software' : modalType === 'category' ? 'Category' : modalType === 'peripheral' ? 'Peripheral Type' : 'Model'}
               </h3>
               <button
                 onClick={handleCloseAddModal}
@@ -1514,13 +1609,13 @@ const EditAsset = () => {
 
             <div style={{ marginBottom: '20px' }}>
               <label style={{ display: 'block', marginBottom: '8px', color: '#34495e', fontWeight: '500' }}>
-                {modalType === 'windows' ? 'Windows Version Name' : modalType === 'office' ? 'Office Version Name' : modalType === 'antivirus' ? 'Antivirus Name' : modalType === 'software' ? 'Software Name' : modalType === 'peripheral' ? 'Peripheral Type Name' : 'Model Name'}
+                {modalType === 'windows' ? 'Windows Version Name' : modalType === 'office' ? 'Office Version Name' : modalType === 'antivirus' ? 'Antivirus Name' : modalType === 'software' ? 'Software Name' : modalType === 'category' ? 'Category Name' : modalType === 'peripheral' ? 'Peripheral Type Name' : 'Model Name'}
               </label>
               <input
                 type="text"
                 value={newOptionValue}
                 onChange={(e) => setNewOptionValue(e.target.value)}
-                placeholder={modalType === 'office' ? 'e.g., Office LTSC 2024' : modalType === 'windows' ? 'e.g., Windows 12' : modalType === 'antivirus' ? 'e.g., Kaspersky Endpoint Security' : modalType === 'software' ? 'e.g., Adobe Acrobat' : modalType === 'peripheral' ? 'e.g., Mouse, Keyboard, Monitor' : 'e.g., Dell OptiPlex 3090, HP ProBook 450 G8'}
+                placeholder={modalType === 'office' ? 'e.g., Office LTSC 2024' : modalType === 'windows' ? 'e.g., Windows 12' : modalType === 'antivirus' ? 'e.g., Kaspersky Endpoint Security' : modalType === 'software' ? 'e.g., Adobe Acrobat' : modalType === 'category' ? 'e.g., Desktop, Laptop, Server' : modalType === 'peripheral' ? 'e.g., Mouse, Keyboard, Monitor' : 'e.g., Dell OptiPlex 3090, HP ProBook 450 G8'}
                 style={{
                   width: '100%',
                   padding: '10px',

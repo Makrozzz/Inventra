@@ -135,7 +135,7 @@ const SearchableDropdown = ({
 
   return (
     <div className="searchable-dropdown-container" ref={dropdownRef}>
-      <style jsx>{`
+      <style>{`
         .searchable-dropdown-container {
           position: relative;
           width: 100%;

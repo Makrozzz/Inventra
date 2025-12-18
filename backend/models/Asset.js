@@ -62,6 +62,7 @@ class Asset {
           a.Windows,
           a.Microsoft_Office,
           a.Monthly_Prices,
+                   a.AV,
           a.Model_ID,
           c.Category,
           m.Model_Name as Model,
@@ -74,7 +75,8 @@ class Asset {
           CASE 
             WHEN LOWER(TRIM(c.Category)) IN ('scanner', 'printer', 'projector') THEN 'None'
             ELSE COALESCE(p.Antivirus, 'None')
-          END AS Antivirus,
+           END AS Antivirus,
+           p.Antivirus AS Project_Antivirus,
           p.Warranty,
           p.Preventive_Maintenance,
           p.Start_Date,
@@ -283,8 +285,8 @@ class Asset {
   static async create(assetData) {
     try {
       const [result] = await pool.execute(
-        `INSERT INTO ASSET (Asset_Serial_Number, Asset_Tag_ID, Item_Name, Recipients_ID, Category_ID, Model_ID, Status, Windows, Microsoft_Office, Monthly_Prices) 
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO ASSET (Asset_Serial_Number, Asset_Tag_ID, Item_Name, Recipients_ID, Category_ID, Model_ID, Status, Windows, Microsoft_Office, Monthly_Prices, AV) 
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           assetData.Asset_Serial_Number,
           assetData.Asset_Tag_ID,
@@ -295,7 +297,8 @@ class Asset {
           assetData.Status || 'Active',
           assetData.Windows || null,
           assetData.Microsoft_Office || null,
-          assetData.Monthly_Prices || null
+          assetData.Monthly_Prices || null,
+          assetData.AV !== undefined ? assetData.AV : null
         ]
       );
       
@@ -650,6 +653,7 @@ class Asset {
           a.Microsoft_Office,
           a.Monthly_Prices,
           a.Model_ID,
+          a.AV AS AV,
           c.Category,
           m.Model_Name as Model,
           r.Recipient_Name,
@@ -662,6 +666,7 @@ class Asset {
             WHEN LOWER(TRIM(c.Category)) IN ('scanner', 'printer', 'projector') THEN 'None'
             ELSE COALESCE(p.Antivirus, 'None')
           END AS Antivirus,
+          p.Antivirus AS Project_Antivirus,
           p.Warranty,
           p.Preventive_Maintenance,
           p.Start_Date,
@@ -698,6 +703,18 @@ class Asset {
         customer: assetData.Customer_Name,
         model_id: assetData.Model_ID
       });
+
+      // Get linked software rows for this asset
+      const [softwareRows] = await pool.execute(`
+        SELECT 
+          s.Software_ID,
+          s.Software_Name,
+          s.Price
+        FROM ASSET_SOFTWARE_BRIDGE asb
+        JOIN SOFTWARE s ON asb.Software_ID = s.Software_ID
+        WHERE asb.Asset_ID = ?
+        ORDER BY s.Software_Name
+      `, [id]);
 
       // Get peripherals for this asset
       const [peripheralRows] = await pool.execute(`
@@ -736,6 +753,7 @@ class Asset {
       // Combine asset data with peripherals and specs
       return {
         ...assetData,
+        SoftwareList: softwareRows,
         Peripherals: peripheralRows,
         ModelSpecifications: modelSpecs
       };

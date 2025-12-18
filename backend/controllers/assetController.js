@@ -240,7 +240,8 @@ const createAssetWithDetails = async (req, res, next, importCache = null) => {
       Model_ID: modelId,
       Windows: windowsVersion,
       Microsoft_Office: msOfficeVersion,
-      Monthly_Prices: completeData.monthly_prices || null
+      Monthly_Prices: completeData.monthly_prices || null,
+      AV: completeData.av !== undefined ? completeData.av : null
     };
 
     const newAsset = await Asset.create(assetData);

@@ -50,6 +50,7 @@ const AddAsset = () => {
   const [officeOptions, setOfficeOptions] = useState([]);
   const [antivirusOptions, setAntivirusOptions] = useState([]);
   const [softwareOptions, setSoftwareOptions] = useState([]);
+  const [projectAntivirusName, setProjectAntivirusName] = useState('');
   const [newSoftwarePrice, setNewSoftwarePrice] = useState('');
   
   // Form data
@@ -205,12 +206,11 @@ const AddAsset = () => {
 
   const fetchProjectByReference = async (projectRefNum) => {
     try {
-      console.log('🔄 Fetching project by reference:', projectRefNum);
       setLoading(true);
       const response = await apiService.getProjectByReference(projectRefNum);
-      console.log('✅ Project response received:', response);
       
       if (response.data) {
+        
         setProjectData(prev => ({
           ...prev,
           customer_name: response.data.customer_name,
@@ -218,18 +218,28 @@ const AddAsset = () => {
           project_title: response.data.project_title
         }));
         
-        // Auto-populate antivirus from project
-        if (response.data.antivirus) {
-          console.log('🦠 Auto-populating antivirus from project:', response.data.antivirus);
+        // Store project antivirus name for dropdown
+        const antivirusValue = response.data.antivirus;
+        
+        // Check if antivirus value is a valid non-empty string
+        const isValidAntivirus = antivirusValue && 
+                                  typeof antivirusValue === 'string' &&
+                                  antivirusValue !== 'None' && 
+                                  antivirusValue !== 'null' && 
+                                  antivirusValue.trim() !== '';
+        
+        if (isValidAntivirus) {
+          const trimmedValue = antivirusValue.trim();
+          setProjectAntivirusName(trimmedValue);
+          // Don't auto-select, let user choose from dropdown
           setAsset(prev => ({
             ...prev,
-            antivirus: response.data.antivirus
+            antivirus: '' // Reset to force user selection
           }));
         } else {
-          console.log('⚠️ No antivirus data in project response');
+          setProjectAntivirusName('');
         }
         
-        console.log('✅ Project data populated:', response.data);
         setError(null);
         
         // Automatically fetch branches when customer is found
@@ -238,16 +248,11 @@ const AddAsset = () => {
           await fetchBranchesByCustomer(response.data.customer_name);
         }
       } else {
-        console.warn('⚠️ No project found for reference:', projectRefNum);
+        console.warn('No project found for reference:', projectRefNum);
         setError(`No project found with reference number "${projectRefNum}"`);
       }
     } catch (err) {
-      console.error('❌ Error fetching project:', err);
-      console.error('❌ Error details:', {
-        message: err.message,
-        stack: err.stack,
-        projectRefNum
-      });
+      console.error('Error fetching project:', err);
       setError(`Failed to load project "${projectRefNum}". ${err.message || 'Please check the reference number and try again.'}`);
       // Clear dependent fields
       setProjectData(prev => ({
@@ -396,7 +401,7 @@ const AddAsset = () => {
 
   const fetchWindowsOptions = async () => {
     try {
-      const response = await fetch('${API_URL}/options/windows');
+      const response = await fetch(`${API_URL}/options/windows`);
       const result = await response.json();
       const optionsData = result.data || [];
       setWindowsOptions(optionsData);
@@ -410,7 +415,7 @@ const AddAsset = () => {
 
   const fetchOfficeOptions = async () => {
     try {
-      const response = await fetch('${API_URL}/options/office');
+      const response = await fetch(`${API_URL}/options/office`);
       const result = await response.json();
       const optionsData = result.data || [];
       setOfficeOptions(optionsData);
@@ -424,7 +429,7 @@ const AddAsset = () => {
 
   const fetchAntivirusOptions = async () => {
     try {
-      const response = await fetch('${API_URL}/options/antivirus');
+      const response = await fetch(`${API_URL}/options/antivirus`);
       const result = await response.json();
       const optionsData = result.data || [];
       setAntivirusOptions(optionsData);
@@ -702,6 +707,9 @@ const AddAsset = () => {
         software: selectedSoftware.length > 0 ? selectedSoftware : null, // Changed to array
         monthly_prices: asset.monthly_prices || null,
         
+        // Convert antivirus dropdown to AV boolean
+        av: asset.antivirus === '' ? null : (asset.antivirus.startsWith('Yes') ? 1 : 0),
+        
         // Include only valid peripherals (those with both name and serial code)
         peripherals: peripherals.filter(p => p.peripheral_name.trim() && p.serial_code_name.trim())
       };
@@ -783,22 +791,21 @@ const AddAsset = () => {
     setProjectSearchError(null); // Clear any errors
     
     // Set project data with fresh values (don't spread old projectData to avoid stale state)
+    // Update project_reference_num first - this will trigger fetchProjectByReference via useEffect
     setProjectData({
       project_reference_num: project.Project_Ref_Number || '',
-      customer_name: project.Customer_Name || '',
-      customer_reference_number: project.Customer_Ref_Number || '',
-      project_title: project.Project_Title || ''
+      customer_name: '', // EMPTY - let API fetch it
+      customer_reference_number: '',
+      project_title: ''
     });
     setProjectSearchTerm(project.Project_Ref_Number || '');
     setShowProjectDropdown(false);
     
-    // Auto-populate antivirus from project if available
-    if (project.Antivirus) {
-      setAsset(prev => ({
-        ...prev,
-        antivirus: project.Antivirus
-      }));
-    }
+    // Reset antivirus so user must select from the full dropdown with 3 choices
+    setAsset(prev => ({
+      ...prev,
+      antivirus: ''
+    }));
     
     // Trigger branch fetching if customer name is available
     if (project.Customer_Name) {
@@ -909,7 +916,7 @@ const AddAsset = () => {
 
   return (
     <div>
-      <style jsx>{`
+      <style>{`
         .dropdown-container {
           position: relative;
           z-index: 1000;
@@ -1421,9 +1428,11 @@ const AddAsset = () => {
                     value={asset.antivirus}
                     onChange={(e) => setAsset({ ...asset, antivirus: e.target.value })}
                   >
-                    <option value="">Select antivirus</option>
-                    {asset.antivirus && asset.antivirus !== 'No' && (
-                      <option value={asset.antivirus}>{asset.antivirus}</option>
+                    <option value="">Select Antivirus</option>
+                    {projectAntivirusName && (
+                      <option value={`Yes (${projectAntivirusName})`}>
+                        Yes ({projectAntivirusName})
+                      </option>
                     )}
                     <option value="No">No</option>
                   </select>
