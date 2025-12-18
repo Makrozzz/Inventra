@@ -561,43 +561,45 @@ const AddModelSpecs = () => {
                     gap: '12px'
                   }}>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', flexWrap: 'wrap' }}>
-                        <span style={{
-                          fontSize: '14px',
-                          fontWeight: '600',
-                          color: '#667eea',
-                          whiteSpace: 'nowrap'
-                        }}>
-                          {spec.Attribute_Name || spec.Attributes_Name}:
-                        </span>
-                        {editingSpec === spec.Attributes_ID ? (
-                          <input
-                            type="text"
-                            value={editValue}
-                            onChange={(e) => setEditValue(e.target.value)}
-                            style={{
-                              flex: 1,
-                              fontSize: '14px',
-                              padding: '6px 10px',
-                              border: '2px solid #667eea',
-                              borderRadius: '6px',
-                              outline: 'none',
-                              fontWeight: '500'
-                            }}
-                            autoFocus
-                          />
-                        ) : (
-                          <span style={{
-                            fontSize: '14px',
-                            color: '#374151',
-                            fontWeight: '500',
-                            wordBreak: 'break-word',
-                            flex: 1
-                          }}>
-                            {spec.Attributes_Value}
-                          </span>
-                        )}
+                      <div style={{
+                        fontSize: '13px',
+                        fontWeight: '600',
+                        color: '#667eea',
+                        marginBottom: '6px',
+                        textAlign: 'left'
+                      }}>
+                        {spec.Attribute_Name || spec.Attributes_Name}
                       </div>
+                      {editingSpec === spec.Attributes_ID ? (
+                        <input
+                          type="text"
+                          value={editValue}
+                          onChange={(e) => setEditValue(e.target.value)}
+                          style={{
+                            width: '100%',
+                            fontSize: '14px',
+                            padding: '8px 12px',
+                            border: '2px solid #667eea',
+                            borderRadius: '6px',
+                            outline: 'none',
+                            fontWeight: '500'
+                          }}
+                          autoFocus
+                        />
+                      ) : (
+                        <div style={{
+                          fontSize: '14px',
+                          color: '#374151',
+                          fontWeight: '500',
+                          lineHeight: '1.6',
+                          wordBreak: 'break-word',
+                          overflowWrap: 'break-word',
+                          textAlign: 'left',
+                          whiteSpace: 'pre-wrap'
+                        }}>
+                          {spec.Attributes_Value}
+                        </div>
+                      )}
                     </div>
                     <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
                       {editingSpec === spec.Attributes_ID ? (
