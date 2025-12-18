@@ -15,10 +15,19 @@ const AssetDetail = () => {
   const [loadingPM, setLoadingPM] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [isWideScreen, setIsWideScreen] = useState(window.innerWidth > 992);
 
   useEffect(() => {
     fetchAssetDetail();
     fetchPMRecords();
+
+    // Handle responsive layout
+    const handleResize = () => {
+      setIsWideScreen(window.innerWidth > 992);
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
   }, [assetId]);
 
   const fetchAssetDetail = async () => {
@@ -233,7 +242,7 @@ const AssetDetail = () => {
       </div>
 
       {/* Main Content Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px', marginBottom: '20px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '20px', marginBottom: '20px' }}>
         
         {/* Asset Specifications */}
         <div className="card">
@@ -501,156 +510,157 @@ const AssetDetail = () => {
           </div>
         </div>
         
-        {/* Project Information */}
-        <div className="card">
-          <div style={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            gap: '10px', 
-            marginBottom: '20px',
-            paddingBottom: '15px',
-            borderBottom: '2px solid #3498db'
-          }}>
-            <FileText size={24} color="#3498db" />
-            <h3 style={{ margin: 0, color: '#2c3e50', fontSize: '1.2rem' }}>Project Information</h3>
-          </div>
-          
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-            <div>
-              <div style={{ color: '#7f8c8d', fontSize: '0.85rem', marginBottom: '5px', fontWeight: '600' }}>
-                Project Reference
-              </div>
-              <div style={{ color: '#2c3e50', fontSize: '1rem' }}>
-                {assetData.Project_Ref_Number || 'N/A'}
-              </div>
+        {/* Project, Customer & Recipient Information - Stacked Cards */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          {/* Project Information Card */}
+          <div className="card">
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px',
+              marginBottom: '15px',
+              paddingBottom: '12px',
+              borderBottom: '2px solid #3498db'
+            }}>
+              <FileText size={20} color="#3498db" />
+              <h3 style={{ margin: 0, color: '#2c3e50', fontSize: '1.1rem' }}>Project Information</h3>
             </div>
             
-            <div>
-              <div style={{ color: '#7f8c8d', fontSize: '0.85rem', marginBottom: '5px', fontWeight: '600' }}>
-                Project Title
-              </div>
-              <div style={{ color: '#2c3e50', fontSize: '1rem', lineHeight: '1.6' }}>
-                {assetData.Project_Title || 'N/A'}
-              </div>
-            </div>
-            
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               <div>
                 <div style={{ color: '#7f8c8d', fontSize: '0.85rem', marginBottom: '5px', fontWeight: '600' }}>
-                  Start Date
+                  Project Reference
                 </div>
                 <div style={{ color: '#2c3e50', fontSize: '0.95rem' }}>
-                  <Calendar size={14} style={{ marginRight: '5px', verticalAlign: 'middle' }} />
-                  {assetData.Start_Date ? new Date(assetData.Start_Date).toLocaleDateString() : 'N/A'}
+                  {assetData.Project_Ref_Number || 'N/A'}
+                </div>
+              </div>
+              
+              <div>
+                <div style={{ color: '#7f8c8d', fontSize: '0.85rem', marginBottom: '5px', fontWeight: '600' }}>
+                  Project Title
+                </div>
+                <div style={{ color: '#2c3e50', fontSize: '0.95rem', lineHeight: '1.6' }}>
+                  {assetData.Project_Title || 'N/A'}
+                </div>
+              </div>
+              
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div>
+                  <div style={{ color: '#7f8c8d', fontSize: '0.85rem', marginBottom: '5px', fontWeight: '600' }}>
+                    Start Date
+                  </div>
+                  <div style={{ color: '#2c3e50', fontSize: '0.95rem' }}>
+                    <Calendar size={14} style={{ marginRight: '5px', verticalAlign: 'middle' }} />
+                    {assetData.Start_Date ? new Date(assetData.Start_Date).toLocaleDateString() : 'N/A'}
+                  </div>
+                </div>
+                
+                <div>
+                  <div style={{ color: '#7f8c8d', fontSize: '0.85rem', marginBottom: '5px', fontWeight: '600' }}>
+                    End Date
+                  </div>
+                  <div style={{ color: '#2c3e50', fontSize: '0.95rem' }}>
+                    <Calendar size={14} style={{ marginRight: '5px', verticalAlign: 'middle' }} />
+                    {assetData.End_Date ? new Date(assetData.End_Date).toLocaleDateString() : 'N/A'}
+                  </div>
+                </div>
+              </div>
+              
+              <div>
+                <div style={{ color: '#7f8c8d', fontSize: '0.85rem', marginBottom: '5px', fontWeight: '600' }}>
+                  <Shield size={14} style={{ marginRight: '5px', verticalAlign: 'middle' }} />
+                  Warranty
+                </div>
+                <div style={{ color: '#2c3e50', fontSize: '0.95rem' }}>
+                  {assetData.Warranty || 'N/A'}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Customer Information Card */}
+          <div className="card">
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px',
+              marginBottom: '15px',
+              paddingBottom: '12px',
+              borderBottom: '2px solid #e74c3c'
+            }}>
+              <Building2 size={20} color="#e74c3c" />
+              <h3 style={{ margin: 0, color: '#2c3e50', fontSize: '1.1rem' }}>Customer Information</h3>
+            </div>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div>
+                <div style={{ color: '#7f8c8d', fontSize: '0.85rem', marginBottom: '5px', fontWeight: '600' }}>
+                  Customer Name
+                </div>
+                <div style={{ color: '#2c3e50', fontSize: '0.95rem', fontWeight: '600' }}>
+                  {assetData.Customer_Name || 'N/A'}
+                </div>
+              </div>
+              
+              <div>
+                <div style={{ color: '#7f8c8d', fontSize: '0.85rem', marginBottom: '5px', fontWeight: '600' }}>
+                  Reference
+                </div>
+                <div style={{ color: '#2c3e50', fontSize: '0.95rem' }}>
+                  {assetData.Customer_Ref_Number || 'N/A'}
+                </div>
+              </div>
+              
+              <div>
+                <div style={{ color: '#7f8c8d', fontSize: '0.85rem', marginBottom: '5px', fontWeight: '600' }}>
+                  Branch / Location
+                </div>
+                <div style={{ color: '#2c3e50', fontSize: '0.95rem' }}>
+                  {assetData.Branch || 'N/A'}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Recipient Information Card */}
+          <div className="card">
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px',
+              marginBottom: '15px',
+              paddingBottom: '12px',
+              borderBottom: '2px solid #9b59b6'
+            }}>
+              <Users size={20} color="#9b59b6" />
+              <h3 style={{ margin: 0, color: '#2c3e50', fontSize: '1.1rem' }}>Recipient Information</h3>
+            </div>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div>
+                <div style={{ color: '#7f8c8d', fontSize: '0.85rem', marginBottom: '5px', fontWeight: '600' }}>
+                  Recipient Name
+                </div>
+                <div style={{ color: '#2c3e50', fontSize: '0.95rem', fontWeight: '600' }}>
+                  {assetData.Recipient_Name || 'N/A'}
                 </div>
               </div>
               <div>
                 <div style={{ color: '#7f8c8d', fontSize: '0.85rem', marginBottom: '5px', fontWeight: '600' }}>
-                  End Date
+                  Department
                 </div>
                 <div style={{ color: '#2c3e50', fontSize: '0.95rem' }}>
-                  <Calendar size={14} style={{ marginRight: '5px', verticalAlign: 'middle' }} />
-                  {assetData.End_Date ? new Date(assetData.End_Date).toLocaleDateString() : 'N/A'}
+                  {assetData.Department || 'N/A'}
                 </div>
               </div>
-            </div>
-            
-            <div>
-              <div style={{ color: '#7f8c8d', fontSize: '0.85rem', marginBottom: '5px', fontWeight: '600' }}>
-                <Shield size={14} style={{ marginRight: '5px', verticalAlign: 'middle' }} />
-                Warranty
-              </div>
-              <div style={{ color: '#2c3e50', fontSize: '1rem' }}>
-                {assetData.Warranty || 'N/A'}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Customer and Recipient Information Row */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px', marginBottom: '20px' }}>
-        {/* Customer Information */}
-        <div className="card">
-          <div style={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            gap: '10px', 
-            marginBottom: '20px',
-            paddingBottom: '15px',
-            borderBottom: '2px solid #e74c3c'
-          }}>
-            <Building2 size={24} color="#e74c3c" />
-            <h3 style={{ margin: 0, color: '#2c3e50', fontSize: '1.2rem' }}>Customer Information</h3>
-          </div>
-          
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-            <div>
-              <div style={{ color: '#7f8c8d', fontSize: '0.85rem', marginBottom: '5px', fontWeight: '600' }}>
-                Customer Name
-              </div>
-              <div style={{ color: '#2c3e50', fontSize: '1.1rem', fontWeight: '600' }}>
-                {assetData.Customer_Name || 'N/A'}
-              </div>
-            </div>
-            
-            <div>
-              <div style={{ color: '#7f8c8d', fontSize: '0.85rem', marginBottom: '5px', fontWeight: '600' }}>
-                Customer Reference
-              </div>
-              <div style={{ color: '#2c3e50', fontSize: '1rem' }}>
-                {assetData.Customer_Ref_Number || 'N/A'}
-              </div>
-            </div>
-            
-            <div>
-              <div style={{ color: '#7f8c8d', fontSize: '0.85rem', marginBottom: '5px', fontWeight: '600' }}>
-                Branch / Location
-              </div>
-              <div style={{ color: '#2c3e50', fontSize: '1rem' }}>
-                {assetData.Branch || 'N/A'}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Recipient Information */}
-        <div className="card">
-          <div style={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            gap: '10px', 
-            marginBottom: '20px',
-            paddingBottom: '15px',
-            borderBottom: '2px solid #9b59b6'
-          }}>
-            <Users size={24} color="#9b59b6" />
-            <h3 style={{ margin: 0, color: '#2c3e50', fontSize: '1.2rem' }}>Recipient Information</h3>
-          </div>
-          
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-            <div>
-              <div style={{ color: '#7f8c8d', fontSize: '0.85rem', marginBottom: '5px', fontWeight: '600' }}>
-                Recipient Name
-              </div>
-              <div style={{ color: '#2c3e50', fontSize: '1.1rem', fontWeight: '600' }}>
-                {assetData.Recipient_Name || 'N/A'}
-              </div>
-            </div>
-            <div>
-              <div style={{ color: '#7f8c8d', fontSize: '0.85rem', marginBottom: '5px', fontWeight: '600' }}>
-                Department
-              </div>
-              <div style={{ color: '#2c3e50', fontSize: '1rem' }}>
-                {assetData.Department || 'N/A'}
-              </div>
-            </div>
-            <div>
-              <div style={{ color: '#7f8c8d', fontSize: '0.85rem', marginBottom: '5px', fontWeight: '600' }}>
-                Position
-              </div>
-              <div style={{ color: '#2c3e50', fontSize: '1rem' }}>
-                {assetData.Position || 'N/A'}
+              <div>
+                <div style={{ color: '#7f8c8d', fontSize: '0.85rem', marginBottom: '5px', fontWeight: '600' }}>
+                  Position
+                </div>
+                <div style={{ color: '#2c3e50', fontSize: '0.95rem' }}>
+                  {assetData.Position || 'N/A'}
+                </div>
               </div>
             </div>
           </div>
