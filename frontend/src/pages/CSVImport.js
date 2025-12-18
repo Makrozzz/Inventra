@@ -222,12 +222,20 @@ const CSVImport = () => {
         }
       }
 
-      // Check status value
-      if (row.status && !validStatuses.includes(row.status)) {
-        errors.push({
-          field: 'status',
-          message: `Status must be one of: ${validStatuses.join(', ')}`
-        });
+      // Check status value (case-insensitive)
+      if (row.status) {
+        const normalizedStatus = validStatuses.find(
+          validStatus => validStatus.toLowerCase() === String(row.status).toLowerCase().trim()
+        );
+        if (!normalizedStatus) {
+          errors.push({
+            field: 'status',
+            message: `Status must be one of: ${validStatuses.join(', ')} (case-insensitive)`
+          });
+        } else if (normalizedStatus !== row.status) {
+          // Normalize the status value in the data
+          row.status = normalizedStatus;
+        }
       }
 
       // Check data formats
@@ -315,7 +323,7 @@ const CSVImport = () => {
     resetImport();
   };
 
-  const handleConfirmImport = async (importOption) => {
+  const handleConfirmImport = async (importOption, enableUpdate) => {
     setImporting(true);
     try {
       let dataToImport = parsedData;
@@ -328,8 +336,8 @@ const CSVImport = () => {
         });
       }
 
-      // Call the bulk import API
-      const result = await apiService.bulkImportAssets(dataToImport);
+      // Call the bulk import API with upsert flag
+      const result = await apiService.bulkImportAssets(dataToImport, enableUpdate);
       
       setImportResults(result);
       setShowConfirmDialog(false);
@@ -788,10 +796,18 @@ const CSVImport = () => {
 
               {importResults.success && (
                 <div className="result-stats">
-                  <div className="stat-item">
-                    <div className="stat-number">{importResults.imported || 0}</div>
-                    <div className="stat-label">Imported</div>
-                  </div>
+                  {importResults.assetsCreated > 0 && (
+                    <div className="stat-item">
+                      <div className="stat-number">{importResults.assetsCreated || 0}</div>
+                      <div className="stat-label">Created</div>
+                    </div>
+                  )}
+                  {importResults.updated > 0 && (
+                    <div className="stat-item">
+                      <div className="stat-number" style={{ color: '#3b82f6' }}>{importResults.updated || 0}</div>
+                      <div className="stat-label">Updated</div>
+                    </div>
+                  )}
                   {importResults.duplicates > 0 && (
                     <div className="stat-item">
                       <div className="stat-number" style={{ color: '#ff9800' }}>{importResults.duplicates || 0}</div>

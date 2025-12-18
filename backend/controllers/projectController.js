@@ -43,6 +43,29 @@ exports.getProjectById = async (req, res) => {
   }
 };
 
+// Get solution principals for a project
+exports.getProjectSolutionPrincipals = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { pool } = require('../config/database');
+    
+    const [rows] = await pool.execute(`
+      SELECT sp.SP_ID, sp.SP_Name, psb.\`Support Type\`
+      FROM PROJECT_SP_BRIDGE psb
+      JOIN SOLUTION_PRINCIPAL sp ON psb.SP_ID = sp.SP_ID
+      WHERE psb.Project_ID = ?
+    `, [id]);
+    
+    res.json(rows);
+  } catch (error) {
+    console.error('Error fetching project solution principals:', error);
+    res.status(500).json({ 
+      error: 'Failed to fetch solution principals',
+      message: error.message 
+    });
+  }
+};
+
 // Get project by reference number with customer data
 exports.getProjectByReference = async (req, res) => {
   try {
@@ -243,21 +266,26 @@ exports.updateProject = async (req, res) => {
     console.log('📝 Updates received:', updates);
     
     // Get current project data for comparison
-    const project = await Project.findById(id);
-    if (!project) {
+    const projectData = await Project.findById(id);
+    if (!projectData) {
       return res.status(404).json({ error: 'Project not found' });
     }
     
-    console.log('📋 Current project data:', project);
+    console.log('📋 Current project data:', projectData);
     
     // Store old values for audit logging
-    const oldData = { ...project };
+    const oldData = { ...projectData };
     
-    // Update project properties
-    Object.keys(updates).forEach(key => {
-      if (project.hasOwnProperty(key)) {
-        project[key] = updates[key];
-      }
+    // Create a Project instance with updated data
+    const project = new Project({
+      Project_ID: id,
+      Project_Ref_Number: updates.Project_Ref_Number || projectData.Project_Ref_Number,
+      Project_Title: updates.Project_Title || projectData.Project_Title,
+      Warranty: updates.Warranty !== undefined ? updates.Warranty : projectData.Warranty,
+      Preventive_Maintenance: updates.Preventive_Maintenance !== undefined ? updates.Preventive_Maintenance : projectData.Preventive_Maintenance,
+      Start_Date: updates.Start_Date !== undefined ? updates.Start_Date : projectData.Start_Date,
+      End_Date: updates.End_Date !== undefined ? updates.End_Date : projectData.End_Date,
+      Antivirus: updates.Antivirus !== undefined ? updates.Antivirus : projectData.Antivirus
     });
     
     await project.update();
@@ -486,6 +514,52 @@ exports.updateProjectBranches = async (req, res) => {
     console.error('Error updating project branches:', error);
     res.status(500).json({ 
       error: 'Failed to update branches',
+      message: error.message 
+    });
+  }
+};
+
+// Update project solution principals
+exports.updateProjectSolutionPrincipals = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { solution_principals } = req.body;
+
+    if (!solution_principals || !Array.isArray(solution_principals)) {
+      return res.status(400).json({ error: 'solution_principals array is required' });
+    }
+
+    console.log(`Updating solution principals for project ${id}:`, solution_principals);
+
+    const { pool } = require('../config/database');
+    
+    // Delete existing solution principal associations
+    await pool.execute(`DELETE FROM PROJECT_SP_BRIDGE WHERE Project_ID = ?`, [id]);
+    
+    // Insert new solution principal associations
+    if (solution_principals.length > 0) {
+      // Use parameterized query for safety
+      const placeholders = solution_principals.map(() => '(?, ?, NULL)').join(', ');
+      const values = [];
+      solution_principals.forEach(spId => {
+        values.push(id, spId);
+      });
+      
+      await pool.execute(`
+        INSERT INTO PROJECT_SP_BRIDGE (Project_ID, SP_ID, \`Support Type\`)
+        VALUES ${placeholders}
+      `, values);
+    }
+
+    res.json({
+      success: true,
+      message: 'Solution principals updated successfully',
+      count: solution_principals.length
+    });
+  } catch (error) {
+    console.error('Error updating project solution principals:', error);
+    res.status(500).json({ 
+      error: 'Failed to update solution principals',
       message: error.message 
     });
   }

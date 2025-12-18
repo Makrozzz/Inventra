@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { Save, ArrowLeft, AlertCircle, CheckCircle, X, Plus, Package, Building2, ClipboardList, Edit3 } from 'lucide-react';
 import { API_URL } from '../config/api';
 import apiService from '../services/apiService';
+import SearchableDropdown from '../components/SearchableDropdown';
 
 const EditAsset = () => {
   const navigate = useNavigate();
@@ -26,6 +27,7 @@ const EditAsset = () => {
   const [softwareLinks, setSoftwareLinks] = useState([]);
   const [newSoftwareSelection, setNewSoftwareSelection] = useState('');
     const [projectAntivirusName, setProjectAntivirusName] = useState('');
+  const [categoryOptions, setCategoryOptions] = useState([]);
   
   // Modal states for adding new options
   const [showAddModal, setShowAddModal] = useState(false);
@@ -48,6 +50,7 @@ const EditAsset = () => {
     Item_Name: '',
     Category: '',
     Model: '',
+    Category: '',
     Status: 'Active',
     Windows: '',
     Microsoft_Office: '',
@@ -134,6 +137,7 @@ const EditAsset = () => {
         Item_Name: data.Item_Name || '',
         Category: data.Category || '',
         Model: data.Model || '',
+        Category: data.Category || '',
         Status: data.Status || 'Active',
         Windows: data.Windows || '',
         Microsoft_Office: data.Microsoft_Office || '',
@@ -190,6 +194,14 @@ const EditAsset = () => {
     setSoftwareLinks(prev => prev.filter(s => s.Software_ID !== softwareId));
   };
 
+  // Handler for SearchableDropdown components
+  const handleChange = (name, value) => {
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
   // Peripheral handlers
   const handleAddPeripheral = () => {
     setPeripherals([...peripherals, {
@@ -240,8 +252,14 @@ const EditAsset = () => {
       const officeRes = await fetch(`${API_URL}/options/office`);
       if (officeRes.ok) {
         const officeData = await officeRes.json();
-        const office = (officeData.data || []).map(o => o.Office_Version || o.name || '');
-        setOfficeOptions(office);
+        setOfficeOptions(officeData.data || []);
+      }
+
+      // Fetch Antivirus options
+      const antivirusRes = await fetch(`${API_URL}/options/antivirus`);
+      if (antivirusRes.ok) {
+        const antivirusData = await antivirusRes.json();
+        setAntivirusOptions(antivirusData.data || []);
       }
 
       // Fetch Software options
@@ -412,6 +430,9 @@ const EditAsset = () => {
         setFormData(prev => ({ ...prev, Model: newOptionValue.trim() }));
       } else if (modalType === 'peripheral') {
         setPeripheralTypeOptions(prev => [...prev, newOptionValue.trim()]);
+      } else if (modalType === 'category') {
+        setCategoryOptions(prev => [...prev, newOptionValue.trim()]);
+        setFormData(prev => ({ ...prev, Category: newOptionValue.trim() }));
       }
 
       handleCloseAddModal();
@@ -846,6 +867,22 @@ const EditAsset = () => {
                       <Plus size={14} /> 
                     </button>
                   </label>
+                  <SearchableDropdown
+                    options={categoryOptions.map(cat => ({
+                      value: cat.Category || cat,
+                      label: cat.Category || cat
+                    }))}
+                    value={formData.Category}
+                    onChange={(selectedValue) => handleChange('Category', selectedValue || '')}
+                    placeholder={`Type to search or select category... (${categoryOptions.length} available)`}
+                    searchPlaceholder="Search categories..."
+                    getOptionLabel={(option) => option.label}
+                    getOptionValue={(option) => option.value}
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label>Status</label>
                   <select
                     name="Category"
                     value={formData.Category || ''}
@@ -1589,7 +1626,7 @@ const EditAsset = () => {
                 gap: '10px'
               }}>
                 <Plus size={24} strokeWidth={2.5} style={{ color: '#10b981' }} />
-                Add New {modalType === 'windows' ? 'Windows Version' : modalType === 'office' ? 'Office Version' : modalType === 'antivirus' ? 'Antivirus' : modalType === 'software' ? 'Software' : modalType === 'category' ? 'Category' : modalType === 'peripheral' ? 'Peripheral Type' : 'Model'}
+                Add New {modalType === 'windows' ? 'Windows Version' : modalType === 'office' ? 'Office Version' : modalType === 'antivirus' ? 'Antivirus' : modalType === 'software' ? 'Software' : modalType === 'category' ? 'Category' : modalType === 'peripheral' ? 'Peripheral Type' : modalType === 'category' ? 'Category' : 'Model'}
               </h3>
               <button
                 onClick={handleCloseAddModal}

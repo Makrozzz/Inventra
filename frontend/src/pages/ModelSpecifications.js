@@ -285,19 +285,33 @@ const ModelSpecifications = () => {
                       <Cpu size={20} color="#667eea" />
                       {model.Model_Name}
                     </h3>
-                    {model.Category_Name && (
-                      <p style={{
-                        margin: 0,
-                        fontSize: '14px',
-                        color: '#6b7280',
-                        background: '#f3f4f6',
-                        padding: '4px 12px',
-                        borderRadius: '6px',
-                        display: 'inline-block'
-                      }}>
-                        {model.Category_Name}
-                      </p>
-                    )}
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '8px' }}>
+                      {model.Category_Name && (
+                        <span style={{
+                          fontSize: '13px',
+                          color: '#6b7280',
+                          background: '#f3f4f6',
+                          padding: '4px 12px',
+                          borderRadius: '6px',
+                          fontWeight: '500'
+                        }}>
+                          {model.Category_Name}
+                        </span>
+                      )}
+                      {model.Customer_Tags && (
+                        <span style={{
+                          fontSize: '13px',
+                          color: '#7c3aed',
+                          background: '#f3e8ff',
+                          padding: '4px 12px',
+                          borderRadius: '6px',
+                          fontWeight: '500',
+                          border: '1px solid #c4b5fd'
+                        }}>
+                          {model.Customer_Tags}
+                        </span>
+                      )}
+                    </div>
                   </div>
                   <div style={{
                     background: model.Spec_Count > 0 ? '#ecfdf5' : '#f3f4f6',

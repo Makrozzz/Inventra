@@ -46,8 +46,9 @@ class Project {
         `, [project.Project_ID]);
         
         // Format as "SP_Name1|Support_Type1||SP_Name2|Support_Type2"
+        // If Support Type is empty/null, don't add the pipe
         project.Solution_Principals = spRows
-          .map(sp => `${sp.SP_Name}|${sp['Support Type'] || ''}`)
+          .map(sp => sp['Support Type'] ? `${sp.SP_Name}|${sp['Support Type']}` : sp.SP_Name)
           .join('||');
       }
       
@@ -95,8 +96,9 @@ class Project {
         WHERE psb.Project_ID = ?
       `, [id]);
 
+      // If Support Type is empty/null, don't add the pipe
       project.Solution_Principals = spRows
-        .map(sp => `${sp.SP_Name}|${sp['Support Type'] || ''}`)
+        .map(sp => sp['Support Type'] ? `${sp.SP_Name}|${sp['Support Type']}` : sp.SP_Name)
         .join('||');
 
       return project;

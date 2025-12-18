@@ -23,6 +23,9 @@ router.get('/branches-by-project/:projectRefNumber', projectController.getBranch
 // GET /api/projects/:id - Get project by ID
 router.get('/:id', projectController.getProjectById);
 
+// GET /api/projects/:id/solution-principals - Get solution principals for a project
+router.get('/:id/solution-principals', projectController.getProjectSolutionPrincipals);
+
 // POST /api/projects - Create new project
 router.post('/', projectController.createProject);
 
@@ -31,6 +34,9 @@ router.put('/:id', projectController.updateProject);
 
 // PUT /api/projects/:id/branches - Update project branches
 router.put('/:id/branches', projectController.updateProjectBranches);
+
+// PUT /api/projects/:id/solution-principals - Update project solution principals
+router.put('/:id/solution-principals', projectController.updateProjectSolutionPrincipals);
 
 // DELETE /api/projects/:id - Delete project
 router.delete('/:id', projectController.deleteProject);

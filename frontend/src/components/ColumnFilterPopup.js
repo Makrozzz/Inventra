@@ -118,6 +118,10 @@ const ColumnFilterPopup = ({ isOpen, onClose, columns, onApply }) => {
     );
     
     setLocalColumns(reordered);
+    
+    // PERSISTENCE FIX: Save column order immediately when reordered
+    ColumnConfigService.saveConfig(reordered);
+    
     setDraggedIndex(null);
     setDragOverIndex(null);
     setDragPosition(null);
@@ -143,10 +147,15 @@ const ColumnFilterPopup = ({ isOpen, onClose, columns, onApply }) => {
   const handleReset = () => {
     const defaultConfig = ColumnConfigService.resetToDefault();
     setLocalColumns(defaultConfig);
+    // Immediately save the reset configuration
+    ColumnConfigService.saveConfig(defaultConfig);
+    onApply(defaultConfig);
   };
 
   // Apply changes and close
   const handleApply = () => {
+    // Save configuration (order already saved on reorder, but save visibility changes)
+    ColumnConfigService.saveConfig(localColumns);
     onApply(localColumns);
     onClose();
   };

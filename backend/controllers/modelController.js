@@ -2,7 +2,7 @@ const { pool } = require('../config/database');
 const logger = require('../utils/logger');
 
 /**
- * Get all models for dropdown/autocomplete
+ * Get all models for dropdown/autocomplete with customer tags
  */
 const getAllModels = async (req, res, next) => {
   try {
@@ -11,13 +11,21 @@ const getAllModels = async (req, res, next) => {
         m.Model_ID,
         m.Model_Name,
         m.Category_ID,
-        c.Category as Category_Name
+        c.Category as Category_Name,
+        GROUP_CONCAT(DISTINCT cust.Customer_Name ORDER BY cust.Customer_Name SEPARATOR ', ') as Customer_Tags
       FROM MODEL m
       LEFT JOIN CATEGORY c ON m.Category_ID = c.Category_ID
+      LEFT JOIN ASSET a ON m.Model_ID = a.Model_ID
+      LEFT JOIN INVENTORY i ON a.Asset_ID = i.Asset_ID
+      LEFT JOIN CUSTOMER cust ON i.Customer_ID = cust.Customer_ID
+      GROUP BY m.Model_ID, m.Model_Name, m.Category_ID, c.Category
       ORDER BY m.Model_Name ASC
     `);
 
-    res.status(200).json(models);
+    res.status(200).json({
+      success: true,
+      data: models
+    });
   } catch (error) {
     logger.error('Error in getAllModels:', error);
     console.error('Error fetching models:', error);
@@ -381,7 +389,7 @@ const getModelSpecs = async (req, res, next) => {
 };
 
 /**
- * Get all models with their specifications
+ * Get all models with their specifications and customer tags
  */
 const getAllModelsWithSpecs = async (req, res, next) => {
   try {
@@ -391,10 +399,14 @@ const getAllModelsWithSpecs = async (req, res, next) => {
         m.Model_Name,
         m.Category_ID,
         c.Category as Category_Name,
-        COUNT(DISTINCT msb.Attributes_ID) as Spec_Count
+        COUNT(DISTINCT msb.Attributes_ID) as Spec_Count,
+        GROUP_CONCAT(DISTINCT cust.Customer_Name ORDER BY cust.Customer_Name SEPARATOR ', ') as Customer_Tags
       FROM MODEL m
       LEFT JOIN CATEGORY c ON m.Category_ID = c.Category_ID
       LEFT JOIN MODEL_SPECS_BRIDGE msb ON m.Model_ID = msb.Model_ID
+      LEFT JOIN ASSET a ON m.Model_ID = a.Model_ID
+      LEFT JOIN INVENTORY i ON a.Asset_ID = i.Asset_ID
+      LEFT JOIN CUSTOMER cust ON i.Customer_ID = cust.Customer_ID
       GROUP BY m.Model_ID, m.Model_Name, m.Category_ID, c.Category
       ORDER BY m.Model_Name ASC
     `);

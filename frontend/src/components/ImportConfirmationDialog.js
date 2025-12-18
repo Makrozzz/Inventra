@@ -10,11 +10,12 @@ const ImportConfirmationDialog = ({
   loading 
 }) => {
   const [importOption, setImportOption] = useState('valid-only');
+  const [enableUpdate, setEnableUpdate] = useState(false);
 
   if (!isOpen) return null;
 
   const handleImportConfirm = () => {
-    onConfirmImport(importOption);
+    onConfirmImport(importOption, enableUpdate);
   };
 
   const downloadFailedRecords = () => {
@@ -508,6 +509,85 @@ const ImportConfirmationDialog = ({
                   </div>
                 )}
               </div>
+            </div>
+
+            <div className="options-section" style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid #e2e8f0' }}>
+              <label 
+                className="checkbox-container" 
+                style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '12px', 
+                  cursor: 'pointer', 
+                  padding: '16px', 
+                  borderRadius: '8px', 
+                  border: enableUpdate ? '2px solid #3b82f6' : '1px solid #e2e8f0', 
+                  backgroundColor: enableUpdate ? '#eff6ff' : 'white', 
+                  boxShadow: enableUpdate ? '0 4px 12px rgba(59, 130, 246, 0.15)' : 'none',
+                  transition: 'all 0.3s ease',
+                  position: 'relative'
+                }}
+              >
+                {enableUpdate && (
+                  <div style={{
+                    position: 'absolute',
+                    top: '-1px',
+                    right: '-1px',
+                    backgroundColor: '#3b82f6',
+                    color: 'white',
+                    padding: '4px 12px',
+                    borderRadius: '0 6px 0 8px',
+                    fontSize: '12px',
+                    fontWeight: '600',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.5px'
+                  }}>
+                    Active
+                  </div>
+                )}
+                <input 
+                  type="checkbox" 
+                  checked={enableUpdate} 
+                  onChange={(e) => setEnableUpdate(e.target.checked)}
+                  style={{ 
+                    width: '20px', 
+                    height: '20px', 
+                    cursor: 'pointer', 
+                    accentColor: '#3b82f6',
+                    flexShrink: 0
+                  }}
+                />
+                <div style={{ flex: 1 }}>
+                  <div style={{ 
+                    fontWeight: '700', 
+                    color: enableUpdate ? '#1e40af' : '#1e293b', 
+                    marginBottom: '4px',
+                    fontSize: '15px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px'
+                  }}>
+                    Enable Update Mode (Upsert)
+                    {enableUpdate && (
+                      <span style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        backgroundColor: '#3b82f6',
+                        color: 'white',
+                        padding: '2px 8px',
+                        borderRadius: '12px',
+                        fontSize: '11px',
+                        fontWeight: '600'
+                      }}>
+                        ON
+                      </span>
+                    )}
+                  </div>
+                  <div style={{ fontSize: '14px', color: enableUpdate ? '#1e40af' : '#64748b', fontWeight: enableUpdate ? '500' : '400' }}>
+                    Update existing assets if they have the same serial number but different data. Assets with identical data will be skipped as duplicates. New assets will still be created.
+                  </div>
+                </div>
+              </label>
             </div>
 
             {validationSummary.errors && validationSummary.errors.length > 0 && (

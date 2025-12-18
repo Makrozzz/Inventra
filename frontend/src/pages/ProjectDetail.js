@@ -402,43 +402,63 @@ const ProjectDetail = () => {
               <div style={{ 
                 display: 'flex',
                 flexDirection: 'column',
-                gap: '8px'
+                gap: '0'
               }}>
                 {project.Solution_Principals && project.Solution_Principals.trim() !== '' ? (
-                  project.Solution_Principals.split('||').map((sp, index) => {
-                    const [name, supportType] = sp.split('|');
-                    return (
-                      <div key={index} style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '10px',
-                        padding: '8px 12px',
-                        backgroundColor: '#ffffff',
-                        borderRadius: '8px',
-                        border: '1px solid #e5e7eb'
-                      }}>
-                        <div style={{
-                          fontSize: '15px',
-                          color: '#1f2937',
-                          fontWeight: '600'
+                  <div style={{
+                    border: '1px solid #e5e7eb',
+                    borderRadius: '8px',
+                    overflow: 'hidden',
+                    backgroundColor: '#ffffff'
+                  }}>
+                    {project.Solution_Principals.split('||').map((sp, index) => {
+                      const [name, supportType] = sp.split('|');
+                      return (
+                        <div key={index} style={{
+                          display: 'grid',
+                          gridTemplateColumns: 'minmax(120px, auto) 1fr',
+                          alignItems: 'center',
+                          gap: '16px',
+                          padding: '12px 16px',
+                          backgroundColor: index % 2 === 0 ? '#f9fafb' : 'white',
+                          borderBottom: index < project.Solution_Principals.split('||').length - 1 ? '1px solid #e5e7eb' : 'none'
                         }}>
-                          {name}
-                        </div>
-                        {supportType && (
                           <div style={{
-                            padding: '4px 12px',
-                            backgroundColor: '#d1fae5',
-                            color: '#065f46',
-                            borderRadius: '6px',
-                            fontSize: '13px',
-                            fontWeight: '500'
+                            fontSize: '15px',
+                            color: '#9C27B0',
+                            fontWeight: '600',
+                            whiteSpace: 'nowrap'
                           }}>
-                            {supportType}
+                            {name}
                           </div>
-                        )}
-                      </div>
-                    );
-                  })
+                          <div style={{
+                            fontSize: '14px',
+                            color: '#6b7280',
+                            display: 'flex',
+                            alignItems: 'center'
+                          }}>
+                            {supportType && supportType.trim() !== '' ? (
+                              <div style={{
+                                display: 'inline-block',
+                                padding: '4px 12px',
+                                backgroundColor: '#d1fae5',
+                                color: '#065f46',
+                                borderRadius: '6px',
+                                fontSize: '13px',
+                                fontWeight: '500'
+                              }}>
+                                {supportType}
+                              </div>
+                            ) : (
+                              <div style={{ color: '#9ca3af', fontStyle: 'italic' }}>
+                                No support type specified
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 ) : (
                   <div style={{ fontSize: '15px', color: '#9ca3af', fontStyle: 'italic' }}>
                     No solution principals assigned

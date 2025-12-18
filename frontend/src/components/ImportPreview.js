@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { AlertTriangle, CheckCircle, XCircle, Info, ArrowRight } from 'lucide-react';
+import { AlertTriangle, CheckCircle, XCircle, Info, ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react';
 
 const ImportPreview = ({ parsedData, validationResults, onValidationComplete }) => {
   const [columnMapping, setColumnMapping] = useState({});
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(20);
   const [validationSummary, setValidationSummary] = useState({
     totalRows: 0,
     validRows: 0,
@@ -97,8 +99,27 @@ const ImportPreview = ({ parsedData, validationResults, onValidationComplete }) 
     return fieldError ? 'invalid' : 'valid';
   };
 
-  const displayRows = parsedData?.slice(0, Math.min(20, parsedData.length)) || [];
   const totalRows = parsedData?.length || 0;
+  const totalPages = Math.ceil(totalRows / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = Math.min(startIndex + itemsPerPage, totalRows);
+  const displayRows = parsedData?.slice(startIndex, endIndex) || [];
+
+  // Reset to page 1 when data changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [parsedData]);
+
+  const handlePageChange = (newPage) => {
+    if (newPage >= 1 && newPage <= totalPages) {
+      setCurrentPage(newPage);
+    }
+  };
+
+  const handleItemsPerPageChange = (value) => {
+    setItemsPerPage(value);
+    setCurrentPage(1); // Reset to first page
+  };
 
   if (!parsedData || parsedData.length === 0) {
     return (
@@ -325,6 +346,76 @@ const ImportPreview = ({ parsedData, validationResults, onValidationComplete }) 
           font-style: italic;
         }
 
+        .pagination-container {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 16px 20px;
+          background: #f8fafc;
+          border-top: 1px solid #e2e8f0;
+        }
+
+        .pagination-info {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          font-size: 14px;
+          color: #64748b;
+        }
+
+        .items-per-page-select {
+          padding: 6px 12px;
+          border: 1px solid #e2e8f0;
+          border-radius: 6px;
+          background: white;
+          cursor: pointer;
+          font-size: 14px;
+          color: #1e293b;
+        }
+
+        .items-per-page-select:hover {
+          border-color: #cbd5e1;
+        }
+
+        .pagination-controls {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+        }
+
+        .pagination-button {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 32px;
+          height: 32px;
+          border: 1px solid #e2e8f0;
+          border-radius: 6px;
+          background: white;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          color: #1e293b;
+        }
+
+        .pagination-button:hover:not(:disabled) {
+          background: #3b82f6;
+          color: white;
+          border-color: #3b82f6;
+        }
+
+        .pagination-button:disabled {
+          opacity: 0.4;
+          cursor: not-allowed;
+        }
+
+        .pagination-text {
+          font-size: 14px;
+          color: #1e293b;
+          font-weight: 500;
+          min-width: 120px;
+          text-align: center;
+        }
+
         .error-list {
           margin: 16px 0 0 0;
           padding: 16px;
@@ -390,10 +481,7 @@ const ImportPreview = ({ parsedData, validationResults, onValidationComplete }) 
       <div className="preview-header">
         <h3 className="preview-title">Data Preview & Validation</h3>
         <p className="preview-subtitle">
-          {totalRows > 20 
-            ? `Showing first 20 of ${totalRows} total records`
-            : `Showing all ${totalRows} records`
-          }
+          Showing {startIndex + 1}-{endIndex} of {totalRows} total records
         </p>
 
         <div className="validation-summary">
@@ -449,10 +537,11 @@ const ImportPreview = ({ parsedData, validationResults, onValidationComplete }) 
             {displayRows.map((row, index) => {
               const rowErrors = validationResults?.[index] || [];
               const isInvalid = rowErrors.length > 0;
+              const actualRowNumber = startIndex + index + 1;
               
               return (
                 <tr key={index} className={isInvalid ? 'invalid' : ''}>
-                  <td>{index + 1}</td>
+                  <td>{actualRowNumber}</td>
                   {Object.entries(row).map(([key, value]) => {
                     const dbField = columnMapping[key];
                     const fieldStatus = getFieldValidationStatus(index, dbField);
@@ -499,9 +588,46 @@ const ImportPreview = ({ parsedData, validationResults, onValidationComplete }) 
         </table>
       </div>
 
-      {totalRows > 20 && (
-        <div className="row-more-indicator">
-          ... and {totalRows - 20} more records
+      {totalPages > 1 && (
+        <div className="pagination-container">
+          <div className="pagination-info">
+            <label htmlFor="itemsPerPage">Rows per page:</label>
+            <select 
+              id="itemsPerPage"
+              value={itemsPerPage} 
+              onChange={(e) => handleItemsPerPageChange(Number(e.target.value))}
+              className="items-per-page-select"
+            >
+              <option value={10}>10</option>
+              <option value={20}>20</option>
+              <option value={50}>50</option>
+              <option value={100}>100</option>
+            </select>
+          </div>
+          
+          <div className="pagination-controls">
+            <button 
+              onClick={() => handlePageChange(currentPage - 1)}
+              disabled={currentPage === 1}
+              className="pagination-button"
+              title="Previous page"
+            >
+              <ChevronLeft size={16} />
+            </button>
+            
+            <span className="pagination-text">
+              Page {currentPage} of {totalPages}
+            </span>
+            
+            <button 
+              onClick={() => handlePageChange(currentPage + 1)}
+              disabled={currentPage === totalPages}
+              className="pagination-button"
+              title="Next page"
+            >
+              <ChevronRight size={16} />
+            </button>
+          </div>
         </div>
       )}
 

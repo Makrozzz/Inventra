@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Save, ArrowLeft, Calendar, FileText, User, Shield, Wrench, Building2, MapPin, X } from 'lucide-react';
 import { API_URL } from '../config/api';
+import SearchableDropdown from '../components/SearchableDropdown';
 
 const AddProject = () => {
   const navigate = useNavigate();
@@ -27,6 +28,28 @@ const AddProject = () => {
   const [branches, setBranches] = useState(['']);
   const [branchInput, setBranchInput] = useState('');
 
+  // Solution Principals
+  const [solutionPrincipals, setSolutionPrincipals] = useState([]);
+  const [selectedSolutionPrincipals, setSelectedSolutionPrincipals] = useState([]);
+
+  // Fetch solution principals on mount
+  useEffect(() => {
+    fetchSolutionPrincipals();
+  }, []);
+
+  const fetchSolutionPrincipals = async () => {
+    try {
+      const response = await fetch(`${API_URL}/solution-principals`);
+      if (response.ok) {
+        const data = await response.json();
+        console.log('Solution Principals fetched:', data);
+        setSolutionPrincipals(data || []);
+      }
+    } catch (error) {
+      console.error('Error fetching solution principals:', error);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -46,7 +69,8 @@ const AddProject = () => {
         customer: {
           ...customer,
           branches: validBranches
-        }
+        },
+        solution_principals: selectedSolutionPrincipals // Array of SP_IDs
       };
       
       console.log('Submitting project data:', payload);
@@ -97,6 +121,21 @@ const AddProject = () => {
 
   const removeBranch = (index) => {
     setBranches(branches.filter((_, i) => i !== index));
+  };
+
+  const handleSolutionPrincipalSelect = (spId) => {
+    if (spId && !selectedSolutionPrincipals.includes(spId)) {
+      setSelectedSolutionPrincipals([...selectedSolutionPrincipals, spId]);
+    }
+  };
+
+  const removeSolutionPrincipal = (spId) => {
+    setSelectedSolutionPrincipals(selectedSolutionPrincipals.filter(id => id !== spId));
+  };
+
+  const getSelectedSPName = (spId) => {
+    const sp = solutionPrincipals.find(s => s.SP_ID === spId);
+    return sp ? sp.SP_Name : 'Unknown';
   };
 
   const handleBranchKeyPress = (e) => {
@@ -248,7 +287,87 @@ const AddProject = () => {
               )}
             </div>
           </div>
-
+          {/* Solution Principal Section */}
+          <div style={{ marginBottom: '20px' }}>
+            <h3 style={{ 
+              marginTop: 0, 
+              marginBottom: '20px', 
+              paddingBottom: '10px', 
+              borderBottom: '2px solid #9C27B0',
+              color: '#333',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px'
+            }}>
+              <User size={20} />
+              Solution Principal
+            </h3>
+            
+            <div className="form-group">
+              <label>
+                <User size={16} style={{ marginRight: '5px', verticalAlign: 'middle' }} />
+                Select Solution Principals
+              </label>
+              <SearchableDropdown
+                options={solutionPrincipals
+                  .filter(sp => !selectedSolutionPrincipals.includes(sp.SP_ID))
+                  .map(sp => ({
+                    value: sp.SP_ID,
+                    label: sp.SP_Name
+                  }))}
+                value=""
+                onChange={(selectedValue) => handleSolutionPrincipalSelect(selectedValue)}
+                placeholder="Type to search and select solution principals..."
+                searchPlaceholder="Search solution principals..."
+                getOptionLabel={(option) => option.label}
+                getOptionValue={(option) => option.value}
+                clearable={false}
+              />
+              
+              {/* Display selected solution principals */}
+              {selectedSolutionPrincipals.length > 0 && (
+                <div style={{ 
+                  marginTop: '15px', 
+                  display: 'flex', 
+                  flexWrap: 'wrap', 
+                  gap: '10px' 
+                }}>
+                  {selectedSolutionPrincipals.map((spId) => (
+                    <div 
+                      key={spId}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        padding: '8px 12px',
+                        backgroundColor: '#f3e5f5',
+                        border: '1px solid #9C27B0',
+                        borderRadius: '20px',
+                        fontSize: '14px'
+                      }}
+                    >
+                      <User size={14} color="#9C27B0" />
+                      <span>{getSelectedSPName(spId)}</span>
+                      <button
+                        type="button"
+                        onClick={() => removeSolutionPrincipal(spId)}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          cursor: 'pointer',
+                          padding: '2px',
+                          display: 'flex',
+                          alignItems: 'center'
+                        }}
+                      >
+                        <X size={16} color="#666" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
           {/* Project Information Section */}
           <div style={{ marginBottom: '20px' }}>
             <h3 style={{ 
