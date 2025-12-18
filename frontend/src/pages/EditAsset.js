@@ -26,8 +26,7 @@ const EditAsset = () => {
   const [branchOptions, setBranchOptions] = useState([]);
   const [softwareLinks, setSoftwareLinks] = useState([]);
   const [newSoftwareSelection, setNewSoftwareSelection] = useState('');
-    const [projectAntivirusName, setProjectAntivirusName] = useState('');
-  const [categoryOptions, setCategoryOptions] = useState([]);
+  const [projectAntivirusName, setProjectAntivirusName] = useState('');
   
   // Modal states for adding new options
   const [showAddModal, setShowAddModal] = useState(false);
@@ -879,22 +878,6 @@ const EditAsset = () => {
                     getOptionLabel={(option) => option.label}
                     getOptionValue={(option) => option.value}
                   />
-                </div>
-
-                <div className="form-group">
-                  <label>Status</label>
-                  <select
-                    name="Category"
-                    value={formData.Category || ''}
-                    onChange={handleInputChange}
-                  >
-                    <option value="">Select Category</option>
-                    {categoryOptions.map((option, index) => (
-                      <option key={index} value={option}>
-                        {option}
-                      </option>
-                    ))}
-                  </select>
                 </div>
 
                 <div className="form-group">
