@@ -489,6 +489,7 @@ class PMaintenance {
           pm.PM_Date,
           pm.Remarks,
           pm.Status,
+          pm.file_path_acknowledgement,
           pm.Created_By,
           u.username as Created_By_Username,
           CONCAT(u.First_Name, ' ', u.Last_Name) as Created_By_Name
@@ -687,6 +688,22 @@ class PMaintenance {
       return result.insertId;
     } catch (error) {
       console.error('Error in PMaintenance.createCategory:', error);
+      throw error;
+    }
+  }
+
+  // Update file_path_acknowledgement for a PM record
+  static async updateAcknowledgementPath(pmId, filePath) {
+    try {
+      const [result] = await pool.execute(`
+        UPDATE PMAINTENANCE
+        SET file_path_acknowledgement = ?
+        WHERE PM_ID = ?
+      `, [filePath, pmId]);
+      
+      return result.affectedRows > 0;
+    } catch (error) {
+      console.error('Error in PMaintenance.updateAcknowledgementPath:', error);
       throw error;
     }
   }

@@ -3,7 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { 
   ArrowLeft, Package, FileText, Building2, Users, Wrench, 
   Calendar, CheckCircle, AlertCircle, Info, Monitor, Mouse, 
-  Keyboard, Cable, Shield, Eye, ClipboardList
+  Keyboard, Cable, Shield, Eye, ClipboardList, Trash2
 } from 'lucide-react';
 import { API_URL } from '../config/api';
 import apiService from '../services/apiService';
@@ -17,6 +17,7 @@ const AssetDetail = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [deleting, setDeleting] = useState(false);
+  const [deletingAck, setDeletingAck] = useState(false);
   const [isWideScreen, setIsWideScreen] = useState(window.innerWidth > 992);
 
   useEffect(() => {
@@ -124,6 +125,36 @@ const AssetDetail = () => {
       'Power Cable': <Cable size={20} />
     };
     return icons[type] || <Package size={20} />;
+  };
+
+  const handleDeleteAcknowledgement = async (pmId) => {
+    if (!window.confirm('Are you sure you want to delete this acknowledgement file? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      setDeletingAck(true);
+
+      const response = await fetch(`${API_URL}/pm/${pmId}/delete-acknowledgement`, {
+        method: 'DELETE'
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Delete failed');
+      }
+
+      alert('Acknowledgement deleted successfully!');
+      
+      // Refresh PM records to update UI
+      fetchPMRecords();
+    } catch (err) {
+      console.error('Error deleting acknowledgement:', err);
+      alert(err.message || 'Failed to delete file. Please try again.');
+    } finally {
+      setDeletingAck(false);
+    }
   };
 
   const handleDeleteAsset = async () => {
@@ -799,6 +830,7 @@ const AssetDetail = () => {
                     <th style={{ width: '150px' }}>Date</th>
                     <th style={{ width: '120px' }}>Status</th>
                     <th style={{ width: '120px', textAlign: 'center' }}>Actions</th>
+                    <th style={{ width: '140px', textAlign: 'center' }}>Acknowledgement</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -859,6 +891,75 @@ const AssetDetail = () => {
                           <Eye size={14} />
                           Details
                         </button>
+                      </td>
+                      <td style={{ textAlign: 'center' }}>
+                        {pm.file_path_acknowledgement ? (
+                          <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', alignItems: 'center' }}>
+                            <button
+                              onClick={() => {
+                                const baseUrl = API_URL.replace('/api/v1', '');
+                                const fileUrl = `${baseUrl}/${pm.file_path_acknowledgement}`;
+                                window.open(fileUrl, '_blank');
+                              }}
+                              style={{
+                                padding: '6px 14px',
+                                background: '#27ae60',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '6px',
+                                cursor: 'pointer',
+                                fontSize: '0.85rem',
+                                fontWeight: '600',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '6px',
+                                transition: 'background 0.2s'
+                              }}
+                              onMouseOver={(e) => e.currentTarget.style.background = '#229954'}
+                              onMouseOut={(e) => e.currentTarget.style.background = '#27ae60'}
+                            >
+                              <Eye size={14} />
+                              View
+                            </button>
+                            <button
+                              onClick={() => handleDeleteAcknowledgement(pm.PM_ID)}
+                              disabled={deletingAck}
+                              style={{
+                                padding: '6px',
+                                background: 'white',
+                                color: '#e74c3c',
+                                border: '2px solid #e74c3c',
+                                borderRadius: '6px',
+                                cursor: deletingAck ? 'not-allowed' : 'pointer',
+                                fontSize: '0.85rem',
+                                fontWeight: '600',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                transition: 'all 0.2s',
+                                opacity: deletingAck ? 0.6 : 1
+                              }}
+                              onMouseOver={(e) => {
+                                if (!deletingAck) {
+                                  e.currentTarget.style.background = '#e74c3c';
+                                  e.currentTarget.style.color = 'white';
+                                }
+                              }}
+                              onMouseOut={(e) => {
+                                if (!deletingAck) {
+                                  e.currentTarget.style.background = 'white';
+                                  e.currentTarget.style.color = '#e74c3c';
+                                }
+                              }}
+                              title="Delete Acknowledgement"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        ) : (
+                          <span style={{ color: '#95a5a6', fontSize: '0.85rem', fontStyle: 'italic' }}>
+                            No file
+                          </span>
+                        )}
                       </td>
                     </tr>
                   ))}
