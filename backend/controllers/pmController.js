@@ -247,15 +247,15 @@ const getAllCategories = async (req, res, next) => {
  */
 const createChecklistItem = async (req, res, next) => {
   try {
-    const { categoryId, checkItem, checkItemLong } = req.body;
+    const { categoryId, checkItemLong } = req.body;
 
-    if (!categoryId || !checkItem) {
+    if (!categoryId || !checkItemLong) {
       return res.status(400).json({
         error: 'Category ID and check item are required'
       });
     }
 
-    const checklistId = await PMaintenance.createChecklistItem(categoryId, checkItem, checkItemLong);
+    const checklistId = await PMaintenance.createChecklistItem(categoryId, checkItemLong);
 
     res.status(201).json({
       success: true,
@@ -277,15 +277,15 @@ const createChecklistItem = async (req, res, next) => {
 const updateChecklistItem = async (req, res, next) => {
   try {
     const { checklistId } = req.params;
-    const { checkItem, checkItemLong } = req.body;
+    const { checkItemLong } = req.body;
 
-    if (!checkItem) {
+    if (!checkItemLong) {
       return res.status(400).json({
         error: 'Check item is required'
       });
     }
 
-    const success = await PMaintenance.updateChecklistItem(checklistId, checkItem, checkItemLong);
+    const success = await PMaintenance.updateChecklistItem(checklistId, checkItemLong);
 
     if (!success) {
       return res.status(404).json({
