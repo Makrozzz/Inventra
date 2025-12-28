@@ -3,6 +3,8 @@ const { formatResponse } = require('../utils/helpers');
 const logger = require('../utils/logger');
 const pdfGenerator = require('../utils/pdfGenerator');
 const path = require('path');
+const multer = require('multer');
+const fs = require('fs');
 
 /**
  * Get all PM records
@@ -247,15 +249,15 @@ const getAllCategories = async (req, res, next) => {
  */
 const createChecklistItem = async (req, res, next) => {
   try {
-    const { categoryId, checkItem, checkItemLong } = req.body;
+    const { categoryId, checkItemLong } = req.body;
 
-    if (!categoryId || !checkItem) {
+    if (!categoryId || !checkItemLong) {
       return res.status(400).json({
         error: 'Category ID and check item are required'
       });
     }
 
-    const checklistId = await PMaintenance.createChecklistItem(categoryId, checkItem, checkItemLong);
+    const checklistId = await PMaintenance.createChecklistItem(categoryId, checkItemLong);
 
     res.status(201).json({
       success: true,
@@ -277,15 +279,15 @@ const createChecklistItem = async (req, res, next) => {
 const updateChecklistItem = async (req, res, next) => {
   try {
     const { checklistId } = req.params;
-    const { checkItem, checkItemLong } = req.body;
+    const { checkItemLong } = req.body;
 
-    if (!checkItem) {
+    if (!checkItemLong) {
       return res.status(400).json({
         error: 'Check item is required'
       });
     }
 
-    const success = await PMaintenance.updateChecklistItem(checklistId, checkItem, checkItemLong);
+    const success = await PMaintenance.updateChecklistItem(checklistId, checkItemLong);
 
     if (!success) {
       return res.status(404).json({
@@ -728,6 +730,162 @@ const getBlankPMReport = async (req, res, next) => {
   }
 };
 
+// Configure multer for acknowledgement PDF uploads
+const acknowledgeStorage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    const uploadDir = 'uploads/signed-pm-reports';
+    // Ensure directory exists
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+    cb(null, uploadDir);
+  },
+  filename: async function (req, file, cb) {
+    try {
+      const pmId = req.params.pmId;
+      
+      // Fetch Asset Serial Number from database
+      const pmData = await PMaintenance.getDetailedPM(pmId);
+      
+      if (!pmData || !pmData.Asset_Serial_Number) {
+        return cb(new Error('PM record or Asset Serial Number not found'));
+      }
+      
+      const serialNumber = pmData.Asset_Serial_Number;
+      const timestamp = Date.now();
+      const ext = path.extname(file.originalname);
+      
+      const filename = `PM${pmId}_Acknowledgement_${serialNumber}_${timestamp}${ext}`;
+      cb(null, filename);
+    } catch (error) {
+      cb(error);
+    }
+  }
+});
+
+const acknowledgeUpload = multer({
+  storage: acknowledgeStorage,
+  limits: {
+    fileSize: 10 * 1024 * 1024 // 10MB limit
+  },
+  fileFilter: function (req, file, cb) {
+    // Only accept PDF files
+    if (file.mimetype === 'application/pdf') {
+      cb(null, true);
+    } else {
+      cb(new Error('Only PDF files are allowed'));
+    }
+  }
+});
+
+/**
+ * Upload recipient acknowledgement PDF
+ */
+const uploadAcknowledgement = [
+  acknowledgeUpload.single('acknowledgement'),
+  async (req, res) => {
+    try {
+      const pmId = parseInt(req.params.pmId);
+
+      if (!req.file) {
+        return res.status(400).json({
+          success: false,
+          error: 'No file uploaded'
+        });
+      }
+
+      // Update database with file path
+      const filePath = req.file.path.replace(/\\/g, '/');
+      const updated = await PMaintenance.updateAcknowledgementPath(pmId, filePath);
+
+      if (!updated) {
+        // Delete uploaded file if database update fails
+        fs.unlinkSync(req.file.path);
+        return res.status(404).json({
+          success: false,
+          error: 'PM record not found'
+        });
+      }
+
+      logger.info(`Acknowledgement uploaded for PM #${pmId}: ${filePath}`);
+
+      res.status(200).json({
+        success: true,
+        message: 'Acknowledgement uploaded successfully',
+        filePath: filePath
+      });
+    } catch (error) {
+      // Clean up uploaded file on error
+      if (req.file) {
+        try {
+          fs.unlinkSync(req.file.path);
+        } catch (unlinkError) {
+          logger.error('Error deleting file after upload failure:', unlinkError);
+        }
+      }
+
+      logger.error('Error in uploadAcknowledgement:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to upload acknowledgement',
+        message: error.message
+      });
+    }
+  }
+];
+
+/**
+ * Delete recipient acknowledgement PDF
+ */
+const deleteAcknowledgement = async (req, res) => {
+  try {
+    const pmId = parseInt(req.params.pmId);
+
+    // Get current file path from database
+    const pmData = await PMaintenance.getDetailedPM(pmId);
+    
+    if (!pmData) {
+      return res.status(404).json({
+        success: false,
+        error: 'PM record not found'
+      });
+    }
+
+    // Delete file from disk if it exists
+    if (pmData.file_path_acknowledgement) {
+      const filePath = pmData.file_path_acknowledgement;
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+        logger.info(`Deleted acknowledgement file: ${filePath}`);
+      }
+    }
+
+    // Set database field to NULL
+    const updated = await PMaintenance.updateAcknowledgementPath(pmId, null);
+
+    if (!updated) {
+      return res.status(404).json({
+        success: false,
+        error: 'Failed to update database'
+      });
+    }
+
+    logger.info(`Acknowledgement deleted for PM #${pmId}`);
+
+    res.status(200).json({
+      success: true,
+      message: 'Acknowledgement deleted successfully'
+    });
+  } catch (error) {
+    logger.error('Error in deleteAcknowledgement:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to delete acknowledgement',
+      message: error.message
+    });
+  }
+};
+
 module.exports = {
   getAllPM,
   getPMStatistics,
@@ -749,5 +907,7 @@ module.exports = {
   createCategory,
   getPMReport,
   getBlankPMReport,
-  bulkDownloadPM
+  bulkDownloadPM,
+  uploadAcknowledgement,
+  deleteAcknowledgement
 };

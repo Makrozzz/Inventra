@@ -20,7 +20,9 @@ const {
   getPMReport,
   getBlankPMReport,
   bulkDownloadPM,
-  deletePM
+  deletePM,
+  uploadAcknowledgement,
+  deleteAcknowledgement
 } = require('../controllers/pmController');
 const { authenticateToken } = require('../middleware/auth');
 
@@ -81,6 +83,8 @@ router.get('/asset/:assetId/blank-report', getBlankPMReport);
 router.post('/bulk-download', bulkDownloadPM);
 
 router.post('/', authenticateToken, createPM);
+router.post('/:pmId/upload-acknowledgement', uploadAcknowledgement);
+router.delete('/:pmId/delete-acknowledgement', deleteAcknowledgement);
 router.delete('/:pmId', deletePM);
 
 // Checklist Management Routes

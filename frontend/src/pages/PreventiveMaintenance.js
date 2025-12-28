@@ -65,9 +65,7 @@ const PreventiveMaintenance = () => {
   const [selectedCategoryForEdit, setSelectedCategoryForEdit] = useState('');
   const [checklistItemsForEdit, setChecklistItemsForEdit] = useState([]);
   const [editingItemId, setEditingItemId] = useState(null);
-  const [editingItemText, setEditingItemText] = useState('');
   const [editingItemTextLong, setEditingItemTextLong] = useState('');
-  const [newItemText, setNewItemText] = useState('');
   const [newItemTextLong, setNewItemTextLong] = useState('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [itemToDelete, setItemToDelete] = useState(null);
@@ -308,10 +306,10 @@ const PreventiveMaintenance = () => {
         const exists = acc[category].checklistItems.find(
           ci => ci.Checklist_ID === item.Checklist_ID
         );
-        if (!exists && item.Check_Item) {
+        if (!exists && item.Check_item_Long) {
           acc[category].checklistItems.push({
             Checklist_ID: item.Checklist_ID,
-            Check_Item: item.Check_Item
+            Check_item_Long: item.Check_item_Long
           });
         }
       });
@@ -363,7 +361,7 @@ const PreventiveMaintenance = () => {
     const categoryId = e.target.value;
     setSelectedCategoryForEdit(categoryId);
     setChecklistItemsForEdit([]);
-    setNewItemText('');
+    setNewItemTextLong('');
     setEditingItemId(null);
     
     if (!categoryId) return;
@@ -384,20 +382,17 @@ const PreventiveMaintenance = () => {
 
   const handleStartEdit = (item) => {
     setEditingItemId(item.Checklist_ID);
-    setEditingItemText(item.Check_Item);
-    setEditingItemTextLong(item.Check_item_Long || item.Check_Item);
+    setEditingItemTextLong(item.Check_item_Long);
   };
 
   const handleCancelEdit = () => {
     setEditingItemId(null);
-    setEditingItemText('');
     setEditingItemTextLong('');
   };
 
   const handleConfirmEdit = () => {
     setPendingEdit({ 
       id: editingItemId, 
-      text: editingItemText,
       textLong: editingItemTextLong 
     });
     setShowEditConfirm(true);
@@ -412,7 +407,6 @@ const PreventiveMaintenance = () => {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          checkItem: pendingEdit.text,
           checkItemLong: pendingEdit.textLong
         })
       });
@@ -424,7 +418,6 @@ const PreventiveMaintenance = () => {
       // Refresh checklist
       await handleCategoryChangeForEdit({ target: { value: selectedCategoryForEdit } });
       setEditingItemId(null);
-      setEditingItemText('');
       setEditingItemTextLong('');
       setPendingEdit(null);
     } catch (err) {
@@ -474,8 +467,8 @@ const PreventiveMaintenance = () => {
   };
 
   const handleAddNewItem = () => {
-    if (!newItemText.trim() || !newItemTextLong.trim()) {
-      alert('Please enter both short and long version of checklist item');
+    if (!newItemTextLong.trim()) {
+      alert('Please enter checklist item');
       return;
     }
     setShowAddConfirm(true);
@@ -491,7 +484,6 @@ const PreventiveMaintenance = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           categoryId: selectedCategoryForEdit,
-          checkItem: newItemText,
           checkItemLong: newItemTextLong
         })
       });
@@ -502,7 +494,6 @@ const PreventiveMaintenance = () => {
       
       // Refresh checklist
       await handleCategoryChangeForEdit({ target: { value: selectedCategoryForEdit } });
-      setNewItemText('');
       setNewItemTextLong('');
     } catch (err) {
       console.error('Error adding checklist item:', err);
@@ -517,7 +508,6 @@ const PreventiveMaintenance = () => {
     setSelectedCategoryForEdit('');
     setChecklistItemsForEdit([]);
     setEditingItemId(null);
-    setNewItemText('');
     setNewItemTextLong('');
     setShowCopyChecklist(false);
   };
@@ -594,7 +584,6 @@ const PreventiveMaintenance = () => {
           },
           body: JSON.stringify({
             categoryId: selectedCategoryForEdit,
-            checkItem: item.Check_Item,
             checkItemLong: item.Check_item_Long
           })
         });
@@ -1324,16 +1313,6 @@ const PreventiveMaintenance = () => {
                         <th style={{ minWidth: '80px', textAlign: 'center' }}>PM Count</th>
                         <th style={{ minWidth: '200px', textAlign: 'center' }}>PM Records</th>
                         <th style={{ minWidth: '140px', textAlign: 'center' }}>Actions</th>
-                        {uniqueChecklistItems.map((item) => (
-                          <th key={item.Checklist_ID} style={{
-                            minWidth: '120px',
-                            fontSize: '0.85rem',
-                            textAlign: 'center',
-                            padding: '12px 8px'
-                          }}>
-                            {item.Check_Item}
-                          </th>
-                        ))}
                       </tr>
                     </thead>
                     <tbody>
@@ -1506,20 +1485,6 @@ const PreventiveMaintenance = () => {
                                 PM
                               </button>
                             </td>
-
-                            {/* Checklist Results */}
-                            {uniqueChecklistItems.map((item) => (
-                              <td key={item.Checklist_ID} style={{
-                                textAlign: 'center',
-                                background: resultsMap[item.Checklist_ID] === 1 ? '#f0f9f4' : '#fef2f2'
-                              }}>
-                                {resultsMap[item.Checklist_ID] !== undefined ? (
-                                  getCheckResultIcon(resultsMap[item.Checklist_ID])
-                                ) : (
-                                  <span style={{ color: '#95a5a6', fontSize: '0.85rem' }}>-</span>
-                                )}
-                              </td>
-                            ))}
                           </tr>
                         );
                       })}
@@ -1579,16 +1544,6 @@ const PreventiveMaintenance = () => {
                       <th style={{ minWidth: '80px', textAlign: 'center' }}>PM Count</th>
                       <th style={{ minWidth: '200px', textAlign: 'center' }}>PM Records</th>
                       <th style={{ minWidth: '140px', textAlign: 'center' }}>Actions</th>
-                      {Array.isArray(checklistItems) && checklistItems.map((item) => (
-                        <th key={item.Checklist_ID} style={{ 
-                          minWidth: '120px', 
-                          fontSize: '0.85rem',
-                          textAlign: 'center',
-                          padding: '12px 8px'
-                        }}>
-                          {item.Check_Item}
-                        </th>
-                      ))}
                     </tr>
                   </thead>
                   <tbody>
@@ -1718,18 +1673,6 @@ const PreventiveMaintenance = () => {
                               PM
                             </button>
                           </td>
-                          {Array.isArray(checklistItems) && checklistItems.map((item) => (
-                            <td key={item.Checklist_ID} style={{ 
-                              textAlign: 'center',
-                              background: resultsMap[item.Checklist_ID] === 1 ? '#f0f9f4' : '#fef2f2'
-                            }}>
-                              {resultsMap[item.Checklist_ID] !== undefined ? (
-                                getCheckResultIcon(resultsMap[item.Checklist_ID])
-                              ) : (
-                                <span style={{ color: '#95a5a6', fontSize: '0.85rem' }}>-</span>
-                              )}
-                            </td>
-                          ))}
                         </tr>
                       );
                     })}
@@ -2430,7 +2373,7 @@ const PreventiveMaintenance = () => {
                                         marginBottom: '4px',
                                         display: 'block'
                                       }}>
-                                        Long Version
+                                        Checklist Item
                                       </label>
                                       <input
                                         type="text"
@@ -2444,32 +2387,7 @@ const PreventiveMaintenance = () => {
                                           fontSize: '0.95rem'
                                         }}
                                         autoFocus
-                                        placeholder="Enter long version"
-                                      />
-                                    </div>
-                                    <div>
-                                      <label style={{ 
-                                        fontSize: '0.75rem', 
-                                        color: '#7f8c8d', 
-                                        fontWeight: '600',
-                                        textTransform: 'uppercase',
-                                        marginBottom: '4px',
-                                        display: 'block'
-                                      }}>
-                                        Short Version
-                                      </label>
-                                      <input
-                                        type="text"
-                                        value={editingItemText}
-                                        onChange={(e) => setEditingItemText(e.target.value)}
-                                        style={{
-                                          width: '100%',
-                                          padding: '8px 12px',
-                                          border: '2px solid #667eea',
-                                          borderRadius: '4px',
-                                          fontSize: '0.95rem'
-                                        }}
-                                        placeholder="Enter short version"
+                                        placeholder="Enter checklist item"
                                       />
                                     </div>
                                   </div>
@@ -2518,48 +2436,12 @@ const PreventiveMaintenance = () => {
                                     </div>
                                   )}
                                   <div style={{ 
-                                    display: 'flex', 
-                                    gap: '12px', 
                                     flex: 1,
-                                    alignItems: 'center'
+                                    fontSize: '0.95rem', 
+                                    color: '#2c3e50',
+                                    fontWeight: '500'
                                   }}>
-                                    <div style={{ 
-                                      flex: 2, 
-                                      fontSize: '0.95rem', 
-                                      color: '#2c3e50',
-                                      fontWeight: '500'
-                                    }}>
-                                      <div style={{ 
-                                        fontSize: '0.75rem', 
-                                        color: '#7f8c8d', 
-                                        marginBottom: '4px',
-                                        fontWeight: '600',
-                                        textTransform: 'uppercase',
-                                        letterSpacing: '0.5px'
-                                      }}>
-                                        Long Version
-                                      </div>
-                                      {item.Check_item_Long || item.Check_Item}
-                                    </div>
-                                    <div style={{ 
-                                      flex: 1, 
-                                      fontSize: '0.9rem', 
-                                      color: '#5a6268',
-                                      paddingLeft: '12px',
-                                      borderLeft: '2px solid #e9ecef'
-                                    }}>
-                                      <div style={{ 
-                                        fontSize: '0.75rem', 
-                                        color: '#7f8c8d', 
-                                        marginBottom: '4px',
-                                        fontWeight: '600',
-                                        textTransform: 'uppercase',
-                                        letterSpacing: '0.5px'
-                                      }}>
-                                        Short Version
-                                      </div>
-                                      {item.Check_Item}
-                                    </div>
+                                    {item.Check_item_Long}
                                   </div>
                                   {!rearrangeMode && (
                                     <div style={{ display: 'flex', gap: '8px' }}>
@@ -2637,38 +2519,13 @@ const PreventiveMaintenance = () => {
                               marginBottom: '4px',
                               display: 'block'
                             }}>
-                              Long Version
+                              Checklist Item
                             </label>
                             <input
                               type="text"
                               value={newItemTextLong}
                               onChange={(e) => setNewItemTextLong(e.target.value)}
-                              placeholder="Enter long version of checklist item..."
-                              style={{
-                                width: '100%',
-                                padding: '10px 12px',
-                                border: '2px solid #ddd',
-                                borderRadius: '4px',
-                                fontSize: '0.95rem'
-                              }}
-                            />
-                          </div>
-                          <div>
-                            <label style={{ 
-                              fontSize: '0.75rem', 
-                              color: '#7f8c8d', 
-                              fontWeight: '600',
-                              textTransform: 'uppercase',
-                              marginBottom: '4px',
-                              display: 'block'
-                            }}>
-                              Short Version
-                            </label>
-                            <input
-                              type="text"
-                              value={newItemText}
-                              onChange={(e) => setNewItemText(e.target.value)}
-                              placeholder="Enter short version of checklist item..."
+                              placeholder="Enter checklist item..."
                               style={{
                                 width: '100%',
                                 padding: '10px 12px',
@@ -2677,7 +2534,7 @@ const PreventiveMaintenance = () => {
                                 fontSize: '0.95rem'
                               }}
                               onKeyPress={(e) => {
-                                if (e.key === 'Enter' && newItemText.trim() && newItemTextLong.trim()) {
+                                if (e.key === 'Enter' && newItemTextLong.trim()) {
                                   handleAddNewItem();
                                 }
                               }}
@@ -2685,14 +2542,14 @@ const PreventiveMaintenance = () => {
                           </div>
                           <button
                             onClick={handleAddNewItem}
-                            disabled={!newItemText.trim() || !newItemTextLong.trim()}
+                            disabled={!newItemTextLong.trim()}
                             style={{
                               padding: '10px 20px',
-                              background: (newItemText.trim() && newItemTextLong.trim()) ? '#27ae60' : '#95a5a6',
+                              background: newItemTextLong.trim() ? '#27ae60' : '#95a5a6',
                               color: 'white',
                               border: 'none',
                               borderRadius: '4px',
-                              cursor: (newItemText.trim() && newItemTextLong.trim()) ? 'pointer' : 'not-allowed',
+                              cursor: newItemTextLong.trim() ? 'pointer' : 'not-allowed',
                               display: 'flex',
                               alignItems: 'center',
                               justifyContent: 'center',
@@ -2852,29 +2709,8 @@ const PreventiveMaintenance = () => {
                                   }}
                                 >
                                   <div style={{ flex: 1 }}>
-                                    <div style={{
-                                      fontSize: '0.75rem',
-                                      color: '#7f8c8d',
-                                      marginBottom: '4px',
-                                      fontWeight: '600',
-                                      textTransform: 'uppercase'
-                                    }}>
-                                      Long Version
-                                    </div>
-                                    <div style={{ fontSize: '0.95rem', color: '#2c3e50', fontWeight: '500', marginBottom: '8px' }}>
-                                      {item.Check_item_Long || item.Check_Item}
-                                    </div>
-                                    <div style={{
-                                      fontSize: '0.75rem',
-                                      color: '#7f8c8d',
-                                      marginBottom: '4px',
-                                      fontWeight: '600',
-                                      textTransform: 'uppercase'
-                                    }}>
-                                      Short Version
-                                    </div>
-                                    <div style={{ fontSize: '0.9rem', color: '#5a6268' }}>
-                                      {item.Check_Item}
+                                    <div style={{ fontSize: '0.95rem', color: '#2c3e50', fontWeight: '500' }}>
+                                      {item.Check_item_Long}
                                     </div>
                                   </div>
                                   <button
@@ -2987,7 +2823,7 @@ const PreventiveMaintenance = () => {
               Are you sure you want to delete this checklist item?
             </p>
             <p style={{ margin: '0 0 24px 0', color: '#2c3e50', fontSize: '0.95rem', fontWeight: '600', background: '#f8f9fa', padding: '12px', borderRadius: '6px' }}>
-              "{itemToDelete?.Check_Item}"
+              "{itemToDelete?.Check_item_Long}"
             </p>
             <p style={{ margin: '0 0 24px 0', color: '#e74c3c', fontSize: '0.9rem', fontStyle: 'italic', display: 'flex', alignItems: 'center', gap: '8px' }}>
               <AlertTriangle size={16} />
@@ -3129,7 +2965,7 @@ const PreventiveMaintenance = () => {
               Are you sure you want to add this checklist item?
             </p>
             <p style={{ margin: '0 0 24px 0', color: '#2c3e50', fontSize: '0.95rem', fontWeight: '600', background: '#f8f9fa', padding: '12px', borderRadius: '6px' }}>
-              "{newItemText}"
+              "{newItemTextLong}"
             </p>
             <p style={{ margin: '0 0 24px 0', color: '#27ae60', fontSize: '0.9rem', fontStyle: 'italic' }}>
               ✓ This item will be available for all future PM records in this category.
@@ -3226,7 +3062,7 @@ const PreventiveMaintenance = () => {
                     #{index + 1}
                   </div>
                   <div style={{ fontSize: '0.9rem', color: '#2c3e50', fontWeight: '500' }}>
-                    {item.Check_item_Long || item.Check_Item}
+                    {item.Check_item_Long}
                   </div>
                 </div>
               ))}

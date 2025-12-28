@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
   ArrowLeft, CheckCircle, X, Calendar, FileText, Package, 
-  Wrench, AlertTriangle, ClipboardCheck, Download
+  Wrench, AlertTriangle, ClipboardCheck, Download, Upload, Eye, Trash2
 } from 'lucide-react';
 import PMReportDownload from '../components/PMReportDownload';
 import { API_URL } from '../config/api';
@@ -15,6 +15,12 @@ const PMDetail = () => {
   const [error, setError] = useState(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  
+  // Upload states
+  const fileInputRef = useRef(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadMessage, setUploadMessage] = useState(null);
+  const [deletingAck, setDeletingAck] = useState(false);
 
   useEffect(() => {
     fetchPMDetail();
@@ -90,6 +96,119 @@ const PMDetail = () => {
     }
   };
 
+  const handleViewAcknowledgement = () => {
+    if (pmData.file_path_acknowledgement) {
+      // Remove /api/v1 from API_URL to get base URL for static files
+      const baseUrl = API_URL.replace('/api/v1', '');
+      const fileUrl = `${baseUrl}/${pmData.file_path_acknowledgement}`;
+      window.open(fileUrl, '_blank');
+    }
+  };
+
+  const handleDeleteAcknowledgement = async () => {
+    if (!window.confirm('Are you sure you want to delete this acknowledgement file? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      setDeletingAck(true);
+      setUploadMessage(null);
+
+      const response = await fetch(`${API_URL}/pm/${pmId}/delete-acknowledgement`, {
+        method: 'DELETE'
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Delete failed');
+      }
+
+      setUploadMessage({ 
+        type: 'success', 
+        text: 'Acknowledgement deleted successfully!' 
+      });
+      
+      // Refresh PM data to update UI
+      fetchPMDetail();
+      
+      // Clear message after 5 seconds
+      setTimeout(() => setUploadMessage(null), 5000);
+    } catch (err) {
+      console.error('Error deleting acknowledgement:', err);
+      setUploadMessage({ 
+        type: 'error', 
+        text: err.message || 'Failed to delete file. Please try again.' 
+      });
+      setTimeout(() => setUploadMessage(null), 5000);
+    } finally {
+      setDeletingAck(false);
+    }
+  };
+
+  const handleFileSelect = async (event) => {
+    const file = event.target.files[0];
+    
+    if (!file) return;
+
+    // Validate file type
+    if (file.type !== 'application/pdf') {
+      setUploadMessage({ type: 'error', text: 'Please select a PDF file' });
+      setTimeout(() => setUploadMessage(null), 4000);
+      return;
+    }
+
+    // Validate file size (10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      setUploadMessage({ type: 'error', text: 'File size must be less than 10MB' });
+      setTimeout(() => setUploadMessage(null), 4000);
+      return;
+    }
+
+    try {
+      setUploading(true);
+      setUploadMessage(null);
+
+      const formData = new FormData();
+      formData.append('acknowledgement', file);
+
+      const response = await fetch(`${API_URL}/pm/${pmId}/upload-acknowledgement`, {
+        method: 'POST',
+        body: formData
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Upload failed');
+      }
+
+      setUploadMessage({ 
+        type: 'success', 
+        text: 'Acknowledgement uploaded successfully!' 
+      });
+      
+      // Refresh PM data to show updated file path
+      fetchPMDetail();
+      
+      // Clear message after 5 seconds
+      setTimeout(() => setUploadMessage(null), 5000);
+    } catch (err) {
+      console.error('Error uploading acknowledgement:', err);
+      setUploadMessage({ 
+        type: 'error', 
+        text: err.message || 'Failed to upload file. Please try again.' 
+      });
+      setTimeout(() => setUploadMessage(null), 5000);
+    } finally {
+      setUploading(false);
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
   if (loading) {
     return (
       <div className="page-container">
@@ -147,10 +266,36 @@ const PMDetail = () => {
   return (
     <div className="page-container">
       {/* Header */}
-      <div className="page-header" style={{ marginBottom: '20px' }}>
+      <div className="page-header" style={{ marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <div>
-          <button onClick={() => navigate(-1)} className="btn btn-secondary" style={{ marginBottom: '10px' }}>
-            <ArrowLeft size={16} style={{ marginRight: '5px' }} />
+          <button 
+            onClick={() => navigate(-1)}
+            style={{
+              padding: '10px 20px',
+              background: 'white',
+              color: '#667eea',
+              border: 'none',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              fontSize: '0.95rem',
+              fontWeight: '600',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '8px',
+              transition: 'all 0.3s ease',
+              boxShadow: '0 4px 15px rgba(0, 0, 0, 0.2)',
+              marginBottom: '10px'
+            }}
+            onMouseOver={(e) => {
+              e.currentTarget.style.transform = 'translateY(-2px)';
+              e.currentTarget.style.boxShadow = '0 6px 20px rgba(0, 0, 0, 0.3)';
+            }}
+            onMouseOut={(e) => {
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.boxShadow = '0 4px 15px rgba(0, 0, 0, 0.2)';
+            }}
+          >
+            <ArrowLeft size={16} />
             Back
           </button>
           <h1 className="page-title" style={{ marginTop: '10px', marginBottom: '5px' }}>
@@ -160,7 +305,148 @@ const PMDetail = () => {
             PM Record #{pmData.PM_ID}
           </p>
         </div>
+        
+        {/* Upload or View Recipient Acknowledgement Button */}
+        {pmData.file_path_acknowledgement ? (
+          // View and Delete Buttons - when file exists
+          <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
+            <button
+              onClick={handleDeleteAcknowledgement}
+              disabled={deletingAck}
+              style={{
+                padding: '12px',
+                background: 'white',
+                color: '#e74c3c',
+                border: '2px solid #e74c3c',
+                borderRadius: '8px',
+                cursor: deletingAck ? 'not-allowed' : 'pointer',
+                fontSize: '1rem',
+                fontWeight: '600',
+                display: 'flex',
+                alignItems: 'center',
+                transition: 'all 0.3s ease',
+                boxShadow: '0 4px 15px rgba(0, 0, 0, 0.2)',
+                opacity: deletingAck ? 0.6 : 1
+              }}
+              onMouseOver={(e) => {
+                if (!deletingAck) {
+                  e.currentTarget.style.background = '#e74c3c';
+                  e.currentTarget.style.color = 'white';
+                  e.currentTarget.style.transform = 'translateY(-2px)';
+                  e.currentTarget.style.boxShadow = '0 6px 20px rgba(0, 0, 0, 0.3)';
+                }
+              }}
+              onMouseOut={(e) => {
+                if (!deletingAck) {
+                  e.currentTarget.style.background = 'white';
+                  e.currentTarget.style.color = '#e74c3c';
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = '0 4px 15px rgba(0, 0, 0, 0.2)';
+                }
+              }}
+              title="Delete Acknowledgement"
+            >
+              <Trash2 size={18} />
+            </button>
+            <button
+              onClick={handleViewAcknowledgement}
+              style={{
+                padding: '12px 24px',
+                background: 'white',
+                color: '#667eea',
+                border: 'none',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                fontSize: '1rem',
+                fontWeight: '600',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                transition: 'all 0.3s ease',
+                boxShadow: '0 4px 15px rgba(0, 0, 0, 0.2)'
+              }}
+              onMouseOver={(e) => {
+                e.currentTarget.style.transform = 'translateY(-2px)';
+                e.currentTarget.style.boxShadow = '0 6px 20px rgba(0, 0, 0, 0.3)';
+              }}
+              onMouseOut={(e) => {
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = '0 4px 15px rgba(0, 0, 0, 0.2)';
+              }}
+            >
+              <Eye size={18} />
+              View Recipient Acknowledgement
+            </button>
+          </div>
+        ) : (
+          // Upload Button - when no file exists
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading}
+            style={{
+              padding: '12px 24px',
+              background: 'white',
+              color: '#667eea',
+              border: 'none',
+              borderRadius: '8px',
+              cursor: uploading ? 'not-allowed' : 'pointer',
+              fontSize: '1rem',
+              fontWeight: '600',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              transition: 'all 0.3s ease',
+              boxShadow: '0 4px 15px rgba(0, 0, 0, 0.2)',
+              marginTop: '10px',
+              opacity: uploading ? 0.6 : 1
+            }}
+            onMouseOver={(e) => {
+              if (!uploading) {
+                e.currentTarget.style.transform = 'translateY(-2px)';
+                e.currentTarget.style.boxShadow = '0 6px 20px rgba(0, 0, 0, 0.3)';
+              }
+            }}
+            onMouseOut={(e) => {
+              if (!uploading) {
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = '0 4px 15px rgba(0, 0, 0, 0.2)';
+              }
+            }}
+          >
+            <Upload size={18} />
+            {uploading ? 'Uploading...' : 'Upload Recipient Acknowledgement'}
+          </button>
+        )}
+        
+        {/* Hidden file input */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="application/pdf"
+          style={{ display: 'none' }}
+          onChange={handleFileSelect}
+        />
       </div>
+
+      {/* Upload Message */}
+      {uploadMessage && (
+        <div style={{
+          marginTop: '20px',
+          padding: '15px 20px',
+          borderRadius: '8px',
+          background: uploadMessage.type === 'success' ? '#d4edda' : '#f8d7da',
+          border: uploadMessage.type === 'success' ? '1px solid #c3e6cb' : '1px solid #f5c6cb',
+          color: uploadMessage.type === 'success' ? '#155724' : '#721c24',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '10px',
+          fontSize: '0.95rem',
+          fontWeight: '500'
+        }}>
+          {uploadMessage.type === 'success' ? <CheckCircle size={20} /> : <AlertTriangle size={20} />}
+          {uploadMessage.text}
+        </div>
+      )}
 
       {/* PM Overview Card */}
       <div className="card" style={{ marginBottom: '20px', background: 'linear-gradient(135deg, #27ae60 0%, #229954 100%)', color: 'white' }}>

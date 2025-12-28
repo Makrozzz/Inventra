@@ -179,7 +179,7 @@ class PMaintenance {
         SELECT 
           Checklist_ID,
           Category_ID,
-          Check_Item,
+          Check_item_Long,
           Display_Order
         FROM PM_CHECKLIST
         WHERE Category_ID = ?
@@ -414,7 +414,6 @@ class PMaintenance {
         SELECT 
           Checklist_ID,
           Category_ID,
-          Check_Item,
           Check_item_Long,
           Display_Order
         FROM PM_CHECKLIST
@@ -490,6 +489,7 @@ class PMaintenance {
           pm.PM_Date,
           pm.Remarks,
           pm.Status,
+          pm.file_path_acknowledgement,
           pm.Created_By,
           u.username as Created_By_Username,
           CONCAT(u.First_Name, ' ', u.Last_Name) as Created_By_Name
@@ -596,12 +596,12 @@ class PMaintenance {
   }
 
   // Create new checklist item
-  static async createChecklistItem(categoryId, checkItem, checkItemLong) {
+  static async createChecklistItem(categoryId, checkItemLong) {
     try {
       const [result] = await pool.execute(`
-        INSERT INTO PM_CHECKLIST (Category_ID, Check_Item, Check_item_Long)
-        VALUES (?, ?, ?)
-      `, [categoryId, checkItem, checkItemLong || checkItem]);
+        INSERT INTO PM_CHECKLIST (Category_ID, Check_item_Long)
+        VALUES (?, ?)
+      `, [categoryId, checkItemLong]);
       
       return result.insertId;
     } catch (error) {
@@ -611,13 +611,13 @@ class PMaintenance {
   }
 
   // Update checklist item
-  static async updateChecklistItem(checklistId, checkItem, checkItemLong) {
+  static async updateChecklistItem(checklistId, checkItemLong) {
     try {
       const [result] = await pool.execute(`
         UPDATE PM_CHECKLIST
-        SET Check_Item = ?, Check_item_Long = ?
+        SET Check_item_Long = ?
         WHERE Checklist_ID = ?
-      `, [checkItem, checkItemLong || checkItem, checklistId]);
+      `, [checkItemLong, checklistId]);
       
       return result.affectedRows > 0;
     } catch (error) {
@@ -688,6 +688,22 @@ class PMaintenance {
       return result.insertId;
     } catch (error) {
       console.error('Error in PMaintenance.createCategory:', error);
+      throw error;
+    }
+  }
+
+  // Update file_path_acknowledgement for a PM record
+  static async updateAcknowledgementPath(pmId, filePath) {
+    try {
+      const [result] = await pool.execute(`
+        UPDATE PMAINTENANCE
+        SET file_path_acknowledgement = ?
+        WHERE PM_ID = ?
+      `, [filePath, pmId]);
+      
+      return result.affectedRows > 0;
+    } catch (error) {
+      console.error('Error in PMaintenance.updateAcknowledgementPath:', error);
       throw error;
     }
   }

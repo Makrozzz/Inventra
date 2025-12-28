@@ -500,7 +500,7 @@ const SolutionPrincipal = () => {
         </div>
       )}
 
-      <style jsx>{`
+      <style>{`
         @keyframes spin {
           from {
             transform: rotate(0deg);
