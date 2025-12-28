@@ -1,9 +1,13 @@
-node_modules/
+node_modules
 
 # Environment variables
-.env
+.env.production
 backend/.env
+backend/.env.development
+backend/.env.production
 frontend/.env
+frontend/.env.production
+frontend/.env.development
 
 # Ignore backend runtime logs
 backend/logs/
@@ -11,6 +15,10 @@ backend/logs/
 
 # Ignore generated PM report PDFs (each user generates their own)
 backend/uploads/pm-reports/*.pdf
+
+# Ignore signed PM reports
+backend/uploads/signed-pm-reports/*
+!backend/uploads/signed-pm-reports/.gitkeep
 
 # OS files
 .DS_Store
