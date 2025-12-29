@@ -1535,6 +1535,16 @@ const hasAssetChanges = (existingAsset, newData) => {
     changes.push({ field: 'branch', old: existingAsset.Branch, new: newData.branch });
   }
   
+  // Compare project reference number (handle both field name formats)
+  const newProjectRefNum = newData.project_reference_num || newData.project_ref_num;
+  if (newProjectRefNum) {
+    const newProjectRef = String(newProjectRefNum).trim();
+    const oldProjectRef = String(existingAsset.Project_Ref_Number || '').trim();
+    if (newProjectRef !== oldProjectRef) {
+      changes.push({ field: 'project_reference_num', old: oldProjectRef, new: newProjectRef });
+    }
+  }
+  
   if (newData.windows !== undefined) {
     const normalizedNewWindows = normalizeNullValue(newData.windows);
     const normalizedOldWindows = normalizeNullValue(existingAsset.Windows);
@@ -1638,15 +1648,39 @@ const updateExistingAsset = async (existingAsset, newData, importCache) => {
     await Asset.linkSoftwareToAsset(assetId, normalizedSoftware);
   }
   
-  // Handle customer/branch update through inventory
-  if (newData.customer_name || newData.branch) {
-    const { pool } = require('../config/database');
-    const [inventoryRows] = await pool.execute(
-      'SELECT Inventory_ID, Customer_ID FROM INVENTORY WHERE Asset_ID = ? LIMIT 1',
-      [assetId]
-    );
+  // Handle project reference number, customer, and branch updates through inventory
+  const { pool } = require('../config/database');
+  const [inventoryRows] = await pool.execute(
+    'SELECT Inventory_ID, Project_ID, Customer_ID FROM INVENTORY WHERE Asset_ID = ? LIMIT 1',
+    [assetId]
+  );
+  
+  if (inventoryRows.length > 0) {
+    const inventoryId = inventoryRows[0].Inventory_ID;
+    const inventoryUpdates = {};
     
-    if (inventoryRows.length > 0) {
+    // Handle project reference number update (support both field name formats)
+    const projectRefNum = newData.project_reference_num || newData.project_ref_num;
+    if (projectRefNum) {
+      const projectRefNumTrimmed = String(projectRefNum).trim();
+      const [projectRows] = await pool.execute(
+        'SELECT Project_ID FROM PROJECT WHERE Project_Ref_Number = ?',
+        [projectRefNumTrimmed]
+      );
+      
+      if (projectRows.length > 0) {
+        const newProjectId = projectRows[0].Project_ID;
+        if (newProjectId !== inventoryRows[0].Project_ID) {
+          inventoryUpdates.Project_ID = newProjectId;
+          console.log(`   📋 Updating Project_ID: ${inventoryRows[0].Project_ID} → ${newProjectId} (${projectRefNumTrimmed})`);
+        }
+      } else {
+        console.warn(`   ⚠️  Project not found with reference: ${projectRefNumTrimmed}`);
+      }
+    }
+    
+    // Handle customer/branch update
+    if (newData.customer_name || newData.branch) {
       const customerName = newData.customer_name || existingAsset.Customer_Name;
       const branch = newData.branch || existingAsset.Branch;
       
@@ -1667,10 +1701,39 @@ const updateExistingAsset = async (existingAsset, newData, importCache) => {
           customerId = result.insertId;
         }
         
-        await pool.execute(
-          'UPDATE INVENTORY SET Customer_ID = ? WHERE Inventory_ID = ?',
-          [customerId, inventoryRows[0].Inventory_ID]
-        );
+        if (customerId !== inventoryRows[0].Customer_ID) {
+          inventoryUpdates.Customer_ID = customerId;
+          console.log(`   👤 Updating Customer_ID: ${inventoryRows[0].Customer_ID} → ${customerId}`);
+        }
+      }
+    }
+    
+    // Apply inventory updates if any
+    if (Object.keys(inventoryUpdates).length > 0) {
+      const updateFields = Object.keys(inventoryUpdates).map(field => `${field} = ?`).join(', ');
+      const updateValues = [...Object.values(inventoryUpdates), inventoryId];
+      
+      await pool.execute(
+        `UPDATE INVENTORY SET ${updateFields} WHERE Inventory_ID = ?`,
+        updateValues
+      );
+      console.log(`   ✅ Inventory updated successfully`);
+    }
+  } else {
+    // No inventory record exists, create one if project reference is provided
+    const projectRefNum = newData.project_reference_num || newData.project_ref_num;
+    if (projectRefNum) {
+      const projectRefNumTrimmed = String(projectRefNum).trim();
+      const customerName = newData.customer_name || existingAsset.Customer_Name || 'Unknown Customer';
+      const branch = newData.branch || existingAsset.Branch || 'Default Branch';
+      
+      console.log(`   📦 Creating inventory link for asset ${assetId} with project ${projectRefNumTrimmed}`);
+      
+      try {
+        await Asset.linkToProject(assetId, projectRefNumTrimmed, customerName, branch);
+        console.log(`   ✅ Inventory link created successfully`);
+      } catch (linkError) {
+        console.error(`   ❌ Failed to create inventory link:`, linkError.message);
       }
     }
   }
