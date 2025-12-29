@@ -819,6 +819,39 @@ class Asset {
       `);
       console.log('Revenue by category query result:', revenueByCategoryResult);
       
+      // Get warranty timeline per project
+      const [warrantyByProjectResult] = await pool.execute(`
+        SELECT 
+          p.Project_Title,
+          p.Project_Ref_Number,
+          p.Warranty,
+          p.Start_Date,
+          p.End_Date,
+          c.Customer_Name,
+          DATEDIFF(p.End_Date, CURDATE()) as days_remaining,
+          DATEDIFF(p.End_Date, p.Start_Date) as total_days,
+          DATEDIFF(CURDATE(), p.Start_Date) as days_elapsed,
+          CASE 
+            WHEN CURDATE() > p.End_Date THEN 100
+            WHEN CURDATE() < p.Start_Date THEN 0
+            ELSE ROUND((DATEDIFF(CURDATE(), p.Start_Date) / DATEDIFF(p.End_Date, p.Start_Date)) * 100, 2)
+          END as warranty_progress,
+          CASE 
+            WHEN CURDATE() > p.End_Date THEN 0
+            WHEN CURDATE() < p.Start_Date THEN 100
+            ELSE ROUND((DATEDIFF(p.End_Date, CURDATE()) / DATEDIFF(p.End_Date, p.Start_Date)) * 100, 2)
+          END as warranty_remaining_percentage,
+          COUNT(DISTINCT a.Asset_ID) as asset_count
+        FROM PROJECT p
+        LEFT JOIN INVENTORY i ON p.Project_ID = i.Project_ID
+        LEFT JOIN CUSTOMER c ON i.Customer_ID = c.Customer_ID
+        LEFT JOIN ASSET a ON i.Asset_ID = a.Asset_ID
+        WHERE p.End_Date IS NOT NULL AND a.Asset_ID IS NOT NULL
+        GROUP BY p.Project_ID
+        ORDER BY warranty_progress DESC
+      `);
+      console.log('Warranty by project query result:', warrantyByProjectResult);
+      
       // Get customer distribution (assets per customer)
       const [customerResult] = await pool.execute(`
         SELECT 
@@ -888,6 +921,20 @@ class Asset {
           category: item.Category || 'Unknown',
           revenue: item.total_revenue || 0,
           count: item.asset_count || 0
+        })),
+        warrantyByProject: warrantyByProjectResult.map(item => ({
+          project: item.Project_Title || 'Unknown',
+          customer: item.Customer_Name || 'Unknown',
+          refNumber: item.Project_Ref_Number || 'N/A',
+          warranty: item.Warranty || 'N/A',
+          startDate: item.Start_Date,
+          endDate: item.End_Date,
+          totalDays: item.total_days || 0,
+          daysElapsed: item.days_elapsed || 0,
+          daysRemaining: item.days_remaining || 0,
+          warrantyProgress: item.warranty_progress || 0,
+          warrantyRemainingPercentage: item.warranty_remaining_percentage || 0,
+          assetCount: item.asset_count || 0
         })),
         byCustomer: customerResult.map(item => ({
           customer: item.Customer_Name || 'Unknown',

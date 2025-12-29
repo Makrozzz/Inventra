@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, Package, Users, TrendingUp, BarChart3, AlertCircle, LayoutDashboard, Activity, Clock, CheckCircle, XCircle, Edit, Trash, Monitor, DollarSign } from 'lucide-react';
+import { Plus, Package, Users, TrendingUp, BarChart3, AlertCircle, LayoutDashboard, Activity, Clock, CheckCircle, XCircle, Edit, Trash, Monitor, DollarSign, Calendar } from 'lucide-react';
 import apiService from '../services/apiService';
 import './Dashboard.css';
 
@@ -87,6 +87,20 @@ const Dashboard = () => {
               revenue: item.revenue,
               count: item.count
             })).sort((a, b) => b.revenue - a.revenue) || [],
+            warrantyByProject: stats.warrantyByProject?.map((item) => ({
+              project: item.project,
+              customer: item.customer,
+              refNumber: item.refNumber,
+              warranty: item.warranty,
+              startDate: item.startDate,
+              endDate: item.endDate,
+              totalDays: item.totalDays,
+              daysElapsed: item.daysElapsed,
+              daysRemaining: item.daysRemaining,
+              warrantyProgress: item.warrantyProgress,
+              warrantyRemainingPercentage: item.warrantyRemainingPercentage,
+              assetCount: item.assetCount
+            })).sort((a, b) => b.warrantyProgress - a.warrantyProgress) || [],
             customerDistribution: stats.byCustomer || [],
             customersByCategory: stats.customersByCategory || {}
           };
@@ -188,7 +202,7 @@ const Dashboard = () => {
   }
 
   // Extract data from API response
-  const { stats, customerAssetData, modelData, revenueByCategory, customerDistribution, customersByCategory, recentAssets } = dashboardData || {};
+  const { stats, customerAssetData, modelData, revenueByCategory, warrantyByProject, customerDistribution, customersByCategory, recentAssets } = dashboardData || {};
   const { totalAssets = 0, activeAssets = 0, totalCustomers = 0, totalValue = 0, totalPeripherals = 0 } = stats || {};
 
   const maxDevices = customerAssetData?.length > 0
@@ -461,6 +475,66 @@ const Dashboard = () => {
               <div className="empty-state">
                 <div className="empty-state-icon">💰</div>
                 <p>No revenue data available</p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Warranty Timeline per Project */}
+        <div className="chart-card">
+          <div className="chart-header">
+            <h2 className="chart-title">
+              <Calendar size={24} className="chart-icon" />
+              Warranty Timeline by Project
+            </h2>
+          </div>
+          <div className="chart-container">
+            {warrantyByProject && warrantyByProject.length > 0 ? (
+              warrantyByProject.map((item, index) => {
+                const progressPct = Number(item.warrantyProgress) || 0;
+                const remainingPct = Number(item.warrantyRemainingPercentage) || 0;
+                const daysLeft = Number(item.daysRemaining) || 0;
+                const isExpired = progressPct >= 100;
+                const isExpiringSoon = remainingPct > 0 && remainingPct < 20;
+                const barColor = isExpired ? '#ef4444' : isExpiringSoon ? '#f59e0b' : '#10b981';
+                
+                return (
+                  <div key={index} className="chart-bar-item" style={{ '--index': index }}>
+                    <div className="chart-bar-info">
+                      <span className="customer-name" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '2px' }}>
+                        <span style={{ fontWeight: '600' }}>{item.customer}</span>
+                        <span style={{ fontSize: '0.85em', opacity: 0.7 }}>{item.refNumber} • {item.assetCount} asset{item.assetCount !== 1 ? 's' : ''}</span>
+                      </span>
+                      <span className="device-count" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ 
+                          fontSize: '0.9em',
+                          fontWeight: '700',
+                          color: barColor
+                        }}>
+                          {progressPct.toFixed(1)}%
+                        </span>
+                        <span style={{ fontSize: '0.85em', opacity: 0.8 }}>
+                          {isExpired ? 'Expired' : `${daysLeft} days left`}
+                        </span>
+                      </span>
+                    </div>
+                    <div className="chart-bar-container">
+                      <div
+                        className="chart-bar"
+                        style={{
+                          width: `${Math.min(Math.max(progressPct, 2), 100)}%`,
+                          background: `linear-gradient(90deg, ${barColor}, ${barColor}dd)`,
+                          transition: 'all 0.3s ease'
+                        }}
+                      ></div>
+                    </div>
+                  </div>
+                );
+              })
+            ) : (
+              <div className="empty-state">
+                <div className="empty-state-icon">📅</div>
+                <p>No warranty data available</p>
               </div>
             )}
           </div>
