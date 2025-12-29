@@ -69,12 +69,12 @@ const Dashboard = () => {
               totalAssets: stats.total || 0,
               activeAssets: activeAssetCount,
               totalCustomers: stats.totalProjects || 0, // 1 project = 1 customer
-              totalValue: 0 // Will be calculated from asset prices
+              totalValue: stats.totalValue || 0 // Total asset value from monthly prices
             },
             customerAssetData: stats.byCategory?.map((cat, index) => ({
               customer: cat.category,
               devices: cat.count.toString()
-            })) || [],
+            })).sort((a, b) => parseInt(b.devices) - parseInt(a.devices)) || [],
             customerDistribution: stats.byCustomer || [],
             customersByCategory: stats.customersByCategory || {}
           };
@@ -306,7 +306,23 @@ const Dashboard = () => {
             <BarChart3 size={40} />
           </div>
           <div className="stat-info">
-            <div className="stat-number">${totalValue.toLocaleString()}</div>
+            <div className="stat-number" style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', justifyContent: 'flex-start' }}>
+              <span style={{ 
+                fontSize: '0.5em', 
+                fontWeight: '900',
+                background: 'rgba(107, 114, 128, 0.12)',
+                border: '1px solid rgba(107, 114, 128, 0.3)',
+                color: '#000000',
+                padding: '4px 8px',
+                borderRadius: '6px',
+                letterSpacing: '1.5px',
+                textTransform: 'uppercase',
+                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)',
+                display: 'inline-block',
+                lineHeight: '1.2'
+              }}>RM</span>
+              <span style={{ letterSpacing: '1px' }}>{totalValue.toLocaleString('en-MY', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+            </div>
             <div className="stat-label">Total Value</div>
           </div>
         </div>
@@ -317,7 +333,7 @@ const Dashboard = () => {
           <div className="chart-header">
             <h2 className="chart-title">
               <BarChart3 size={24} className="chart-icon" />
-              Device Analysis by Customer
+              Device Analysis by Category
             </h2>
           </div>
           <div className="chart-container">

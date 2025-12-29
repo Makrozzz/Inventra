@@ -771,6 +771,10 @@ class Asset {
       const [totalResult] = await pool.execute('SELECT COUNT(*) as total FROM ASSET');
       console.log('Total query result:', totalResult);
       
+      // Calculate total asset value
+      const [valueResult] = await pool.execute('SELECT SUM(Monthly_Prices) as totalValue FROM ASSET WHERE Monthly_Prices IS NOT NULL');
+      console.log('Total value query result:', valueResult);
+      
       const [statusResult] = await pool.execute('SELECT Status, COUNT(*) as count FROM ASSET GROUP BY Status');
       console.log('Status query result:', statusResult);
       
@@ -833,6 +837,7 @@ class Asset {
       
       const result = {
         total: totalResult[0].total,
+        totalValue: valueResult[0].totalValue || 0,
         byStatus: statusResult.map(item => ({
           status: item.Status || 'Unknown',
           count: item.count
@@ -857,6 +862,7 @@ class Asset {
       // Return fallback data if database query fails
       return {
         total: 0,
+        totalValue: 0,
         byStatus: [],
         byCategory: [],
         byCustomer: [],
