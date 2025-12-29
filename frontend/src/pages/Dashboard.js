@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, Package, Users, TrendingUp, BarChart3, AlertCircle, LayoutDashboard } from 'lucide-react';
+import { Plus, Package, Users, TrendingUp, BarChart3, AlertCircle, LayoutDashboard, Activity, Clock, CheckCircle, XCircle, Edit, Trash } from 'lucide-react';
 import apiService from '../services/apiService';
 import './Dashboard.css';
 
 const Dashboard = () => {
   const [dashboardData, setDashboardData] = useState(null);
+  const [recentActivity, setRecentActivity] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -37,6 +38,8 @@ const Dashboard = () => {
       try {
         setLoading(true);
         setError(null);
+        
+        // Fetch dashboard statistics
         const response = await apiService.getDashboardData();
 
         console.log('Dashboard API Response:', response); // Debug log
@@ -73,15 +76,7 @@ const Dashboard = () => {
               devices: cat.count.toString()
             })) || [],
             customerDistribution: stats.byCustomer || [],
-            customersByCategory: stats.customersByCategory || {},
-            recentAssets: stats.recent?.map(asset => ({
-              id: asset.serialNumber || 'N/A',
-              name: asset.assetModelName || 'Unknown',
-              category: asset.assetCategory || 'Unknown',
-              status: asset.assetStatus || 'Unknown',
-              location: asset.assetLocation || 'Unknown',
-              value: 0 // No price in current database structure
-            })) || []
+            customersByCategory: stats.customersByCategory || {}
           };
 
           console.log('Final dashboardData:', dashboardData);
@@ -94,9 +89,20 @@ const Dashboard = () => {
             stats: { totalAssets: 0, activeAssets: 0, totalCustomers: 0, totalValue: 0 },
             customerAssetData: [],
             customerDistribution: [],
-            customersByCategory: {},
-            recentAssets: []
+            customersByCategory: {}
           });
+        }
+
+        // Fetch recent activity
+        try {
+          const activityResponse = await apiService.getRecentActivity(10);
+          if (activityResponse && activityResponse.success && activityResponse.data) {
+            setRecentActivity(activityResponse.data);
+          }
+        } catch (activityError) {
+          console.warn('Failed to fetch recent activity:', activityError);
+          // Don't fail the whole dashboard if activity fails
+          setRecentActivity([]);
         }
       } catch (err) {
         console.error('Error fetching dashboard data:', err);
@@ -447,54 +453,139 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* Recent Assets - Full Width Section */}
+      {/* Recent Activity Feed - Full Width Section */}
       <div className="chart-card" style={{ marginTop: '30px' }}>
         <div className="chart-header">
           <h2 className="chart-title">
-            <Package size={24} className="chart-icon" />
-            Recent Assets
+            <Activity size={24} className="chart-icon" />
+            Recent Activity
           </h2>
         </div>
 
-        {recentAssets && recentAssets.length > 0 ? (
-          <div className="recent-assets-grid">
-            {recentAssets.slice(0, 6).map((asset, index) => (
-              <div key={asset.id} className="recent-asset-card" style={{ '--index': index }}>
-                <div className="asset-header">
-                  <h3 className="asset-name">{asset.name}</h3>
-                  <span className={`status-badge status-${asset.status.toLowerCase()}`}>
-                    {asset.status}
-                  </span>
+        {recentActivity && recentActivity.length > 0 ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            {recentActivity.map((activity, index) => {
+              // Helper function to get icon and color based on activity type
+              const getActivityIcon = (type) => {
+                switch(type) {
+                  case 'asset_created':
+                    return { icon: <CheckCircle size={20} />, color: '#10b981', bgColor: '#d1fae5' };
+                  case 'asset_updated':
+                    return { icon: <Edit size={20} />, color: '#3b82f6', bgColor: '#dbeafe' };
+                  case 'asset_deleted':
+                    return { icon: <Trash size={20} />, color: '#ef4444', bgColor: '#fee2e2' };
+                  case 'pm_completed':
+                    return { icon: <Clock size={20} />, color: '#8b5cf6', bgColor: '#ede9fe' };
+                  case 'project_created':
+                    return { icon: <CheckCircle size={20} />, color: '#06b6d4', bgColor: '#cffafe' };
+                  default:
+                    return { icon: <Activity size={20} />, color: '#6b7280', bgColor: '#f3f4f6' };
+                }
+              };
+
+              // Helper function to format relative time
+              const getRelativeTime = (timestamp) => {
+                const now = new Date();
+                const activityTime = new Date(timestamp);
+                const diffMs = now - activityTime;
+                const diffMins = Math.floor(diffMs / 60000);
+                const diffHours = Math.floor(diffMs / 3600000);
+                const diffDays = Math.floor(diffMs / 86400000);
+
+                if (diffMins < 1) return 'Just now';
+                if (diffMins < 60) return `${diffMins} minute${diffMins > 1 ? 's' : ''} ago`;
+                if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
+                if (diffDays < 7) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+                return activityTime.toLocaleDateString();
+              };
+
+              const { icon, color, bgColor } = getActivityIcon(activity.activityType);
+
+              return (
+                <div 
+                  key={index} 
+                  style={{
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: '16px',
+                    padding: '16px',
+                    backgroundColor: '#fafafa',
+                    borderRadius: '8px',
+                    border: '1px solid #e5e7eb',
+                    transition: 'all 0.2s ease',
+                    cursor: 'default'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = '#f5f5f5';
+                    e.currentTarget.style.borderColor = '#d1d5db';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = '#fafafa';
+                    e.currentTarget.style.borderColor = '#e5e7eb';
+                  }}
+                >
+                  {/* Activity Icon */}
+                  <div style={{
+                    width: '40px',
+                    height: '40px',
+                    borderRadius: '8px',
+                    backgroundColor: bgColor,
+                    color: color,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0
+                  }}>
+                    {icon}
+                  </div>
+
+                  {/* Activity Details */}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{
+                      fontSize: '14px',
+                      color: '#111827',
+                      fontWeight: '500',
+                      marginBottom: '4px',
+                      lineHeight: '1.4'
+                    }}>
+                      {activity.description}
+                    </div>
+                    <div style={{
+                      fontSize: '13px',
+                      color: '#6b7280',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px'
+                    }}>
+                      <span>{activity.entityType}: {activity.entityName}</span>
+                      {activity.userName && (
+                        <>
+                          <span>•</span>
+                          <span>by {activity.userName}</span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Timestamp */}
+                  <div style={{
+                    fontSize: '12px',
+                    color: '#9ca3af',
+                    flexShrink: 0,
+                    textAlign: 'right'
+                  }}>
+                    {getRelativeTime(activity.timestamp)}
+                  </div>
                 </div>
-                <div className="asset-details">
-                  <div className="asset-detail">
-                    <span className="detail-label">Category:</span>
-                    <span className="detail-value">{asset.category}</span>
-                  </div>
-                  <div className="asset-detail">
-                    <span className="detail-label">Location:</span>
-                    <span className="detail-value">{asset.location}</span>
-                  </div>
-                  <div className="asset-detail">
-                    <span className="detail-label">Serial:</span>
-                    <span className="detail-value">{asset.id}</span>
-                  </div>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         ) : (
           <div className="empty-state">
-            <div className="empty-state-icon"><Package size={48} /></div>
-            <p>No recent assets available</p>
+            <div className="empty-state-icon"><Activity size={48} /></div>
+            <p>No recent activity to display</p>
           </div>
         )}
-
-        <div style={{ textAlign: 'center', marginTop: '20px', paddingTop: '20px', borderTop: '1px solid #eee' }}>
-          <Link to="/assets" className="btn btn-secondary">
-            View All Assets
-          </Link>
-        </div>
       </div>
     </div>
   );

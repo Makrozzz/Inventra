@@ -114,6 +114,10 @@ class ApiService {
     return this.makeRequest('assets/statistics');
   }
 
+  async getRecentActivity(limit = 10) {
+    return this.makeRequest(`activity/recent?limit=${limit}`);
+  }
+
   // Asset methods
   async getAllAssets(page = 1, limit = 10, filters = {}) {
     const queryParams = new URLSearchParams({

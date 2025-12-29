@@ -16,6 +16,7 @@ const optionsRoutes = require('./options');
 const historyLogRoutes = require('./historyLog');
 const recipientRoutes = require('./recipients');
 const solutionPrincipalRoutes = require('./solutionPrincipal');
+const activityRoutes = require('./activity');
 
 // Mount routes
 router.use('/assets', assetRoutes);
@@ -32,5 +33,6 @@ router.use('/options', optionsRoutes);
 router.use('/history-log', historyLogRoutes);
 router.use('/recipients', recipientRoutes);
 router.use('/solution-principals', solutionPrincipalRoutes);
+router.use('/activity', activityRoutes);
 
 module.exports = router;
