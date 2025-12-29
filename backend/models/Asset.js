@@ -790,6 +790,20 @@ class Asset {
       `);
       console.log('Category query result:', categoryResult);
       
+      // Get model distribution (assets per model)
+      const [modelResult] = await pool.execute(`
+        SELECT 
+          m.Model_Name,
+          COUNT(a.Asset_ID) as asset_count
+        FROM MODEL m
+        LEFT JOIN ASSET a ON m.Model_ID = a.Model_ID
+        WHERE a.Asset_ID IS NOT NULL
+        GROUP BY m.Model_Name
+        HAVING asset_count > 0
+        ORDER BY asset_count DESC
+      `);
+      console.log('Model distribution query result:', modelResult);
+      
       // Get customer distribution (assets per customer)
       const [customerResult] = await pool.execute(`
         SELECT 
@@ -851,6 +865,10 @@ class Asset {
           category: item.Category || 'Unknown',
           count: item.count
         })),
+        byModel: modelResult.map(item => ({
+          model: item.Model_Name || 'Unknown',
+          count: item.asset_count
+        })),
         byCustomer: customerResult.map(item => ({
           customer: item.Customer_Name || 'Unknown',
           count: item.asset_count
@@ -871,6 +889,7 @@ class Asset {
         totalPeripherals: 0,
         byStatus: [],
         byCategory: [],
+        byModel: [],
         byCustomer: [],
         customersByCategory: {}
       };

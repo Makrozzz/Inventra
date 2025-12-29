@@ -78,6 +78,10 @@ const Dashboard = () => {
               customer: cat.category,
               devices: cat.count.toString()
             })).sort((a, b) => parseInt(b.devices) - parseInt(a.devices)) || [],
+            modelData: stats.byModel?.map((model, index) => ({
+              model: model.model,
+              count: model.count
+            })).sort((a, b) => b.count - a.count) || [],
             customerDistribution: stats.byCustomer || [],
             customersByCategory: stats.customersByCategory || {}
           };
@@ -179,11 +183,15 @@ const Dashboard = () => {
   }
 
   // Extract data from API response
-  const { stats, customerAssetData, customerDistribution, customersByCategory, recentAssets } = dashboardData || {};
+  const { stats, customerAssetData, modelData, customerDistribution, customersByCategory, recentAssets } = dashboardData || {};
   const { totalAssets = 0, activeAssets = 0, totalCustomers = 0, totalValue = 0, totalPeripherals = 0 } = stats || {};
 
   const maxDevices = customerAssetData?.length > 0
     ? Math.max(...customerAssetData.map(item => parseInt(item.devices)))
+    : 0;
+
+  const maxModels = modelData?.length > 0
+    ? Math.max(...modelData.map(item => item.count))
     : 0;
 
   // Find max total assets across all customers for scaling
@@ -372,6 +380,42 @@ const Dashboard = () => {
               <div className="empty-state">
                 <div className="empty-state-icon">📊</div>
                 <p>No customer data available</p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Model Distribution Chart */}
+        <div className="chart-card">
+          <div className="chart-header">
+            <h2 className="chart-title">
+              <Package size={24} className="chart-icon" />
+              Top 10 Most Deployed Models
+            </h2>
+          </div>
+          <div className="chart-container">
+            {modelData && modelData.length > 0 ? (
+              modelData.slice(0, 10).map((item, index) => (
+                <div key={index} className="chart-bar-item" style={{ '--index': index }}>
+                  <div className="chart-bar-info">
+                    <span className="customer-name">{item.model}</span>
+                    <span className="device-count">{item.count} {item.count === 1 ? 'asset' : 'assets'}</span>
+                  </div>
+                  <div className="chart-bar-container">
+                    <div
+                      className="chart-bar"
+                      style={{
+                        width: `${(item.count / maxModels) * 100}%`,
+                        backgroundColor: `hsl(${280 + index * 25}, 65%, 55%)`
+                      }}
+                    ></div>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="empty-state">
+                <div className="empty-state-icon">📦</div>
+                <p>No model data available</p>
               </div>
             )}
           </div>
