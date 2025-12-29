@@ -101,6 +101,11 @@ const Dashboard = () => {
               warrantyRemainingPercentage: item.warrantyRemainingPercentage,
               assetCount: item.assetCount
             })).sort((a, b) => b.warrantyProgress - a.warrantyProgress) || [],
+            peripheralTypeDistribution: stats.peripheralTypeDistribution?.map((item) => ({
+              peripheralType: item.peripheralType,
+              count: item.count,
+              assetCount: item.assetCount
+            })).sort((a, b) => b.count - a.count) || [],
             customerDistribution: stats.byCustomer || [],
             customersByCategory: stats.customersByCategory || {}
           };
@@ -202,7 +207,7 @@ const Dashboard = () => {
   }
 
   // Extract data from API response
-  const { stats, customerAssetData, modelData, revenueByCategory, warrantyByProject, customerDistribution, customersByCategory, recentAssets } = dashboardData || {};
+  const { stats, customerAssetData, modelData, revenueByCategory, warrantyByProject, peripheralTypeDistribution, customerDistribution, customersByCategory, recentAssets } = dashboardData || {};
   const { totalAssets = 0, activeAssets = 0, totalCustomers = 0, totalValue = 0, totalPeripherals = 0 } = stats || {};
 
   const maxDevices = customerAssetData?.length > 0
@@ -211,6 +216,10 @@ const Dashboard = () => {
 
   const maxModels = modelData?.length > 0
     ? Math.max(...modelData.map(item => item.count))
+    : 0;
+
+  const maxPeripheralCount = peripheralTypeDistribution?.length > 0
+    ? Math.max(...peripheralTypeDistribution.map(item => item.count))
     : 0;
 
   const maxRevenue = revenueByCategory?.length > 0
@@ -373,6 +382,7 @@ const Dashboard = () => {
       </div>
 
       <div className="dashboard-charts">
+        {/* First Row - Device Analysis and Customer Distribution */}
         <div className="chart-card">
           <div className="chart-header">
             <h2 className="chart-title">
@@ -407,6 +417,111 @@ const Dashboard = () => {
             )}
           </div>
         </div>
+
+        <div className="chart-card">
+          <div className="chart-header">
+            <h2 className="chart-title">
+              <Users size={24} className="chart-icon" />
+              Customer Distribution
+            </h2>
+          </div>
+          <div className="chart-container">
+            {customersByCategory && Object.entries(customersByCategory).length > 0 ? (
+              Object.entries(customersByCategory).map(([customerName, data], index) => (
+                <div key={index} className="chart-bar-item" style={{ '--index': index }}>
+                  <div className="chart-bar-info">
+                    <span className="customer-name">{customerName}</span>
+                    <span className="device-count">{data.total} {data.total === 1 ? 'asset' : 'assets'}</span>
+                  </div>
+                  <div style={{ 
+                    display: 'flex', 
+                    width: '100%', 
+                    height: '32px',
+                    borderRadius: '8px', 
+                    overflow: 'hidden',
+                    backgroundColor: '#f3f4f6',
+                    boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.1)'
+                  }}>
+                    {data.categories.map((cat, catIndex) => {
+                      const percentage = (cat.count / data.total) * 100;
+                      const color = categoryColors[cat.category] || '#94a3b8';
+                      return (
+                        <div
+                          key={catIndex}
+                          style={{
+                            width: `${percentage}%`,
+                            backgroundColor: color,
+                            height: '100%',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            position: 'relative',
+                            transition: 'all 0.3s ease',
+                            cursor: 'pointer',
+                            minWidth: percentage > 0 ? '2px' : '0',
+                            borderRight: catIndex < data.categories.length - 1 ? '1px solid rgba(255,255,255,0.3)' : 'none'
+                          }}
+                          title={`${cat.category}: ${cat.count} assets (${percentage.toFixed(1)}%)`}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.opacity = '0.85';
+                            e.currentTarget.style.transform = 'scaleY(1.05)';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.opacity = '1';
+                            e.currentTarget.style.transform = 'scaleY(1)';
+                          }}
+                        >
+                          {percentage > 8 && (
+                            <span style={{ 
+                              color: 'white', 
+                              fontSize: '11px', 
+                              fontWeight: '700',
+                              textShadow: '0 1px 2px rgba(0,0,0,0.5)',
+                              userSelect: 'none'
+                            }}>
+                              {cat.count}
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="empty-state">
+                <div className="empty-state-icon">👥</div>
+                <p>No customer distribution data available</p>
+              </div>
+            )}
+            
+            {/* Category Legend */}
+            {customersByCategory && Object.keys(customersByCategory).length > 0 && Object.keys(categoryColors).length > 0 && (
+              <div style={{ 
+                marginTop: '20px', 
+                paddingTop: '15px', 
+                borderTop: '1px solid #e5e7eb',
+                display: 'flex',
+                flexWrap: 'wrap',
+                gap: '12px'
+              }}>
+                {Object.entries(categoryColors).sort(([a], [b]) => a.localeCompare(b)).map(([category, color]) => (
+                  <div key={category} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <div style={{ 
+                      width: '12px', 
+                      height: '12px', 
+                      backgroundColor: color,
+                      borderRadius: '3px'
+                    }}></div>
+                    <span style={{ fontSize: '13px', color: '#6b7280' }}>{category}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        
 
         {/* Model Distribution Chart */}
         <div className="chart-card">
@@ -539,106 +654,34 @@ const Dashboard = () => {
             )}
           </div>
         </div>
-
-        {/* Customer Distribution Chart */}
+        {/* Peripheral Type Distribution */}
         <div className="chart-card">
           <div className="chart-header">
             <h2 className="chart-title">
-              <Users size={24} className="chart-icon" />
-              Customer Distribution
+              <Monitor size={24} className="chart-icon" />
+              Peripheral Type Distribution
             </h2>
           </div>
           <div className="chart-container">
-            {customersByCategory && Object.entries(customersByCategory).length > 0 ? (
-              Object.entries(customersByCategory).map(([customerName, data], index) => (
+            {peripheralTypeDistribution && peripheralTypeDistribution.length > 0 ? (
+              peripheralTypeDistribution.map((item, index) => (
                 <div key={index} className="chart-bar-item" style={{ '--index': index }}>
                   <div className="chart-bar-info">
-                    <span className="customer-name">{customerName}</span>
-                    <span className="device-count">{data.total} {data.total === 1 ? 'asset' : 'assets'}</span>
+                    <span className="customer-name">{item.peripheralType}</span>
+                    <span className="device-count">{item.count} peripheral{item.count !== 1 ? 's' : ''} ({item.assetCount} asset{item.assetCount !== 1 ? 's' : ''})</span>
                   </div>
-                  <div style={{ 
-                    display: 'flex', 
-                    width: '100%', 
-                    height: '32px',
-                    borderRadius: '8px', 
-                    overflow: 'hidden',
-                    backgroundColor: '#f3f4f6',
-                    boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.1)'
-                  }}>
-                    {data.categories.map((cat, catIndex) => {
-                      const percentage = (cat.count / data.total) * 100;
-                      const color = categoryColors[cat.category] || '#94a3b8';
-                      return (
-                        <div
-                          key={catIndex}
-                          style={{
-                            width: `${percentage}%`,
-                            backgroundColor: color,
-                            height: '100%',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            position: 'relative',
-                            transition: 'all 0.3s ease',
-                            cursor: 'pointer',
-                            minWidth: percentage > 0 ? '2px' : '0',
-                            borderRight: catIndex < data.categories.length - 1 ? '1px solid rgba(255,255,255,0.3)' : 'none'
-                          }}
-                          title={`${cat.category}: ${cat.count} assets (${percentage.toFixed(1)}%)`}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.opacity = '0.85';
-                            e.currentTarget.style.transform = 'scaleY(1.05)';
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.opacity = '1';
-                            e.currentTarget.style.transform = 'scaleY(1)';
-                          }}
-                        >
-                          {percentage > 8 && (
-                            <span style={{ 
-                              color: 'white', 
-                              fontSize: '11px', 
-                              fontWeight: '700',
-                              textShadow: '0 1px 2px rgba(0,0,0,0.5)',
-                              userSelect: 'none'
-                            }}>
-                              {cat.count}
-                            </span>
-                          )}
-                        </div>
-                      );
-                    })}
+                  <div className="chart-bar-container">
+                    <div className="chart-bar" style={{
+                      width: `${(item.count / maxPeripheralCount) * 100}%`,
+                      background: `linear-gradient(90deg, hsl(${180 + index * 20}, 65%, 55%), hsl(${180 + index * 20}, 65%, 65%))`
+                    }}></div>
                   </div>
                 </div>
               ))
             ) : (
               <div className="empty-state">
-                <div className="empty-state-icon">👥</div>
-                <p>No customer distribution data available</p>
-              </div>
-            )}
-            
-            {/* Category Legend */}
-            {customersByCategory && Object.keys(customersByCategory).length > 0 && Object.keys(categoryColors).length > 0 && (
-              <div style={{ 
-                marginTop: '20px', 
-                paddingTop: '15px', 
-                borderTop: '1px solid #e5e7eb',
-                display: 'flex',
-                flexWrap: 'wrap',
-                gap: '12px'
-              }}>
-                {Object.entries(categoryColors).sort(([a], [b]) => a.localeCompare(b)).map(([category, color]) => (
-                  <div key={category} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <div style={{ 
-                      width: '12px', 
-                      height: '12px', 
-                      backgroundColor: color,
-                      borderRadius: '3px'
-                    }}></div>
-                    <span style={{ fontSize: '13px', color: '#6b7280' }}>{category}</span>
-                  </div>
-                ))}
+                <div className="empty-state-icon">🖱️</div>
+                <p>No peripheral type data available</p>
               </div>
             )}
           </div>

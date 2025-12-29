@@ -852,6 +852,21 @@ class Asset {
       `);
       console.log('Warranty by project query result:', warrantyByProjectResult);
       
+      // Get peripheral type distribution
+      const [peripheralTypeResult] = await pool.execute(`
+        SELECT 
+          pt.Peripheral_Type_Name,
+          COUNT(p.Peripheral_ID) as peripheral_count,
+          COUNT(DISTINCT p.Asset_ID) as asset_count
+        FROM PERIPHERAL_TYPE pt
+        LEFT JOIN PERIPHERAL p ON pt.Peripheral_Type_ID = p.Peripheral_Type_ID
+        WHERE p.Asset_ID IS NOT NULL
+        GROUP BY pt.Peripheral_Type_Name
+        HAVING peripheral_count > 0
+        ORDER BY peripheral_count DESC
+      `);
+      console.log('Peripheral type distribution query result:', peripheralTypeResult);
+      
       // Get customer distribution (assets per customer)
       const [customerResult] = await pool.execute(`
         SELECT 
@@ -934,6 +949,11 @@ class Asset {
           daysRemaining: item.days_remaining || 0,
           warrantyProgress: item.warranty_progress || 0,
           warrantyRemainingPercentage: item.warranty_remaining_percentage || 0,
+          assetCount: item.asset_count || 0
+        })),
+        peripheralTypeDistribution: peripheralTypeResult.map(item => ({
+          peripheralType: item.Peripheral_Type_Name || 'Unknown',
+          count: item.peripheral_count || 0,
           assetCount: item.asset_count || 0
         })),
         byCustomer: customerResult.map(item => ({
