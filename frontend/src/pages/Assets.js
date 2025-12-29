@@ -115,7 +115,7 @@ const Assets = ({ onDelete }) => {
         // Default columns in specified order:
         // 1. Customer name, 2. Branch, 3. Serial number, 4. Tag ID, 5. Status
         // 6. Item name, 7. Model, 8. Category, 9. Antivirus, 10. Windows version
-        // 11. Microsoft Office version, 12. Software, 13. Recipient name
+        // 11. Microsoft Office version, 12. Software, 13. Software Name, 14. Recipient name
         const assetColumns = [
           { Field: 'Customer_Name', Type: 'varchar(255)', Label: 'Customer Name' },
           { Field: 'Branch', Type: 'varchar(255)', Label: 'Branch' },
@@ -129,6 +129,7 @@ const Assets = ({ onDelete }) => {
           { Field: 'Windows', Type: 'varchar(255)', Label: 'Windows Version' },
           { Field: 'Microsoft_Office', Type: 'varchar(255)', Label: 'Microsoft Office' },
           { Field: 'Software', Type: 'text', Label: 'Software' },
+          { Field: 'Software_Name', Type: 'text', Label: 'Software Name' },
           { Field: 'Peripheral_Type', Type: 'text', Label: 'Peripheral Name' },
           { Field: 'Peripheral_Serial', Type: 'text', Label: 'Peripheral Serial Code' },
           { Field: 'Recipient_Name', Type: 'varchar(255)', Label: 'Recipient Name' }
@@ -583,6 +584,14 @@ const Assets = ({ onDelete }) => {
       return value;
     }
     
+    // Special handling for Software_Name column - show 'None' for assets without software name
+    if (columnName === 'Software_Name') {
+      if (!value || value === '' || value === null || value === undefined) {
+        return 'None';
+      }
+      return value;
+    }
+    
     if (value === null || value === undefined) return 'N/A';
     
     // Format date columns to show only date (YYYY-MM-DD)
@@ -619,7 +628,7 @@ const Assets = ({ onDelete }) => {
       displayColumns.map(col => {
         const value = asset[col.Field];
         // Special handling for Software: empty means no software, show 'None'
-        if (col.Field === 'Software') {
+        if (col.Field === 'Software' || col.Field === 'Software_Name') {
           return value || 'None';
         }
         return value || 'N/A';

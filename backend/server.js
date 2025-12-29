@@ -1,15 +1,23 @@
+console.log('🚀 ==== SERVER.JS STARTING ==== 🚀');
 const express = require('express');
+console.log('✅ Express loaded');
 const cors = require('cors');
+console.log('✅ CORS loaded');
 const helmet = require('helmet');
 const compression = require('compression');
 const rateLimit = require('express-rate-limit');
 const path = require('path');
 require('dotenv').config({ path: __dirname + '/.env' });
+console.log('✅ Environment loaded');
 
 const logger = require('./utils/logger');
+console.log('✅ Logger loaded');
 const errorHandler = require('./middleware/errorHandler');
+console.log('✅ ErrorHandler loaded');
 const routes = require('./routes');
+console.log('✅ Routes loaded');
 const { initializeDatabase } = require('./config/database');
+console.log('✅ Database config loaded');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -140,8 +148,14 @@ app.use(errorHandler);
 // Initialize database and start server
 const startServer = async () => {
   try {
+    console.log('🔧 Starting server initialization...');
+    console.log('📍 Environment:', process.env.NODE_ENV);
+    console.log('📍 Port:', PORT);
+    
     // Try to initialize database connection (but don't fail if it doesn't work)
+    console.log('🔌 Attempting database connection...');
     await initializeDatabase();
+    console.log('✅ Database initialization complete');
     
     console.log('✨ About to start server on port:', PORT);
     
@@ -170,11 +184,23 @@ const startServer = async () => {
     }
     
   } catch (error) {
+    console.error('❌ Critical error in startServer:', error);
     logger.error('Failed to start server:', error);
     logger.warn('Database initialization failed, but server will continue:', error.message);
+    // Don't exit - try to start server anyway
+    console.log('⚠️  Attempting to start server despite errors...');
+    try {
+      const server = app.listen(PORT, '0.0.0.0', () => {
+        console.log(`🚀 Server started on port ${PORT} (with errors)`);
+      });
+    } catch (serverError) {
+      console.error('❌ Could not start server:', serverError);
+      process.exit(1);
+    }
   }
 };
 
+console.log('📋 Server script loaded, calling startServer()...');
 startServer();
 
 // Graceful shutdown

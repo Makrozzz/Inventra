@@ -86,13 +86,14 @@ class Asset {
           cust.Customer_Name,
           cust.Branch,
           GROUP_CONCAT(DISTINCT s.Software_Name SEPARATOR ', ') AS Software,
+          GROUP_CONCAT(DISTINCT s.Software_Name SEPARATOR ', ') AS Software_Name,
           GROUP_CONCAT(DISTINCT s.Price SEPARATOR ', ') AS Software_Prices,
           (SELECT GROUP_CONCAT(CONCAT(pt2.Peripheral_Type_Name, '|', COALESCE(NULLIF(per2.Serial_Code, ''), 'N/A'), '|', COALESCE(NULLIF(per2.Condition, ''), 'N/A'), '|', COALESCE(NULLIF(per2.Remarks, ''), 'N/A')) ORDER BY per2.Peripheral_ID SEPARATOR '||')
            FROM PERIPHERAL per2
            LEFT JOIN PERIPHERAL_TYPE pt2 ON per2.Peripheral_Type_ID = pt2.Peripheral_Type_ID
            WHERE per2.Asset_ID = a.Asset_ID) AS Peripheral_Data
-        FROM INVENTORY i
-        INNER JOIN ASSET a ON i.Asset_ID = a.Asset_ID
+        FROM ASSET a
+        LEFT JOIN INVENTORY i ON i.Asset_ID = a.Asset_ID
         LEFT JOIN CATEGORY c ON a.Category_ID = c.Category_ID
         LEFT JOIN MODEL m ON a.Model_ID = m.Model_ID
         LEFT JOIN RECIPIENTS r ON a.Recipients_ID = r.Recipients_ID
@@ -100,16 +101,21 @@ class Asset {
         LEFT JOIN CUSTOMER cust ON i.Customer_ID = cust.Customer_ID
         LEFT JOIN ASSET_SOFTWARE_BRIDGE asb ON a.Asset_ID = asb.Asset_ID
         LEFT JOIN SOFTWARE s ON asb.Software_ID = s.Software_ID
-        GROUP BY i.Inventory_ID, a.Asset_ID
-        ORDER BY i.Inventory_ID DESC
+        GROUP BY a.Asset_ID
+        ORDER BY a.Asset_ID DESC
       `);
       
-      console.log(`✅ Query returned ${rows.length} assets with inventory links`);
+      console.log(`✅ Query returned ${rows.length} assets (including those without inventory links)`);
       
       if (rows.length > 0) {
-        const inventoryIds = rows.map(row => row.Inventory_ID).sort((a, b) => a - b);
-        console.log(`Inventory_ID range: ${inventoryIds[0]} - ${inventoryIds[inventoryIds.length - 1]}`);
-        console.log(`Latest 5 Inventory_IDs: ${inventoryIds.slice(-5).join(', ')}`);
+        const withInventory = rows.filter(row => row.Inventory_ID !== null).length;
+        const withoutInventory = rows.length - withInventory;
+        console.log(`   - ${withInventory} assets with inventory links`);
+        console.log(`   - ${withoutInventory} assets without inventory links`);
+        
+        const assetIds = rows.map(row => row.Asset_ID).sort((a, b) => a - b);
+        console.log(`Asset_ID range: ${assetIds[0]} - ${assetIds[assetIds.length - 1]}`);
+        console.log(`Latest 5 Asset_IDs: ${assetIds.slice(-5).join(', ')}`);
       }
       
       // Post-process to extract peripheral details into separate columns
@@ -1331,6 +1337,109 @@ class Asset {
         }
       }
       console.error('Error in getOrCreateSoftware:', error);
+      throw error;
+    }
+  }
+
+  // Helper method to get or create software with price and cache support
+  static async getOrCreateSoftwareWithPrice(softwareName, price = null, cache = null) {
+    try {
+      if (!softwareName || typeof softwareName !== 'string' || softwareName.trim() === '') {
+        return null;
+      }
+
+      const cleanSoftwareName = softwareName.trim();
+      const cleanPrice = price && !isNaN(parseFloat(price)) ? parseFloat(price) : null;
+      
+      // Check cache first if provided
+      if (cache) {
+        const cached = cache.hasSoftware(cleanSoftwareName);
+        if (cached.exists) {
+          console.log(`✓ Found software in cache: "${cached.originalName}" (ID: ${cached.id})`);
+          // Update price if provided and different
+          if (cleanPrice !== null) {
+            await pool.execute(
+              'UPDATE SOFTWARE SET Price = ? WHERE Software_ID = ? AND (Price IS NULL OR Price != ?)',
+              [cleanPrice, cached.id, cleanPrice]
+            );
+          }
+          return cached.id;
+        }
+      }
+
+      console.log(`Getting or creating software with price: "${cleanSoftwareName}", Price: ${cleanPrice}`);
+
+      // Check if software exists in database (case-insensitive)
+      const [existing] = await pool.execute(
+        'SELECT Software_ID, Software_Name, Price FROM SOFTWARE WHERE LOWER(Software_Name) = LOWER(?)',
+        [cleanSoftwareName]
+      );
+      
+      if (existing.length > 0) {
+        const softwareId = existing[0].Software_ID;
+        console.log(`Found existing software: ID=${softwareId}, Name="${existing[0].Software_Name}", Current Price="${existing[0].Price}"`);
+        
+        // Update price if provided and different from existing
+        if (cleanPrice !== null && existing[0].Price !== cleanPrice) {
+          await pool.execute(
+            'UPDATE SOFTWARE SET Price = ? WHERE Software_ID = ?',
+            [cleanPrice, softwareId]
+          );
+          console.log(`✅ Updated software price: ${existing[0].Price} → ${cleanPrice}`);
+        }
+        
+        // Add to cache if provided
+        if (cache) {
+          cache.addSoftware(existing[0].Software_Name, softwareId);
+        }
+        
+        return softwareId;
+      }
+      
+      // Create new software with price
+      if (cache) {
+        const cacheCheck = cache.hasSoftware(cleanSoftwareName);
+        if (cacheCheck.exists) {
+          console.log(`⚠️  Duplicate software in import, reusing: "${cacheCheck.originalName}" (ID: ${cacheCheck.id})`);
+          return cacheCheck.id;
+        }
+      }
+      
+      // Create new software with price
+      const [result] = await pool.execute(
+        'INSERT INTO SOFTWARE (Software_Name, Price) VALUES (?, ?)',
+        [cleanSoftwareName, cleanPrice]
+      );
+      
+      const newSoftwareId = result.insertId;
+      console.log(`✅ Created new software: ID=${newSoftwareId}, Name="${cleanSoftwareName}", Price=${cleanPrice}`);
+      
+      // Add to cache
+      if (cache) {
+        cache.addSoftware(cleanSoftwareName, newSoftwareId);
+      }
+      
+      return newSoftwareId;
+    } catch (error) {
+      // Handle duplicate key error (race condition)
+      if (error.code === 'ER_DUP_ENTRY') {
+        try {
+          const [existing] = await pool.execute(
+            'SELECT Software_ID FROM SOFTWARE WHERE LOWER(Software_Name) = LOWER(?)',
+            [softwareName.trim()]
+          );
+          if (existing.length > 0) {
+            const softwareId = existing[0].Software_ID;
+            if (cache) {
+              cache.addSoftware(softwareName.trim(), softwareId);
+            }
+            return softwareId;
+          }
+        } catch (retryError) {
+          console.error('Error in retry after duplicate:', retryError);
+        }
+      }
+      console.error('Error in getOrCreateSoftwareWithPrice:', error);
       throw error;
     }
   }

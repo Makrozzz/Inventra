@@ -321,9 +321,37 @@ const createAssetWithDetails = async (req, res, next, importCache = null) => {
     }
 
     console.log('Linking software...');
-    // Step 5.5: Link software to asset if provided (supports both single string and array) with cache support
-    if (completeData.software) {
-      // Handle both array (new format) and string (legacy format)
+    // Step 5.5: Link software to asset if provided (supports software name with price) with cache support
+    if (completeData.softwareWithPrice && Array.isArray(completeData.softwareWithPrice)) {
+      // New format: software with name and price
+      console.log(`Processing ${completeData.softwareWithPrice.length} software item(s) with prices:`, completeData.softwareWithPrice);
+      
+      for (const softwareItem of completeData.softwareWithPrice) {
+        if (softwareItem.name && softwareItem.name.trim() && softwareItem.name.toLowerCase() !== 'none') {
+          try {
+            // Get or create software with price
+            const softwareId = await Asset.getOrCreateSoftwareWithPrice(
+              softwareItem.name.trim(), 
+              softwareItem.price, 
+              importCache
+            );
+            
+            if (softwareId) {
+              // Link software to asset
+              await pool.execute(
+                'INSERT IGNORE INTO ASSET_SOFTWARE_BRIDGE (Asset_ID, Software_ID) VALUES (?, ?)',
+                [newAsset.Asset_ID, softwareId]
+              );
+              console.log(`✅ Linked software: ${softwareItem.name} (ID: ${softwareId}, Price: ${softwareItem.price || 'N/A'})`);
+            }
+          } catch (softwareError) {
+            console.log(`Failed to link software "${softwareItem.name}":`, softwareError.message);
+            // Continue with other software
+          }
+        }
+      }
+    } else if (completeData.software) {
+      // Legacy format: handle both array and string
       const softwareList = Array.isArray(completeData.software) 
         ? completeData.software 
         : [completeData.software];
@@ -381,7 +409,23 @@ const createAssetWithDetails = async (req, res, next, importCache = null) => {
         // Continue anyway
       }
     } else {
-      console.warn(`⚠️  Cannot link to inventory - missing project_reference_num for asset ${newAsset.Asset_ID}`);
+      console.log(`⚠️  No project reference provided - creating basic inventory record for asset ${newAsset.Asset_ID}`);
+      // Create a basic inventory record without project/customer linkage
+      // This ensures the asset appears in inventory even without a project assignment
+      try {
+        const [result] = await pool.execute(
+          'INSERT INTO INVENTORY (Asset_ID) VALUES (?)',
+          [newAsset.Asset_ID]
+        );
+        inventoryId = result.insertId;
+        console.log(`✅ CREATED BASIC INVENTORY: Asset_ID ${newAsset.Asset_ID} → Inventory_ID ${inventoryId} (no project/customer)`);
+      } catch (inventoryError) {
+        console.error('❌ Failed to create basic inventory record:', {
+          error: inventoryError.message,
+          asset_id: newAsset.Asset_ID
+        });
+        // Continue anyway - asset exists even without inventory
+      }
     }
 
     // Step 7: PM record creation - DISABLED (PM records should be created manually only)
@@ -1672,14 +1716,63 @@ const updateExistingAsset = async (existingAsset, newData, importCache) => {
     console.log(`   ℹ️  No database updates needed (only software/customer changes)`);
   }
   
-  // Handle software update
-  const normalizedSoftware = normalizeNullValue(newData.software);
-  if (normalizedSoftware && normalizedSoftware.toLowerCase() !== 'none') {
-    await Asset.linkSoftwareToAsset(assetId, normalizedSoftware);
+  // Handle software update - remove old software links and add new ones
+  // Check if we have new software data to process
+  const hasSoftwareUpdate = (newData.softwareWithPrice && newData.softwareWithPrice.length > 0) || 
+                           (newData.software && normalizeNullValue(newData.software) && normalizeNullValue(newData.software).toLowerCase() !== 'none');
+  
+  if (hasSoftwareUpdate) {
+    // STEP 1: Remove all existing software links for this asset
+    console.log(`   🗑️  Removing old software links for asset ${assetId}...`);
+    await pool.execute(
+      'DELETE FROM ASSET_SOFTWARE_BRIDGE WHERE Asset_ID = ?',
+      [assetId]
+    );
+    console.log(`   ✅ Old software links removed`);
+    
+    // STEP 2: Add new software links
+    if (newData.softwareWithPrice && newData.softwareWithPrice.length > 0) {
+      // New format: software with name and price
+      console.log(`   📦 Adding ${newData.softwareWithPrice.length} new software item(s) with prices...`);
+      
+      for (const softwareItem of newData.softwareWithPrice) {
+        if (softwareItem.name && softwareItem.name.trim() && softwareItem.name.toLowerCase() !== 'none') {
+          try {
+            // Get or create software with price
+            const softwareId = await Asset.getOrCreateSoftwareWithPrice(
+              softwareItem.name.trim(), 
+              softwareItem.price, 
+              importCache
+            );
+            
+            if (softwareId) {
+              // Link software to asset
+              await pool.execute(
+                'INSERT IGNORE INTO ASSET_SOFTWARE_BRIDGE (Asset_ID, Software_ID) VALUES (?, ?)',
+                [assetId, softwareId]
+              );
+              console.log(`   ✅ Linked software: ${softwareItem.name} (ID: ${softwareId}, Price: ${softwareItem.price || 'N/A'})`);
+            }
+          } catch (softwareError) {
+            console.log(`   ⚠️  Failed to link software "${softwareItem.name}":`, softwareError.message);
+            // Continue with other software
+          }
+        }
+      }
+    } else if (newData.software) {
+      // Legacy format: single software field
+      const normalizedSoftware = normalizeNullValue(newData.software);
+      if (normalizedSoftware && normalizedSoftware.toLowerCase() !== 'none') {
+        console.log(`   📦 Adding legacy software: ${normalizedSoftware}`);
+        await Asset.linkSoftwareToAsset(assetId, normalizedSoftware, importCache);
+        console.log(`   ✅ Software linked successfully`);
+      }
+    }
+  } else {
+    console.log(`   ℹ️  No software update required`);
   }
   
   // Handle project reference number, customer, and branch updates through inventory
-  const { pool } = require('../config/database');
   const [inventoryRows] = await pool.execute(
     'SELECT Inventory_ID, Project_ID, Customer_ID FROM INVENTORY WHERE Asset_ID = ? LIMIT 1',
     [assetId]
@@ -2117,6 +2210,32 @@ const bulkImportAssets = async (req, res, next) => {
             console.log(`✅ Processed into ${processedPeripherals.length} individual peripherals`);
           }
 
+          // Process software - handle both software name and software with price
+          let processedSoftware = null;
+          let softwareWithPrice = [];
+          
+          if (assetData.software_name || assetData.software) {
+            // New format: software_name and price as separate fields
+            if (assetData.software_name) {
+              const softwareNames = String(assetData.software_name).split(',').map(s => s.trim()).filter(s => s && s.toLowerCase() !== 'n/a' && s.toLowerCase() !== 'none');
+              const softwarePrices = assetData.price ? String(assetData.price).split(',').map(s => s.trim()) : [];
+              
+              softwareNames.forEach((name, idx) => {
+                softwareWithPrice.push({
+                  name: name,
+                  price: softwarePrices[idx] || null
+                });
+              });
+              
+              console.log(`📦 Processed ${softwareWithPrice.length} software items with prices:`, softwareWithPrice);
+            } 
+            // Legacy format: single software field
+            else if (assetData.software) {
+              processedSoftware = assetData.software;
+              console.log(`📦 Processing legacy software field:`, processedSoftware);
+            }
+          }
+
           // Set default values
           const processedAsset = {
             project_reference_num: String(assetData.project_reference_num || assetData.project_ref_num || '').trim(),
@@ -2135,6 +2254,8 @@ const bulkImportAssets = async (req, res, next) => {
             windows: assetData.windows || null,
             microsoft_office: assetData.microsoft_office || null,
             monthly_prices: assetData.monthly_prices || null,
+            software: processedSoftware,
+            softwareWithPrice: softwareWithPrice.length > 0 ? softwareWithPrice : null,
             peripherals: processedPeripherals
           };
 
