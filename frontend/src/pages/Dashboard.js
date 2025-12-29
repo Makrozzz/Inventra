@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, Package, Users, TrendingUp, BarChart3, AlertCircle, LayoutDashboard, Activity, Clock, CheckCircle, XCircle, Edit, Trash, Monitor } from 'lucide-react';
+import { Plus, Package, Users, TrendingUp, BarChart3, AlertCircle, LayoutDashboard, Activity, Clock, CheckCircle, XCircle, Edit, Trash, Monitor, DollarSign } from 'lucide-react';
 import apiService from '../services/apiService';
 import './Dashboard.css';
 
@@ -82,6 +82,11 @@ const Dashboard = () => {
               model: model.model,
               count: model.count
             })).sort((a, b) => b.count - a.count) || [],
+            revenueByCategory: stats.revenueByCategory?.map((item) => ({
+              category: item.category,
+              revenue: item.revenue,
+              count: item.count
+            })).sort((a, b) => b.revenue - a.revenue) || [],
             customerDistribution: stats.byCustomer || [],
             customersByCategory: stats.customersByCategory || {}
           };
@@ -183,7 +188,7 @@ const Dashboard = () => {
   }
 
   // Extract data from API response
-  const { stats, customerAssetData, modelData, customerDistribution, customersByCategory, recentAssets } = dashboardData || {};
+  const { stats, customerAssetData, modelData, revenueByCategory, customerDistribution, customersByCategory, recentAssets } = dashboardData || {};
   const { totalAssets = 0, activeAssets = 0, totalCustomers = 0, totalValue = 0, totalPeripherals = 0 } = stats || {};
 
   const maxDevices = customerAssetData?.length > 0
@@ -192,6 +197,10 @@ const Dashboard = () => {
 
   const maxModels = modelData?.length > 0
     ? Math.max(...modelData.map(item => item.count))
+    : 0;
+
+  const maxRevenue = revenueByCategory?.length > 0
+    ? Math.max(...revenueByCategory.map(item => item.revenue))
     : 0;
 
   // Find max total assets across all customers for scaling
@@ -416,6 +425,42 @@ const Dashboard = () => {
               <div className="empty-state">
                 <div className="empty-state-icon">📦</div>
                 <p>No model data available</p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Revenue by Category Chart */}
+        <div className="chart-card">
+          <div className="chart-header">
+            <h2 className="chart-title">
+              <DollarSign size={24} className="chart-icon" />
+              Revenue by Category
+            </h2>
+          </div>
+          <div className="chart-container">
+            {revenueByCategory && revenueByCategory.length > 0 ? (
+              revenueByCategory.map((item, index) => (
+                <div key={index} className="chart-bar-item" style={{ '--index': index }}>
+                  <div className="chart-bar-info">
+                    <span className="customer-name">{item.category}</span>
+                    <span className="device-count">RM {item.revenue.toLocaleString('en-MY', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ({item.count} {item.count === 1 ? 'asset' : 'assets'})</span>
+                  </div>
+                  <div className="chart-bar-container">
+                    <div
+                      className="chart-bar"
+                      style={{
+                        width: `${(item.revenue / maxRevenue) * 100}%`,
+                        background: `linear-gradient(90deg, hsl(${140 + index * 20}, 70%, 50%), hsl(${140 + index * 20}, 70%, 60%))`
+                      }}
+                    ></div>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="empty-state">
+                <div className="empty-state-icon">💰</div>
+                <p>No revenue data available</p>
               </div>
             )}
           </div>

@@ -804,6 +804,21 @@ class Asset {
       `);
       console.log('Model distribution query result:', modelResult);
       
+      // Get revenue by category
+      const [revenueByCategoryResult] = await pool.execute(`
+        SELECT 
+          c.Category,
+          SUM(a.Monthly_Prices) as total_revenue,
+          COUNT(a.Asset_ID) as asset_count
+        FROM CATEGORY c
+        LEFT JOIN ASSET a ON c.Category_ID = a.Category_ID
+        WHERE a.Monthly_Prices IS NOT NULL
+        GROUP BY c.Category
+        HAVING total_revenue > 0
+        ORDER BY total_revenue DESC
+      `);
+      console.log('Revenue by category query result:', revenueByCategoryResult);
+      
       // Get customer distribution (assets per customer)
       const [customerResult] = await pool.execute(`
         SELECT 
@@ -868,6 +883,11 @@ class Asset {
         byModel: modelResult.map(item => ({
           model: item.Model_Name || 'Unknown',
           count: item.asset_count
+        })),
+        revenueByCategory: revenueByCategoryResult.map(item => ({
+          category: item.Category || 'Unknown',
+          revenue: item.total_revenue || 0,
+          count: item.asset_count || 0
         })),
         byCustomer: customerResult.map(item => ({
           customer: item.Customer_Name || 'Unknown',
