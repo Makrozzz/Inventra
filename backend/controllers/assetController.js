@@ -527,7 +527,37 @@ const updateAssetById = async (req, res, next) => {
     }
 
     // Handle Software update through bridge table (Software is not a column in ASSET table)
-    if (updateData.Software !== undefined) {
+    // Support both softwareLinks array (from Edit Asset page) and Software string (legacy)
+    if (updateData.softwareLinks !== undefined) {
+      try {
+        console.log('Updating software links (array format):', updateData.softwareLinks);
+        
+        // Remove all existing software links for this asset
+        await pool.execute(
+          'DELETE FROM ASSET_SOFTWARE_BRIDGE WHERE Asset_ID = ?',
+          [id]
+        );
+        console.log('✅ Removed existing software links');
+        
+        // Add new software links
+        if (Array.isArray(updateData.softwareLinks) && updateData.softwareLinks.length > 0) {
+          for (const software of updateData.softwareLinks) {
+            if (software.Software_ID) {
+              // Insert the software link directly using the provided ID
+              await pool.execute(
+                'INSERT INTO ASSET_SOFTWARE_BRIDGE (Asset_ID, Software_ID) VALUES (?, ?)',
+                [id, software.Software_ID]
+              );
+              console.log(`✅ Linked software ID ${software.Software_ID} (${software.Software_Name}) to asset`);
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error updating software links:', error);
+        console.warn('Could not update software links:', error.message);
+      }
+    } else if (updateData.Software !== undefined) {
+      // Legacy support for single Software string
       try {
         if (updateData.Software && updateData.Software.trim()) {
           if (updateData.Software.toLowerCase() !== 'none') {
