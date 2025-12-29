@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, Package, Users, TrendingUp, BarChart3, AlertCircle, LayoutDashboard, Activity, Clock, CheckCircle, XCircle, Edit, Trash } from 'lucide-react';
+import { Plus, Package, Users, TrendingUp, BarChart3, AlertCircle, LayoutDashboard, Activity, Clock, CheckCircle, XCircle, Edit, Trash, Monitor } from 'lucide-react';
 import apiService from '../services/apiService';
 import './Dashboard.css';
 
@@ -50,6 +50,8 @@ const Dashboard = () => {
 
           console.log('=== DASHBOARD DEBUG ===');
           console.log('stats.total:', stats.total);
+          console.log('stats.totalValue:', stats.totalValue);
+          console.log('stats.totalPeripherals:', stats.totalPeripherals);
           console.log('stats.byStatus:', stats.byStatus);
           console.log('stats.byCategory:', stats.byCategory);
           console.log('stats.byCustomer:', stats.byCustomer);
@@ -69,7 +71,8 @@ const Dashboard = () => {
               totalAssets: stats.total || 0,
               activeAssets: activeAssetCount,
               totalCustomers: stats.totalProjects || 0, // 1 project = 1 customer
-              totalValue: stats.totalValue || 0 // Total asset value from monthly prices
+              totalValue: stats.totalValue || 0, // Total asset value from monthly prices
+              totalPeripherals: stats.totalPeripherals || 0 // Total peripherals for all assets
             },
             customerAssetData: stats.byCategory?.map((cat, index) => ({
               customer: cat.category,
@@ -177,7 +180,7 @@ const Dashboard = () => {
 
   // Extract data from API response
   const { stats, customerAssetData, customerDistribution, customersByCategory, recentAssets } = dashboardData || {};
-  const { totalAssets = 0, activeAssets = 0, totalCustomers = 0, totalValue = 0 } = stats || {};
+  const { totalAssets = 0, activeAssets = 0, totalCustomers = 0, totalValue = 0, totalPeripherals = 0 } = stats || {};
 
   const maxDevices = customerAssetData?.length > 0
     ? Math.max(...customerAssetData.map(item => parseInt(item.devices)))
@@ -324,6 +327,16 @@ const Dashboard = () => {
               <span style={{ letterSpacing: '1px' }}>{totalValue.toLocaleString('en-MY', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
             </div>
             <div className="stat-label">Total Value</div>
+          </div>
+        </div>
+
+        <div className="stat-card">
+          <div className="stat-icon">
+            <Monitor size={40} />
+          </div>
+          <div className="stat-info">
+            <div className="stat-number">{totalPeripherals}</div>
+            <div className="stat-label">Total Peripherals</div>
           </div>
         </div>
       </div>

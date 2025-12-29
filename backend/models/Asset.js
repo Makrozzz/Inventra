@@ -775,6 +775,10 @@ class Asset {
       const [valueResult] = await pool.execute('SELECT SUM(Monthly_Prices) as totalValue FROM ASSET WHERE Monthly_Prices IS NOT NULL');
       console.log('Total value query result:', valueResult);
       
+      // Calculate total peripheral count for all assets
+      const [peripheralResult] = await pool.execute('SELECT COUNT(*) as totalPeripherals FROM PERIPHERAL WHERE Asset_ID IS NOT NULL');
+      console.log('Total peripheral query result:', peripheralResult);
+      
       const [statusResult] = await pool.execute('SELECT Status, COUNT(*) as count FROM ASSET GROUP BY Status');
       console.log('Status query result:', statusResult);
       
@@ -838,6 +842,7 @@ class Asset {
       const result = {
         total: totalResult[0].total,
         totalValue: valueResult[0].totalValue || 0,
+        totalPeripherals: peripheralResult[0].totalPeripherals || 0,
         byStatus: statusResult.map(item => ({
           status: item.Status || 'Unknown',
           count: item.count
@@ -863,6 +868,7 @@ class Asset {
       return {
         total: 0,
         totalValue: 0,
+        totalPeripherals: 0,
         byStatus: [],
         byCategory: [],
         byCustomer: [],
