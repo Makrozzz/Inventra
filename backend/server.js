@@ -100,6 +100,33 @@ if (process.env.NODE_ENV === 'production') {
 // API routes
 app.use('/api/v1', routes);
 
+// Debug endpoint - Check which database is being used
+app.get('/api/debug/env', (req, res) => {
+  res.json({
+    '🔍 DATABASE CONFIG': {
+      DB_NAME: process.env.DB_NAME,
+      DB_HOST: process.env.DB_HOST,
+      DB_USER: process.env.DB_USER,
+      DB_PORT: process.env.DB_PORT
+    },
+    '🌍 ENVIRONMENT': {
+      NODE_ENV: process.env.NODE_ENV,
+      PORT: process.env.PORT
+    },
+    '📂 FILE SYSTEM': {
+      currentDirectory: __dirname,
+      envFileExists: require('fs').existsSync(path.join(__dirname, '.env')),
+      envFilePath: path.join(__dirname, '.env')
+    },
+    '🔑 ALL DB VARIABLES': Object.keys(process.env)
+      .filter(key => key.startsWith('DB_'))
+      .reduce((obj, key) => {
+        obj[key] = process.env[key];
+        return obj;
+      }, {})
+  });
+});
+
 // Health check endpoint
 app.get('/api/health', (req, res) => {
   res.status(200).json({
