@@ -210,4 +210,76 @@ router.post('/antivirus', async (req, res) => {
   }
 });
 
+// Get all customers
+router.get('/customers', async (req, res) => {
+  try {
+    // Get distinct customer names with their reference numbers
+    const [rows] = await pool.execute(`
+      SELECT DISTINCT 
+        Customer_Name, 
+        Customer_Ref_Number,
+        MIN(Customer_ID) as Customer_ID
+      FROM CUSTOMER 
+      GROUP BY Customer_Name, Customer_Ref_Number
+      ORDER BY Customer_Name
+    `);
+    res.json({ success: true, customers: rows });
+  } catch (error) {
+    console.error('Error fetching customers:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch customers' });
+  }
+});
+
+// Get branches for a specific customer name
+router.get('/customer-branches/:customerName', async (req, res) => {
+  try {
+    const { customerName } = req.params;
+    const [rows] = await pool.execute(
+      'SELECT DISTINCT Branch FROM CUSTOMER WHERE Customer_Name = ? AND Branch IS NOT NULL AND Branch != "" ORDER BY Branch',
+      [customerName]
+    );
+    const branches = rows.map(row => row.Branch);
+    res.json({ success: true, branches });
+  } catch (error) {
+    console.error('Error fetching branches:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch branches' });
+  }
+});
+
+// Get all asset categories
+router.get('/asset-categories', async (req, res) => {
+  try {
+    const { customer, branch } = req.query;
+    
+    // If customer and branch are provided, filter categories by assets in that branch
+    if (customer && branch) {
+      const [rows] = await pool.execute(
+        `SELECT DISTINCT c.Category 
+         FROM CATEGORY c
+         INNER JOIN ASSET a ON c.Category_ID = a.Category_ID
+         INNER JOIN INVENTORY i ON a.Asset_ID = i.Asset_ID
+         INNER JOIN CUSTOMER cu ON i.Customer_ID = cu.Customer_ID
+         WHERE cu.Customer_Name = ? 
+         AND cu.Branch = ?
+         AND c.Category IS NOT NULL 
+         AND c.Category != ""
+         ORDER BY c.Category`,
+        [customer, branch]
+      );
+      const categories = rows.map(row => row.Category);
+      return res.json({ success: true, categories });
+    }
+    
+    // Default: return all categories
+    const [rows] = await pool.execute(
+      'SELECT DISTINCT Category_ID, Category FROM CATEGORY WHERE Category IS NOT NULL AND Category != "" ORDER BY Category'
+    );
+    const categories = rows.map(row => row.Category);
+    res.json({ success: true, categories });
+  } catch (error) {
+    console.error('Error fetching categories:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch categories' });
+  }
+});
+
 module.exports = router;

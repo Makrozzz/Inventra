@@ -11,6 +11,7 @@ import Assets from './pages/Assets';
 import AssetDetail from './pages/AssetDetail';
 import PreventiveMaintenance from './pages/PreventiveMaintenance';
 import PMDetail from './pages/PMDetail';
+import PMImport from './pages/PMImport';
 import AccountSettings from './pages/AccountSettings';
 import AuditLog from './pages/AuditLog';
 import SolutionPrincipal from './pages/SolutionPrincipal';
@@ -98,7 +99,7 @@ function App() {
   }
 
   return (
-    <Router>
+    <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <div className="app-layout">
         <Sidebar onLogout={handleLogout} onMinimizeChange={setIsSidebarMinimized} />
         <main className="main-content" style={{
@@ -116,6 +117,8 @@ function App() {
             <Route path="/assets/import" element={<CSVImport />} />
             <Route path="/asset-detail/:assetId" element={<AssetDetail />} />
             <Route path="/maintenance" element={<PreventiveMaintenance assets={assets} />} />
+            <Route path="/pm" element={<PreventiveMaintenance assets={assets} />} />
+            <Route path="/pm-import" element={<PMImport />} />
             <Route path="/maintenance/detail/:pmId" element={<PMDetail />} />
             <Route path="/models" element={<Models />} />
             <Route path="/models/specs" element={<ModelSpecifications />} />

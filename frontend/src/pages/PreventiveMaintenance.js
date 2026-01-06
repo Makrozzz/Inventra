@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Calendar, Clock, CheckCircle, AlertTriangle, Wrench, Filter, Building2, MapPin, Package, FileText, X, ClipboardCheck, Edit, Trash2, Plus, Save, Search, Download, ChevronRight, ChevronLeft, Copy, ArrowLeft, GripVertical, Hammer } from 'lucide-react';
+import { Calendar, Clock, CheckCircle, AlertTriangle, Wrench, Filter, Building2, MapPin, Package, FileText, X, ClipboardCheck, Edit, Trash2, Plus, Save, Search, Download, ChevronRight, ChevronLeft, Copy, ArrowLeft, GripVertical, Hammer, FileUp } from 'lucide-react';
 import { API_URL } from '../config/api';
 
 const PreventiveMaintenance = () => {
@@ -123,20 +123,32 @@ const PreventiveMaintenance = () => {
 
   // Initialize from URL parameters on mount
   useEffect(() => {
+    fetchStatistics();
+    fetchCustomers();
+  }, []);
+
+  // Separate effect to handle URL params after customers are loaded
+  useEffect(() => {
+    if (customers.length === 0) return;
+    
     const customerParam = searchParams.get('customer');
     const branchParam = searchParams.get('branch');
     
     if (customerParam) {
-      setSelectedCustomer(customerParam);
-      if (branchParam) {
-        // Save branch to restore after branches are fetched
-        savedBranch.current = branchParam;
+      // Find customer by name (from PMImport) or by ID
+      const customerObj = customers.find(c => 
+        c.Customer_Name === customerParam || c.Customer_ID == customerParam
+      );
+      
+      if (customerObj && customerObj.Customer_ID != selectedCustomer) {
+        setSelectedCustomer(customerObj.Customer_ID);
+        if (branchParam) {
+          // Save branch to restore after branches are fetched
+          savedBranch.current = branchParam;
+        }
       }
     }
-    
-    fetchStatistics();
-    fetchCustomers();
-  }, []);
+  }, [customers, searchParams]);
 
   useEffect(() => {
     if (selectedCustomer) {
@@ -1170,13 +1182,14 @@ const PreventiveMaintenance = () => {
               </div>
 
               {/* Horizontal Category Filter */}
-              <div style={{ marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-                <span style={{ fontWeight: '600', color: '#2c3e50', fontSize: '0.95rem', marginRight: '10px' }}>
-                  Category:
-                </span>
-                
-                {/* "All" Button */}
-                <button
+              <div style={{ marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                  <span style={{ fontWeight: '600', color: '#2c3e50', fontSize: '0.95rem', marginRight: '10px' }}>
+                    Category:
+                  </span>
+                  
+                  {/* "All" Button */}
+                  <button
                   onClick={() => setSelectedCategoryFilter('all')}
                   style={{
                     padding: '8px 16px',
@@ -1257,6 +1270,48 @@ const PreventiveMaintenance = () => {
                     </button>
                   );
                 })}
+                </div>
+
+                {/* Import Data Button */}
+                <button
+                  onClick={() => {
+                    const params = new URLSearchParams();
+                    if (selectedCustomer) {
+                      // Pass customer name instead of ID for PMImport compatibility
+                      const customer = customers.find(c => c.Customer_ID == selectedCustomer);
+                      if (customer) params.set('customer', customer.Customer_Name);
+                    }
+                    if (selectedBranch) params.set('branch', selectedBranch);
+                    navigate(`/pm-import?${params.toString()}`);
+                  }}
+                  style={{
+                    padding: '10px 20px',
+                    background: 'linear-gradient(135deg, #667eea, #764ba2)',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontSize: '0.95rem',
+                    fontWeight: '600',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    transition: 'all 0.2s',
+                    whiteSpace: 'nowrap',
+                    boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                  }}
+                  onMouseOver={(e) => {
+                    e.currentTarget.style.transform = 'translateY(-2px)';
+                    e.currentTarget.style.boxShadow = '0 4px 8px rgba(0,0,0,0.2)';
+                  }}
+                  onMouseOut={(e) => {
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
+                  }}
+                >
+                  <FileUp size={18} />
+                  Import Data
+                </button>
               </div>
 
               {/* No Results */}
