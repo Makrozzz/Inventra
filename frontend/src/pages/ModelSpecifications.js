@@ -1,8 +1,113 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Cpu, Search, Plus, ArrowLeft, AlertCircle, Package } from 'lucide-react';
+import { Cpu, Search, Plus, ArrowLeft, AlertCircle, Package, ChevronDown, ChevronUp } from 'lucide-react';
+import Pagination from '../components/Pagination';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api/v1';
+
+// Loading skeleton component
+const SkeletonCard = () => (
+  <div className="skeleton-card">
+    <div className="skeleton-header">
+      <div className="skeleton-title">
+        <div className="skeleton-bar skeleton-bar-lg" />
+        <div className="skeleton-bar skeleton-bar-md" />
+      </div>
+      <div className="skeleton-count" />
+    </div>
+    <div className="skeleton-tags">
+      {[1, 2, 3].map(i => (
+        <div key={i} className="skeleton-tag" />
+      ))}
+    </div>
+  </div>
+);
+
+// Memoized card component to prevent unnecessary re-renders
+const ModelCard = React.memo(({ model, onClick }) => {
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  const handleCardClick = (e) => {
+    if (e.target.closest('.expand-button')) {
+      return;
+    }
+    onClick(model.Model_ID);
+  };
+
+  const handleToggleExpand = (e) => {
+    e.stopPropagation();
+    setIsExpanded(!isExpanded);
+  };
+
+  return (
+    <div className="model-spec-card" onClick={handleCardClick}>
+      <div className="model-spec-header">
+        <div className="model-spec-title">
+          <h3 className="model-spec-name">
+            <Cpu size={20} color="#667eea" />
+            {model.Model_Name}
+          </h3>
+          <div className="model-spec-tags">
+            {model.Category_Name && (
+              <span className="model-tag model-tag-category">
+                {model.Category_Name}
+              </span>
+            )}
+            {model.Customer_Tags && (
+              <span className="model-tag model-tag-customer">
+                {model.Customer_Tags}
+              </span>
+            )}
+          </div>
+        </div>
+        <div className={`model-spec-count ${model.Spec_Count > 0 ? 'has-specs' : 'no-specs'}`}>
+          {model.Spec_Count}
+          <div className="model-spec-count-label">specs</div>
+        </div>
+      </div>
+
+      {model.specifications && model.specifications.length > 0 ? (
+        <div className="spec-overview-section">
+          <div className="spec-overview-header">
+            <h4 className="spec-overview-title">Specifications Overview</h4>
+            <button
+              className={`expand-button ${isExpanded ? 'expanded' : 'collapsed'}`}
+              onClick={handleToggleExpand}
+            >
+              {isExpanded ? (
+                <>
+                  <span>Collapse</span>
+                  <ChevronUp size={14} />
+                </>
+              ) : (
+                <>
+                  <span>View All ({model.specifications.length})</span>
+                  <ChevronDown size={14} />
+                </>
+              )}
+            </button>
+          </div>
+          
+          {isExpanded && (
+            <div className="specs-container-expanded">
+              {model.specifications.map((spec, index) => (
+                <div key={index} className="spec-badge">
+                  {spec.Attribute_Name || spec.Attributes_Name}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="no-specs-placeholder">
+          <Plus size={20} color="#d97706" style={{ margin: '0 auto 8px' }} />
+          <p className="no-specs-text">No specifications yet</p>
+          <p className="no-specs-subtext">Click to add specifications</p>
+        </div>
+      )}
+    </div>
+  );
+});
 
 const ModelSpecifications = () => {
   const navigate = useNavigate();
@@ -10,25 +115,60 @@ const ModelSpecifications = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('All');
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('Desktop');
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(6);
+  
+  // Hardcoded categories for instant display (no API call needed)
+  const categories = ['Router', 'Printer', 'Printer Photo', 'Server', 'Notebook', 'Laptop', 'Desktop', 'Projector', 'Scanner', 'IPAD', 'UPS'];
+  
+  // Cache for fetched data
+  const [dataCache, setDataCache] = useState({});
 
+  // Fetch models when selected category changes
   useEffect(() => {
-    fetchModelsWithSpecs();
-  }, []);
+    if (selectedCategory) {
+      // Check cache first
+      if (dataCache[selectedCategory]) {
+        setModels(dataCache[selectedCategory]);
+        setLoading(false);
+      } else {
+        fetchModelsWithSpecs(selectedCategory);
+      }
+    }
+  }, [selectedCategory]);
 
-  const fetchModelsWithSpecs = async () => {
+  // Debounce search term to reduce filtering operations
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  const fetchModelsWithSpecs = async (category) => {
     try {
       setLoading(true);
       setError(null);
       
-      const response = await fetch(`${API_URL}/models/with-specs`);
+      const url = `${API_URL}/models/with-specs?category=${encodeURIComponent(category)}`;
+      
+      const response = await fetch(url);
       
       if (!response.ok) {
         throw new Error(`Failed to fetch models: ${response.statusText}`);
       }
       
       const result = await response.json();
-      setModels(result.data || []);
+      const data = result.data || [];
+      
+      // Update models and cache
+      setModels(data);
+      setDataCache(prev => ({ ...prev, [category]: data }));
     } catch (err) {
       console.error('Error fetching models with specs:', err);
       setError(err.message || 'Failed to load models');
@@ -37,20 +177,43 @@ const ModelSpecifications = () => {
     }
   };
 
-  const handleModelClick = (modelId) => {
+  const handleModelClick = useCallback((modelId) => {
     navigate(`/models/${modelId}/add-specs`);
-  };
+  }, [navigate]);
 
-  // Get unique categories
-  const categories = ['All', ...new Set(models.map(m => m.Category_Name).filter(Boolean))];
+  // Filter models based on search term only (category filtering done by backend)
+  const filteredModels = useMemo(() => {
+    if (!debouncedSearchTerm) return models;
+    return models.filter(model => {
+      return model.Model_Name?.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+             model.Category_Name?.toLowerCase().includes(debouncedSearchTerm.toLowerCase());
+    });
+  }, [models, debouncedSearchTerm]);
 
-  // Filter models based on search term and category
-  const filteredModels = models.filter(model => {
-    const matchesSearch = model.Model_Name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         model.Category_Name?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = selectedCategory === 'All' || model.Category_Name === selectedCategory;
-    return matchesSearch && matchesCategory;
-  });
+  // Pagination calculations - memoized
+  const { totalPages, paginatedModels } = useMemo(() => {
+    const total = Math.ceil(filteredModels.length / itemsPerPage);
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    const paginated = filteredModels.slice(startIndex, endIndex);
+    return { totalPages: total, paginatedModels: paginated };
+  }, [filteredModels, currentPage, itemsPerPage]);
+
+  // Reset to page 1 when search or category changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [debouncedSearchTerm, selectedCategory]);
+
+  const handlePageChange = useCallback((page) => {
+    setCurrentPage(page);
+    // Scroll to top of the page when changing pages
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, []);
+
+  const handleItemsPerPageChange = useCallback((newItemsPerPage) => {
+    setItemsPerPage(newItemsPerPage);
+    setCurrentPage(1);
+  }, []);
 
   return (
     <div style={{ padding: '0' }}>
@@ -99,7 +262,7 @@ const ModelSpecifications = () => {
               color: 'rgba(255, 255, 255, 0.9)',
               fontSize: '16px'
             }}>
-              Manage technical specifications for all models
+              Manage technical specifications for all models • {models.length} total model{models.length !== 1 ? 's' : ''}
             </p>
           </div>
         </div>
@@ -190,21 +353,14 @@ const ModelSpecifications = () => {
       {/* Content Section */}
       <div style={{ padding: '0 32px 32px' }}>
         {loading ? (
-          <div style={{ 
-            textAlign: 'center', 
-            padding: '60px 20px',
-            color: '#6b7280'
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))',
+            gap: '24px'
           }}>
-            <div style={{
-              width: '48px',
-              height: '48px',
-              border: '4px solid #f3f4f6',
-              borderTop: '4px solid #667eea',
-              borderRadius: '50%',
-              margin: '0 auto 16px',
-              animation: 'spin 1s linear infinite'
-            }} />
-            Loading models...
+            {[...Array(6)].map((_, i) => (
+              <SkeletonCard key={i} />
+            ))}
           </div>
         ) : error ? (
           <div style={{
@@ -237,163 +393,34 @@ const ModelSpecifications = () => {
             </p>
           </div>
         ) : (
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))',
-            gap: '24px'
-          }}>
-            {filteredModels.map((model) => (
-              <div
-                key={model.Model_ID}
-                onClick={() => handleModelClick(model.Model_ID)}
-                style={{
-                  background: 'white',
-                  border: '2px solid #e5e7eb',
-                  borderRadius: '16px',
-                  padding: '24px',
-                  cursor: 'pointer',
-                  transition: 'all 0.3s ease',
-                  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)'
-                }}
-                onMouseOver={(e) => {
-                  e.currentTarget.style.borderColor = '#667eea';
-                  e.currentTarget.style.transform = 'translateY(-4px)';
-                  e.currentTarget.style.boxShadow = '0 8px 24px rgba(102, 126, 234, 0.15)';
-                }}
-                onMouseOut={(e) => {
-                  e.currentTarget.style.borderColor = '#e5e7eb';
-                  e.currentTarget.style.transform = 'translateY(0)';
-                  e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.04)';
-                }}
-              >
-                <div style={{ 
-                  display: 'flex', 
-                  alignItems: 'flex-start', 
-                  justifyContent: 'space-between',
-                  marginBottom: '16px'
-                }}>
-                  <div style={{ flex: 1 }}>
-                    <h3 style={{
-                      margin: '0 0 8px 0',
-                      fontSize: '18px',
-                      fontWeight: '600',
-                      color: '#1f2937',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px'
-                    }}>
-                      <Cpu size={20} color="#667eea" />
-                      {model.Model_Name}
-                    </h3>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '8px' }}>
-                      {model.Category_Name && (
-                        <span style={{
-                          fontSize: '13px',
-                          color: '#6b7280',
-                          background: '#f3f4f6',
-                          padding: '4px 12px',
-                          borderRadius: '6px',
-                          fontWeight: '500'
-                        }}>
-                          {model.Category_Name}
-                        </span>
-                      )}
-                      {model.Customer_Tags && (
-                        <span style={{
-                          fontSize: '13px',
-                          color: '#7c3aed',
-                          background: '#f3e8ff',
-                          padding: '4px 12px',
-                          borderRadius: '6px',
-                          fontWeight: '500',
-                          border: '1px solid #c4b5fd'
-                        }}>
-                          {model.Customer_Tags}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  <div style={{
-                    background: model.Spec_Count > 0 ? '#ecfdf5' : '#f3f4f6',
-                    color: model.Spec_Count > 0 ? '#059669' : '#6b7280',
-                    padding: '8px 12px',
-                    borderRadius: '8px',
-                    fontSize: '14px',
-                    fontWeight: '600',
-                    textAlign: 'center',
-                    minWidth: '50px'
-                  }}>
-                    {model.Spec_Count}
-                    <div style={{ fontSize: '11px', fontWeight: '400' }}>specs</div>
-                  </div>
-                </div>
-
-                {model.specifications && model.specifications.length > 0 ? (
-                  <div style={{
-                    marginTop: '16px'
-                  }}>
-                    <h4 style={{
-                      margin: '0 0 12px 0',
-                      fontSize: '12px',
-                      fontWeight: '600',
-                      color: '#6b7280',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.5px'
-                    }}>
-                      Specifications Overview
-                    </h4>
-                    <div style={{ 
-                      display: 'flex', 
-                      flexWrap: 'wrap', 
-                      gap: '8px'
-                    }}>
-                      {model.specifications.map((spec, index) => (
-                        <div key={index} style={{
-                          background: 'rgba(102, 126, 234, 0.1)',
-                          backdropFilter: 'blur(10px)',
-                          border: '1px solid rgba(102, 126, 234, 0.2)',
-                          color: '#667eea',
-                          padding: '8px 14px',
-                          borderRadius: '10px',
-                          fontSize: '13px',
-                          fontWeight: '600',
-                          boxShadow: '0 2px 8px rgba(102, 126, 234, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.5)',
-                          whiteSpace: 'nowrap'
-                        }}>
-                          {spec.Attribute_Name || spec.Attributes_Name}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ) : (
-                  <div style={{
-                    background: '#fef3c7',
-                    borderRadius: '12px',
-                    padding: '16px',
-                    marginTop: '16px',
-                    textAlign: 'center'
-                  }}>
-                    <Plus size={20} color="#d97706" style={{ margin: '0 auto 8px' }} />
-                    <p style={{
-                      margin: 0,
-                      fontSize: '13px',
-                      color: '#92400e',
-                      fontWeight: '500'
-                    }}>
-                      No specifications yet
-                    </p>
-                    <p style={{
-                      margin: '4px 0 0 0',
-                      fontSize: '12px',
-                      color: '#b45309'
-                    }}>
-                      Click to add specifications
-                    </p>
-                  </div>
-                )}
-              </div>
-            ))}
+          <>
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))',
+              gap: '24px',
+              marginBottom: '32px'
+            }}>
+              {paginatedModels.map((model) => (
+                <ModelCard 
+                  key={model.Model_ID} 
+                  model={model} 
+                  onClick={handleModelClick}
+                />
+              ))}
           </div>
+          
+          {/* Pagination */}
+          {filteredModels.length > 0 && (
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={handlePageChange}
+              itemsPerPage={itemsPerPage}
+              onItemsPerPageChange={handleItemsPerPageChange}
+              totalItems={filteredModels.length}
+            />
+          )}
+          </>
         )}
       </div>
 
@@ -402,6 +429,11 @@ const ModelSpecifications = () => {
           @keyframes spin {
             from { transform: rotate(0deg); }
             to { transform: rotate(360deg); }
+          }
+          
+          @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
           }
         `}
       </style>
