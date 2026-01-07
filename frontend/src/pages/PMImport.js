@@ -34,6 +34,12 @@ const PMImport = () => {
   const [validationResult, setValidationResult] = useState({ valid: [], invalid: [] });
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [successResults, setSuccessResults] = useState({ successful: [], failed: [], totalCount: 0 });
+  
+  // File preview states
+  const [showFilePreview, setShowFilePreview] = useState(false);
+  const [previewFile, setPreviewFile] = useState(null);
+  const [previewAssetId, setPreviewAssetId] = useState(null);
+  const [previewAssetInfo, setPreviewAssetInfo] = useState(null);
 
   // Initialize from URL parameters on mount
   useEffect(() => {
@@ -139,7 +145,25 @@ const PMImport = () => {
       );
       if (!response.ok) throw new Error('Failed to fetch assets');
       const data = await response.json();
-      setAssets(data || []);
+      
+      // Fetch PM count for each asset
+      const assetsWithPMCount = await Promise.all(
+        data.map(async (asset) => {
+          try {
+            const pmResponse = await fetch(`${API_URL}/pm/asset/${asset.Asset_ID}`);
+            if (pmResponse.ok) {
+              const pmData = await pmResponse.json();
+              return { ...asset, PM_Count: pmData.length || 0 };
+            }
+            return { ...asset, PM_Count: 0 };
+          } catch (error) {
+            console.error(`Error fetching PM count for asset ${asset.Asset_ID}:`, error);
+            return { ...asset, PM_Count: 0 };
+          }
+        })
+      );
+      
+      setAssets(assetsWithPMCount || []);
     } catch (error) {
       console.error('Error fetching assets:', error);
       alert('Failed to load assets. Please try again.');
@@ -204,14 +228,47 @@ const PMImport = () => {
     }));
   };
 
-  const handleFileChange = (assetId, file) => {
-    setPmData(prev => ({
-      ...prev,
-      [assetId]: {
-        ...prev[assetId],
-        file: file
-      }
-    }));
+  const handleFileChange = (assetId, file, assetInfo) => {
+    if (!file) {
+      // Clear file if none selected
+      setPmData(prev => ({
+        ...prev,
+        [assetId]: {
+          ...prev[assetId],
+          file: null
+        }
+      }));
+      return;
+    }
+    
+    // Show preview modal
+    setPreviewFile(file);
+    setPreviewAssetId(assetId);
+    setPreviewAssetInfo(assetInfo);
+    setShowFilePreview(true);
+  };
+  
+  const confirmFileUpload = () => {
+    if (previewFile && previewAssetId) {
+      setPmData(prev => ({
+        ...prev,
+        [previewAssetId]: {
+          ...prev[previewAssetId],
+          file: previewFile
+        }
+      }));
+    }
+    setShowFilePreview(false);
+    setPreviewFile(null);
+    setPreviewAssetId(null);
+    setPreviewAssetInfo(null);
+  };
+  
+  const cancelFileUpload = () => {
+    setShowFilePreview(false);
+    setPreviewFile(null);
+    setPreviewAssetId(null);
+    setPreviewAssetInfo(null);
   };
 
   const handleRemarksChange = (assetId, remarks) => {
@@ -1163,6 +1220,7 @@ const PMImport = () => {
                       <th style={{ padding: '12px', border: '1px solid #ddd', textAlign: 'left' }}>Serial Number</th>
                       <th style={{ padding: '12px', border: '1px solid #ddd', textAlign: 'left' }}>Tag ID</th>
                       <th style={{ padding: '12px', border: '1px solid #ddd', textAlign: 'left' }}>Asset Name</th>
+                      <th style={{ padding: '12px', border: '1px solid #ddd', textAlign: 'center', width: '100px' }}>PM Count</th>
                       <th style={{ padding: '12px', border: '1px solid #ddd', textAlign: 'left', width: '180px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', justifyContent: 'space-between' }}>
                           <span>PM Date</span>
@@ -1213,8 +1271,12 @@ const PMImport = () => {
                       })
                       .map((asset) => (
                       <React.Fragment key={asset.Asset_ID}>
-                        {/* Main Row */}
-                        <tr style={{ borderBottom: '1px solid #ddd' }}>
+                        {/* Main Row - Highlighted if file uploaded */}
+                        <tr style={{ 
+                          borderBottom: '1px solid #ddd',
+                          backgroundColor: pmData[asset.Asset_ID]?.file ? '#d4edda' : 'white',
+                          transition: 'background-color 0.3s ease'
+                        }}>
                           <td style={{ padding: '12px', border: '1px solid #ddd', textAlign: 'center' }}>
                             <button
                               onClick={() => toggleRow(asset.Asset_ID)}
@@ -1243,6 +1305,16 @@ const PMImport = () => {
                           </td>
                           <td style={{ padding: '12px', border: '1px solid #ddd' }}>
                             {asset.Item_Name}
+                          </td>
+                          <td style={{ 
+                            padding: '12px', 
+                            border: '1px solid #ddd', 
+                            textAlign: 'center',
+                            fontWeight: '600',
+                            color: asset.PM_Count > 0 ? '#27ae60' : '#95a5a6',
+                            fontSize: '1.1rem'
+                          }}>
+                            {asset.PM_Count || 0}
                           </td>
                           <td style={{ padding: '12px', border: '1px solid #ddd' }}>
                             <input
@@ -1274,14 +1346,42 @@ const PMImport = () => {
                             />
                           </td>
                           <td style={{ padding: '12px', border: '1px solid #ddd' }}>
-                            <input
-                              type="file"
-                              onChange={(e) => handleFileChange(asset.Asset_ID, e.target.files[0])}
-                              style={{
-                                width: '100%',
-                                fontSize: '0.9rem'
-                              }}
-                            />
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                              <input
+                                type="file"
+                                accept=".pdf,.jpg,.jpeg,.png"
+                                onChange={(e) => handleFileChange(
+                                  asset.Asset_ID, 
+                                  e.target.files[0],
+                                  {
+                                    serialNumber: asset.Asset_Serial_Number,
+                                    tagId: asset.Asset_Tag_ID,
+                                    name: asset.Item_Name,
+                                    model: asset.Model || asset.Model_Name || 'N/A'
+                                  }
+                                )}
+                                style={{
+                                  width: '100%',
+                                  fontSize: '0.9rem'
+                                }}
+                              />
+                              {pmData[asset.Asset_ID]?.file && (
+                                <div style={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '8px',
+                                  padding: '6px 10px',
+                                  background: '#27ae60',
+                                  color: 'white',
+                                  borderRadius: '4px',
+                                  fontSize: '0.85rem',
+                                  fontWeight: '600'
+                                }}>
+                                  <CheckCircle size={16} />
+                                  {pmData[asset.Asset_ID].file.name}
+                                </div>
+                              )}
+                            </div>
                           </td>
                         </tr>
 
@@ -1851,6 +1951,203 @@ const PMImport = () => {
                 onMouseOut={(e) => e.target.style.background = '#667eea'}
               >
                 Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* File Preview Modal */}
+      {showFilePreview && previewFile && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.7)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 2000
+        }}>
+          <div style={{
+            background: 'white',
+            borderRadius: '12px',
+            padding: '25px',
+            maxWidth: '900px',
+            width: '90%',
+            maxHeight: '90vh',
+            overflow: 'auto',
+            boxShadow: '0 10px 40px rgba(0,0,0,0.5)'
+          }}>
+            {/* Header */}
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'flex-start',
+              marginBottom: '20px',
+              paddingBottom: '15px',
+              borderBottom: '2px solid #667eea'
+            }}>
+              <div>
+                <h2 style={{ margin: '0 0 10px 0', color: '#2c3e50', fontSize: '1.5rem' }}>
+                  Preview File Before Upload
+                </h2>
+                {previewAssetInfo && (
+                  <div style={{ 
+                    background: '#e3f2fd', 
+                    padding: '12px', 
+                    borderRadius: '6px',
+                    border: '1px solid #90caf9'
+                  }}>
+                    <p style={{ margin: '4px 0', fontSize: '0.95rem', color: '#1565c0' }}>
+                      <strong>Serial Number:</strong> {previewAssetInfo.serialNumber}
+                    </p>
+                    <p style={{ margin: '4px 0', fontSize: '0.95rem', color: '#1565c0' }}>
+                      <strong>Tag ID:</strong> {previewAssetInfo.tagId}
+                    </p>
+                    <p style={{ margin: '4px 0', fontSize: '0.95rem', color: '#1565c0' }}>
+                      <strong>Asset Name:</strong> {previewAssetInfo.name}
+                    </p>
+                    <p style={{ margin: '4px 0', fontSize: '0.95rem', color: '#1565c0' }}>
+                      <strong>Model:</strong> {previewAssetInfo.model || 'N/A'}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* File Info */}
+            <div style={{
+              padding: '15px',
+              background: '#f8f9fa',
+              borderRadius: '8px',
+              marginBottom: '20px'
+            }}>
+              <p style={{ margin: '5px 0', fontSize: '0.95rem', color: '#2c3e50' }}>
+                <strong>File Name:</strong> {previewFile.name}
+              </p>
+              <p style={{ margin: '5px 0', fontSize: '0.95rem', color: '#2c3e50' }}>
+                <strong>File Size:</strong> {(previewFile.size / 1024 / 1024).toFixed(2)} MB
+              </p>
+              <p style={{ margin: '5px 0', fontSize: '0.95rem', color: '#2c3e50' }}>
+                <strong>File Type:</strong> {previewFile.type || 'Unknown'}
+              </p>
+            </div>
+
+            {/* Preview Area */}
+            <div style={{
+              marginBottom: '20px',
+              border: '2px solid #ddd',
+              borderRadius: '8px',
+              overflow: 'hidden',
+              minHeight: '500px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background: '#f5f5f5'
+            }}>
+              {previewFile.type === 'application/pdf' ? (
+                <iframe
+                  src={URL.createObjectURL(previewFile)}
+                  style={{
+                    width: '100%',
+                    height: '500px',
+                    border: 'none'
+                  }}
+                  title="PDF Preview"
+                />
+              ) : previewFile.type.startsWith('image/') ? (
+                <img
+                  src={URL.createObjectURL(previewFile)}
+                  alt="Preview"
+                  style={{
+                    maxWidth: '100%',
+                    maxHeight: '500px',
+                    objectFit: 'contain'
+                  }}
+                />
+              ) : (
+                <div style={{
+                  padding: '40px',
+                  textAlign: 'center',
+                  color: '#666'
+                }}>
+                  <AlertCircle size={48} color="#999" style={{ marginBottom: '15px' }} />
+                  <p style={{ fontSize: '1.1rem', fontWeight: '600', marginBottom: '10px' }}>Preview not available</p>
+                  <p style={{ fontSize: '0.95rem' }}>File type: {previewFile.type || 'Unknown'}</p>
+                  <p style={{ fontSize: '0.9rem', color: '#999', marginTop: '10px' }}>You can still upload this file</p>
+                </div>
+              )}
+            </div>
+
+            {/* Warning Message */}
+            <div style={{
+              padding: '15px',
+              background: '#fff3cd',
+              border: '1px solid #ffc107',
+              borderRadius: '8px',
+              marginBottom: '20px',
+              display: 'flex',
+              gap: '12px',
+              alignItems: 'flex-start'
+            }}>
+              <AlertCircle size={20} color="#856404" style={{ flexShrink: 0, marginTop: '2px' }} />
+              <div>
+                <p style={{ margin: '0 0 5px 0', fontWeight: '600', color: '#856404' }}>Please verify:</p>
+                <ul style={{ margin: 0, paddingLeft: '20px', color: '#856404', lineHeight: '1.6' }}>
+                  <li>The date in the document matches the PM date</li>
+                  <li>The Tag ID in the document matches the asset Tag ID</li>
+                  <li>The document is clear and readable</li>
+                </ul>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+              <button
+                onClick={cancelFileUpload}
+                style={{
+                  padding: '12px 30px',
+                  background: '#e74c3c',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: '1rem',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}
+                onMouseOver={(e) => e.target.style.background = '#c0392b'}
+                onMouseOut={(e) => e.target.style.background = '#e74c3c'}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmFileUpload}
+                style={{
+                  padding: '12px 30px',
+                  background: '#27ae60',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: '1rem',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}
+                onMouseOver={(e) => e.target.style.background = '#229954'}
+                onMouseOut={(e) => e.target.style.background = '#27ae60'}
+              >
+                <CheckCircle size={18} />
+                Confirm & Upload
               </button>
             </div>
           </div>

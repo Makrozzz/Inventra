@@ -410,18 +410,20 @@ class Asset {
     try {
       if (!categoryName) return currentCategoryId;
 
-      // If we have a current category ID, update that category's name
-      if (currentCategoryId) {
-        console.log('Updating existing category:', { categoryName, currentCategoryId });
-        
-        await pool.execute(
-          'UPDATE CATEGORY SET Category = ? WHERE Category_ID = ?',
-          [categoryName, currentCategoryId]
-        );
-        return currentCategoryId;
+      // Find existing category by name - DO NOT UPDATE THE CATEGORY TABLE
+      console.log('Looking up category ID for:', categoryName);
+      const [rows] = await pool.execute(
+        'SELECT Category_ID FROM CATEGORY WHERE Category = ?',
+        [categoryName]
+      );
+
+      if (rows.length > 0) {
+        // Category exists - return its ID to link the asset to it
+        console.log('Found existing category ID:', rows[0].Category_ID);
+        return rows[0].Category_ID;
       }
 
-      // If no current category ID, create new category
+      // If category doesn't exist, create new category
       console.log('Creating new category:', { categoryName });
       const [result] = await pool.execute(
         'INSERT INTO CATEGORY (Category) VALUES (?)',
