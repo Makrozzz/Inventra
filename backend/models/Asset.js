@@ -71,7 +71,7 @@ class Asset {
       // Build LIMIT clause
       const limitClause = limit ? `LIMIT ${parseInt(limit)} OFFSET ${parseInt(offset)}` : '';
       
-      // Optimized query without GROUP_CONCAT and subqueries for initial load
+      // Optimized query with minimal JOINs - fetch only essential data
       const [rows] = await pool.execute(`
         SELECT 
           i.Inventory_ID,
@@ -122,19 +122,82 @@ class Asset {
         ${limitClause}
       `, searchParams);
       
-      // Simple processing without peripheral data for fast initial load
+      // Get asset IDs for fetching related data
+      const assetIds = rows.map(r => r.Asset_ID);
+      
+      // Fetch software data in a single query if we have assets
+      let softwareMap = new Map();
+      if (assetIds.length > 0) {
+        const placeholders = assetIds.map(() => '?').join(',');
+        const [softwareRows] = await pool.execute(`
+          SELECT asb.Asset_ID, s.Software_Name, s.Price
+          FROM ASSET_SOFTWARE_BRIDGE asb
+          LEFT JOIN SOFTWARE s ON asb.Software_ID = s.Software_ID
+          WHERE asb.Asset_ID IN (${placeholders})
+        `, assetIds);
+        
+        softwareRows.forEach(sw => {
+          if (!softwareMap.has(sw.Asset_ID)) {
+            softwareMap.set(sw.Asset_ID, []);
+          }
+          softwareMap.get(sw.Asset_ID).push(sw);
+        });
+      }
+      
+      // Fetch peripheral data in a single query
+      let peripheralMap = new Map();
+      if (assetIds.length > 0) {
+        const placeholders = assetIds.map(() => '?').join(',');
+        const [peripheralRows] = await pool.execute(`
+          SELECT per.Asset_ID, pt.Peripheral_Type_Name,
+                 per.Serial_Code, per.Condition, per.Remarks, per.Peripheral_ID
+          FROM PERIPHERAL per
+          LEFT JOIN PERIPHERAL_TYPE pt ON per.Peripheral_Type_ID = pt.Peripheral_Type_ID
+          WHERE per.Asset_ID IN (${placeholders})
+          ORDER BY per.Peripheral_ID
+        `, assetIds);
+        
+        peripheralRows.forEach(p => {
+          if (!peripheralMap.has(p.Asset_ID)) {
+            peripheralMap.set(p.Asset_ID, []);
+          }
+          peripheralMap.get(p.Asset_ID).push(p);
+        });
+      }
+      
+      // Process rows with fetched data
       const processedRows = rows.map(row => {
-        return {
-          ...row,
-          Software: null,
-          Software_Name: null,
-          Software_Prices: null,
-          Peripheral_Type: null,
-          Peripheral_Serial: null,
-          Peripheral_Condition: null,
-          Peripheral_Remarks: null,
-          Peripheral_Details: null
-        };
+        const processed = { ...row };
+        
+        // Add software data
+        const softwareList = softwareMap.get(row.Asset_ID) || [];
+        processed.Software = softwareList.map(s => s.Software_Name).join(', ') || null;
+        processed.Software_Name = softwareList.map(s => s.Software_Name).join(', ') || null;
+        processed.Software_Prices = softwareList.map(s => s.Price).join(', ') || null;
+        
+        // Add peripheral data
+        const peripheralList = peripheralMap.get(row.Asset_ID) || [];
+        if (peripheralList.length > 0) {
+          processed.Peripheral_Type = peripheralList.map(p => p.Peripheral_Type_Name).join(', ');
+          processed.Peripheral_Serial = peripheralList.map(p => p.Serial_Code || 'N/A').join(', ');
+          processed.Peripheral_Condition = peripheralList.map(p => p.Condition || 'N/A').join(', ');
+          processed.Peripheral_Remarks = peripheralList.map(p => p.Remarks || 'N/A').join(', ');
+          processed.Peripheral_Details = peripheralList.map(p => {
+            const parts = [p.Peripheral_Type_Name];
+            const details = [];
+            if (p.Serial_Code) details.push(p.Serial_Code);
+            if (p.Condition) details.push(p.Condition);
+            return details.length > 0 ? `${parts[0]} (${details.join(', ')})` : parts[0];
+          }).join('; ');
+        } else {
+          processed.Peripheral_Type = null;
+          processed.Peripheral_Serial = null;
+          processed.Peripheral_Condition = null;
+          processed.Peripheral_Remarks = null;
+          processed.Peripheral_Details = null;
+        }
+        
+        return processed;
       });
       
       // Return pagination metadata if limit was specified

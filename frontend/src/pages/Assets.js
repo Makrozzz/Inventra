@@ -159,7 +159,8 @@ const Assets = ({ onDelete }) => {
         // Default columns in specified order:
         // 1. Customer name, 2. Branch, 3. Serial number, 4. Tag ID, 5. Status
         // 6. Item name, 7. Model, 8. Category, 9. Antivirus, 10. Windows version
-        // 11. Microsoft Office version, 12. Software, 13. Software Name, 14. Recipient name
+        // 11. Microsoft Office version, 12. Recipient name
+        // Note: Software and Peripheral columns are available but hidden by default
         const assetColumns = [
           { Field: 'Customer_Name', Type: 'varchar(255)', Label: 'Customer Name' },
           { Field: 'Branch', Type: 'varchar(255)', Label: 'Branch' },
@@ -172,10 +173,6 @@ const Assets = ({ onDelete }) => {
           { Field: 'Antivirus', Type: 'varchar(255)', Label: 'Antivirus' },
           { Field: 'Windows', Type: 'varchar(255)', Label: 'Windows Version' },
           { Field: 'Microsoft_Office', Type: 'varchar(255)', Label: 'Microsoft Office' },
-          { Field: 'Software', Type: 'text', Label: 'Software' },
-          { Field: 'Software_Name', Type: 'text', Label: 'Software Name' },
-          { Field: 'Peripheral_Type', Type: 'text', Label: 'Peripheral Name' },
-          { Field: 'Peripheral_Serial', Type: 'text', Label: 'Peripheral Serial Code' },
           { Field: 'Recipient_Name', Type: 'varchar(255)', Label: 'Recipient Name' }
         ];
         setColumns(assetColumns);
