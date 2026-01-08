@@ -164,13 +164,12 @@ const ProjectDetail = () => {
       {/* Header with Back Button */}
       <div style={{
         background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-        padding: '30px 40px',
+        padding: '30px 20px',
         marginBottom: '30px',
         borderRadius: '0 0 20px 20px',
         boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)'
       }}>
-        <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <div style={{ flex: 1 }}>
               <button
                 onClick={() => navigate('/projects')}
@@ -238,10 +237,9 @@ const ProjectDetail = () => {
               Customer Ref: <strong>{project.Customer_Ref_Number}</strong>
             </p>
           )}
-        </div>
       </div>
 
-      <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '0 40px' }}>
+      <div style={{ padding: '0 20px', width: '100%', boxSizing: 'border-box' }}>
         {/* Branch Selector */}
         {branches.length > 0 && (
           <div style={{
