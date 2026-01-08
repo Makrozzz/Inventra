@@ -32,6 +32,9 @@ const Assets = ({ onDelete }) => {
 
   // State for all assets (loaded once)
   const [allAssets, setAllAssets] = useState([]);
+  const [lastFetchTime, setLastFetchTime] = useState(0);
+  const [isFetching, setIsFetching] = useState(false);
+  const CACHE_DURATION = 30000; // 30 seconds cache
   
   // Sorting state
   const [sortField, setSortField] = useState('Inventory_ID');
@@ -89,9 +92,24 @@ const Assets = ({ onDelete }) => {
     setColumnConfig(savedConfig);
   }, []);
 
-  // Fetch all assets from database
-  const fetchAssets = async () => {
+  // Fetch all assets from database with caching and deduplication
+  const fetchAssets = async (force = false) => {
+    const now = Date.now();
+    
+    // Deduplication: prevent multiple simultaneous requests
+    if (isFetching) {
+      console.log('⏳ Request already in progress, skipping...');
+      return;
+    }
+    
+    // Use cache if available and not expired (unless forced)
+    if (!force && now - lastFetchTime < CACHE_DURATION && allAssets.length > 0) {
+      console.log('✅ Using cached assets data (age: ' + Math.round((now - lastFetchTime) / 1000) + 's)');
+      return;
+    }
+    
     try {
+      setIsFetching(true);
       setLoading(true);
       setError(null);
         
@@ -101,6 +119,9 @@ const Assets = ({ onDelete }) => {
         console.log('Assets API Response Status:', response.status); // Debug log
         
         if (!response.ok) {
+          if (response.status === 429) {
+            throw new Error('Too many requests. Please wait a moment and try again.');
+          }
           const errorText = await response.text();
           console.error('Assets API Error Response:', errorText);
           throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
@@ -111,6 +132,7 @@ const Assets = ({ onDelete }) => {
         console.log('Number of assets:', assets.length); // Debug log
         
         setAllAssets(assets);
+        setLastFetchTime(now);
         
         // Create columns based on new database schema
         // Default columns in specified order:
@@ -143,12 +165,14 @@ const Assets = ({ onDelete }) => {
         setColumns([]);
       } finally {
         setLoading(false);
+        setIsFetching(false);
       }
     };
 
   // Load assets on component mount
   useEffect(() => {
-    fetchAssets();
+    fetchAssets(true); // Force fetch on initial mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Only fetch once on mount
 
   // Refresh data when coming from CSV import or when explicitly requested
@@ -160,7 +184,7 @@ const Assets = ({ onDelete }) => {
     if (hasRefresh) {
       console.log('Refreshing assets:', stateMessage || 'Data refresh requested');
       setSuccessMessage(stateMessage || 'Asset data refreshed successfully');
-      fetchAssets();
+      fetchAssets(true); // Force refresh
       
       // Clear the state to prevent infinite refreshing
       if (location.state) {
@@ -174,7 +198,7 @@ const Assets = ({ onDelete }) => {
 
   // Refresh function to be called from external components
   const refreshAssets = () => {
-    fetchAssets();
+    fetchAssets(true); // Force refresh when explicitly called
   };
 
   // Handle column configuration changes
