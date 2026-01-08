@@ -29,7 +29,7 @@ const Assets = ({ onDelete }) => {
   
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(50);
+  const [itemsPerPage, setItemsPerPage] = useState(25);
 
   // State for all assets (loaded once)
   const [allAssets, setAllAssets] = useState([]);

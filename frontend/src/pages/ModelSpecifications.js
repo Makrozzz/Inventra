@@ -121,6 +121,7 @@ const ModelSpecifications = () => {
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(6);
+  const modelSpecsPageOptions = [6, 12, 24, 30];
   
   // Hardcoded categories for instant display (no API call needed)
   const categories = ['Router', 'Printer', 'Printer Photo', 'Server', 'Notebook', 'Laptop', 'Desktop', 'Projector', 'Scanner', 'IPAD', 'UPS'];
@@ -418,6 +419,7 @@ const ModelSpecifications = () => {
               itemsPerPage={itemsPerPage}
               onItemsPerPageChange={handleItemsPerPageChange}
               totalItems={filteredModels.length}
+              itemsPerPageOptions={modelSpecsPageOptions}
             />
           )}
           </>

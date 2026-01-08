@@ -12,7 +12,7 @@ const getAllAssets = async (req, res, next) => {
     // Extract pagination and filtering parameters from query
     const {
       page = 1,
-      limit = 50,
+      limit = 25,
       search = '',
       sortField = 'Asset_ID',
       sortDirection = 'DESC'
