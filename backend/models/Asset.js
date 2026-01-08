@@ -27,34 +27,50 @@ class Asset {
   }
 
   // Get all assets with complete inventory information (Project, Customer, Recipients, Category, Model)
-  static async findAll() {
+  static async findAll(options = {}) {
     try {
-      // First, let's check all assets and their inventory status
-      console.log('=== Asset.findAll() DEBUG ===');
+      const { limit, offset = 0, search = '', sortField = 'Asset_ID', sortDirection = 'DESC' } = options;
       
-      // Check total assets in ASSET table
-      const [assetCount] = await pool.execute('SELECT COUNT(*) as total FROM ASSET');
-      console.log(`Total assets in ASSET table: ${assetCount[0].total}`);
+      // Build WHERE clause for search
+      let whereClause = '';
+      let searchParams = [];
       
-      // Check total inventory records
-      const [inventoryCount] = await pool.execute('SELECT COUNT(*) as total FROM INVENTORY WHERE Asset_ID IS NOT NULL');
-      console.log(`Total inventory records with Asset_ID: ${inventoryCount[0].total}`);
-      
-      // Check assets without inventory linkage
-      const [orphanAssets] = await pool.execute(`
-        SELECT a.Asset_ID, a.Asset_Serial_Number, a.Asset_Tag_ID, a.Item_Name 
-        FROM ASSET a 
-        WHERE a.Asset_ID NOT IN (SELECT DISTINCT Asset_ID FROM INVENTORY WHERE Asset_ID IS NOT NULL)
-      `);
-      
-      if (orphanAssets.length > 0) {
-        console.log(`WARNING: Found ${orphanAssets.length} assets without inventory links:`);
-        orphanAssets.forEach(asset => {
-          console.log(`  - Asset_ID: ${asset.Asset_ID}, Serial: ${asset.Asset_Serial_Number}, Tag: ${asset.Asset_Tag_ID}`);
-        });
+      if (search) {
+        whereClause = `WHERE (
+          a.Asset_Serial_Number LIKE ? OR
+          a.Asset_Tag_ID LIKE ? OR
+          a.Item_Name LIKE ? OR
+          cust.Customer_Name LIKE ? OR
+          cust.Branch LIKE ? OR
+          m.Model_Name LIKE ?
+        )`;
+        const searchPattern = `%${search}%`;
+        searchParams = [searchPattern, searchPattern, searchPattern, searchPattern, searchPattern, searchPattern];
       }
-
-      console.log('Executing main assets query...');
+      
+      // Get total count for pagination
+      const countQuery = `
+        SELECT COUNT(DISTINCT a.Asset_ID) as total
+        FROM ASSET a
+        LEFT JOIN INVENTORY i ON i.Asset_ID = a.Asset_ID
+        LEFT JOIN CATEGORY c ON a.Category_ID = c.Category_ID
+        LEFT JOIN MODEL m ON a.Model_ID = m.Model_ID
+        LEFT JOIN CUSTOMER cust ON i.Customer_ID = cust.Customer_ID
+        ${whereClause}
+      `;
+      
+      const [countResult] = await pool.execute(countQuery, searchParams);
+      const total = countResult[0].total;
+      
+      // Build ORDER BY clause
+      const validSortFields = ['Asset_ID', 'Asset_Serial_Number', 'Asset_Tag_ID', 'Item_Name', 'Status', 'Customer_Name', 'Model'];
+      const orderField = validSortFields.includes(sortField) ? sortField : 'Asset_ID';
+      const orderDir = sortDirection.toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
+      const orderBy = `ORDER BY ${orderField} ${orderDir}`;
+      
+      // Build LIMIT clause
+      const limitClause = limit ? `LIMIT ${parseInt(limit)} OFFSET ${parseInt(offset)}` : '';
+      
       const [rows] = await pool.execute(`
         SELECT 
           i.Inventory_ID,
@@ -109,22 +125,11 @@ class Asset {
         LEFT JOIN CUSTOMER cust ON i.Customer_ID = cust.Customer_ID
         LEFT JOIN ASSET_SOFTWARE_BRIDGE asb ON a.Asset_ID = asb.Asset_ID
         LEFT JOIN SOFTWARE s ON asb.Software_ID = s.Software_ID
+        ${whereClause}
         GROUP BY a.Asset_ID
-        ORDER BY a.Asset_ID DESC
-      `);
-      
-      console.log(`✅ Query returned ${rows.length} assets (including those without inventory links)`);
-      
-      if (rows.length > 0) {
-        const withInventory = rows.filter(row => row.Inventory_ID !== null).length;
-        const withoutInventory = rows.length - withInventory;
-        console.log(`   - ${withInventory} assets with inventory links`);
-        console.log(`   - ${withoutInventory} assets without inventory links`);
-        
-        const assetIds = rows.map(row => row.Asset_ID).sort((a, b) => a - b);
-        console.log(`Asset_ID range: ${assetIds[0]} - ${assetIds[assetIds.length - 1]}`);
-        console.log(`Latest 5 Asset_IDs: ${assetIds.slice(-5).join(', ')}`);
-      }
+        ${orderBy}
+        ${limitClause}
+      `, searchParams);
       
       // Post-process to extract peripheral details into separate columns
       const processedRows = rows.map(row => {
@@ -209,8 +214,20 @@ class Asset {
         return processed;
       });
       
-      console.log('=== End Asset.findAll() DEBUG ===');
-      
+      // Return pagination metadata if limit was specified
+      if (limit) {
+        return {
+          data: processedRows,
+          pagination: {
+            total,
+            limit: parseInt(limit),
+            offset: parseInt(offset),
+            page: Math.floor(offset / limit) + 1,
+            totalPages: Math.ceil(total / limit)
+          }
+        };
+      }
+
       return processedRows;
     } catch (error) {
       console.error('❌ Error in Asset.findAll:', error.message);
