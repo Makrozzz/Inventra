@@ -9,6 +9,51 @@ const Dashboard = () => {
   const [recentActivity, setRecentActivity] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  
+  // State to track which cards are expanded (default: all minimized)
+  const [expandedCards, setExpandedCards] = useState({
+    deviceAnalysis: false,
+    customerDistribution: false,
+    modelDistribution: false,
+    revenueByCategory: false,
+    warrantyTimeline: false,
+    peripheralDistribution: false,
+    recentActivity: false
+  });
+  
+  // Define adjacent card pairs
+  const adjacentCards = {
+    deviceAnalysis: 'customerDistribution',
+    customerDistribution: 'deviceAnalysis',
+    modelDistribution: 'revenueByCategory',
+    revenueByCategory: 'modelDistribution',
+    warrantyTimeline: 'peripheralDistribution',
+    peripheralDistribution: 'warrantyTimeline',
+    recentActivity: null // standalone card
+  };
+  
+  // Toggle card expansion and toggle adjacent card as well
+  const toggleCard = (cardName) => {
+    setExpandedCards(prev => {
+      const isExpanding = !prev[cardName];
+      const adjacent = adjacentCards[cardName];
+      
+      // If has adjacent card, toggle both together
+      if (adjacent) {
+        return {
+          ...prev,
+          [cardName]: isExpanding,
+          [adjacent]: isExpanding
+        };
+      }
+      
+      // Otherwise just toggle the current card
+      return {
+        ...prev,
+        [cardName]: isExpanding
+      };
+    });
+  };
 
   const headerButtonStyle = {
     background: 'white',
@@ -384,13 +429,21 @@ const Dashboard = () => {
       <div className="dashboard-charts">
         {/* First Row - Device Analysis and Customer Distribution */}
         <div className="chart-card">
-          <div className="chart-header">
+          <div 
+            className="chart-header"
+            onClick={() => toggleCard('deviceAnalysis')}
+            style={{
+              cursor: 'pointer',
+              userSelect: 'none'
+            }}
+            title={expandedCards.deviceAnalysis ? 'Click to minimize' : 'Click to maximize'}
+          >
             <h2 className="chart-title">
               <BarChart3 size={24} className="chart-icon" />
               Device Analysis by Category
             </h2>
           </div>
-          <div className="chart-container">
+          {expandedCards.deviceAnalysis && (<div className="chart-container">
             {customerAssetData && customerAssetData.length > 0 ? (
               customerAssetData.map((item, index) => (
                 <div key={index} className="chart-bar-item" style={{ '--index': index }}>
@@ -415,17 +468,25 @@ const Dashboard = () => {
                 <p>No customer data available</p>
               </div>
             )}
-          </div>
+          </div>)}
         </div>
 
         <div className="chart-card">
-          <div className="chart-header">
+          <div 
+            className="chart-header"
+            onClick={() => toggleCard('customerDistribution')}
+            style={{
+              cursor: 'pointer',
+              userSelect: 'none'
+            }}
+            title={expandedCards.customerDistribution ? 'Click to minimize' : 'Click to maximize'}
+          >
             <h2 className="chart-title">
               <Users size={24} className="chart-icon" />
               Customer Distribution
             </h2>
           </div>
-          <div className="chart-container">
+          {expandedCards.customerDistribution && (<div className="chart-container">
             {customersByCategory && Object.entries(customersByCategory).length > 0 ? (
               Object.entries(customersByCategory).map(([customerName, data], index) => (
                 <div key={index} className="chart-bar-item" style={{ '--index': index }}>
@@ -518,20 +579,28 @@ const Dashboard = () => {
                 ))}
               </div>
             )}
-          </div>
+          </div>)}
         </div>
 
         
 
         {/* Model Distribution Chart */}
         <div className="chart-card">
-          <div className="chart-header">
+          <div 
+            className="chart-header"
+            onClick={() => toggleCard('modelDistribution')}
+            style={{
+              cursor: 'pointer',
+              userSelect: 'none'
+            }}
+            title={expandedCards.modelDistribution ? 'Click to minimize' : 'Click to maximize'}
+          >
             <h2 className="chart-title">
               <Package size={24} className="chart-icon" />
               Top 10 Most Deployed Models
             </h2>
           </div>
-          <div className="chart-container">
+          {expandedCards.modelDistribution && (<div className="chart-container">
             {modelData && modelData.length > 0 ? (
               modelData.slice(0, 10).map((item, index) => (
                 <div key={index} className="chart-bar-item" style={{ '--index': index }}>
@@ -556,18 +625,26 @@ const Dashboard = () => {
                 <p>No model data available</p>
               </div>
             )}
-          </div>
+          </div>)}
         </div>
 
         {/* Revenue by Category Chart */}
         <div className="chart-card">
-          <div className="chart-header">
+          <div 
+            className="chart-header"
+            onClick={() => toggleCard('revenueByCategory')}
+            style={{
+              cursor: 'pointer',
+              userSelect: 'none'
+            }}
+            title={expandedCards.revenueByCategory ? 'Click to minimize' : 'Click to maximize'}
+          >
             <h2 className="chart-title">
               <DollarSign size={24} className="chart-icon" />
               Revenue by Category
             </h2>
           </div>
-          <div className="chart-container">
+          {expandedCards.revenueByCategory && (<div className="chart-container">
             {revenueByCategory && revenueByCategory.length > 0 ? (
               revenueByCategory.map((item, index) => (
                 <div key={index} className="chart-bar-item" style={{ '--index': index }}>
@@ -592,18 +669,26 @@ const Dashboard = () => {
                 <p>No revenue data available</p>
               </div>
             )}
-          </div>
+          </div>)}
         </div>
 
         {/* Warranty Timeline per Project */}
         <div className="chart-card">
-          <div className="chart-header">
+          <div 
+            className="chart-header"
+            onClick={() => toggleCard('warrantyTimeline')}
+            style={{
+              cursor: 'pointer',
+              userSelect: 'none'
+            }}
+            title={expandedCards.warrantyTimeline ? 'Click to minimize' : 'Click to maximize'}
+          >
             <h2 className="chart-title">
               <Calendar size={24} className="chart-icon" />
               Warranty Timeline by Project
             </h2>
           </div>
-          <div className="chart-container">
+          {expandedCards.warrantyTimeline && (<div className="chart-container">
             {warrantyByProject && warrantyByProject.length > 0 ? (
               warrantyByProject.map((item, index) => {
                 const progressPct = Number(item.warrantyProgress) || 0;
@@ -652,17 +737,25 @@ const Dashboard = () => {
                 <p>No warranty data available</p>
               </div>
             )}
-          </div>
+          </div>)}
         </div>
         {/* Peripheral Type Distribution */}
         <div className="chart-card">
-          <div className="chart-header">
+          <div 
+            className="chart-header"
+            onClick={() => toggleCard('peripheralDistribution')}
+            style={{
+              cursor: 'pointer',
+              userSelect: 'none'
+            }}
+            title={expandedCards.peripheralDistribution ? 'Click to minimize' : 'Click to maximize'}
+          >
             <h2 className="chart-title">
               <Monitor size={24} className="chart-icon" />
               Peripheral Type Distribution
             </h2>
           </div>
-          <div className="chart-container">
+          {expandedCards.peripheralDistribution && (<div className="chart-container">
             {peripheralTypeDistribution && peripheralTypeDistribution.length > 0 ? (
               peripheralTypeDistribution.map((item, index) => (
                 <div key={index} className="chart-bar-item" style={{ '--index': index }}>
@@ -684,20 +777,28 @@ const Dashboard = () => {
                 <p>No peripheral type data available</p>
               </div>
             )}
-          </div>
+          </div>)}
         </div>
       </div>
 
       {/* Recent Activity Feed - Full Width Section */}
       <div className="chart-card" style={{ marginTop: '30px' }}>
-        <div className="chart-header">
+        <div 
+          className="chart-header"
+          onClick={() => toggleCard('recentActivity')}
+          style={{
+            cursor: 'pointer',
+            userSelect: 'none'
+          }}
+          title={expandedCards.recentActivity ? 'Click to minimize' : 'Click to maximize'}
+        >
           <h2 className="chart-title">
             <Activity size={24} className="chart-icon" />
             Recent Activity
           </h2>
         </div>
 
-        {recentActivity && recentActivity.length > 0 ? (
+        {expandedCards.recentActivity && (recentActivity && recentActivity.length > 0 ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             {recentActivity.map((activity, index) => {
               // Helper function to get icon and color based on activity type
@@ -820,7 +921,7 @@ const Dashboard = () => {
             <div className="empty-state-icon"><Activity size={48} /></div>
             <p>No recent activity to display</p>
           </div>
-        )}
+        ))}
       </div>
     </div>
   );
