@@ -390,47 +390,71 @@ const getModelSpecs = async (req, res, next) => {
 
 /**
  * Get all models with their specifications and customer tags
+ * Optimized to use single query with GROUP_CONCAT to avoid N+1 problem
  */
 const getAllModelsWithSpecs = async (req, res, next) => {
   try {
-    const [models] = await pool.execute(`
+    const { category } = req.query;
+    
+    // Build WHERE clause if category is provided
+    const whereClause = category ? 'WHERE c.Category = ?' : '';
+    const queryParams = category ? [category] : [];
+    
+    const [results] = await pool.execute(`
       SELECT 
         m.Model_ID,
         m.Model_Name,
         m.Category_ID,
         c.Category as Category_Name,
         COUNT(DISTINCT msb.Attributes_ID) as Spec_Count,
-        GROUP_CONCAT(DISTINCT cust.Customer_Name ORDER BY cust.Customer_Name SEPARATOR ', ') as Customer_Tags
+        (
+          SELECT GROUP_CONCAT(DISTINCT cust.Customer_Name ORDER BY cust.Customer_Name SEPARATOR ', ')
+          FROM ASSET a
+          INNER JOIN INVENTORY i ON a.Asset_ID = i.Asset_ID
+          INNER JOIN CUSTOMER cust ON i.Customer_ID = cust.Customer_ID
+          WHERE a.Model_ID = m.Model_ID
+        ) as Customer_Tags,
+        GROUP_CONCAT(
+          DISTINCT CONCAT_WS(':::',
+            msb.Attributes_ID,
+            s.Attribute_Name,
+            COALESCE(msb.Attributes_Value, '')
+          )
+          ORDER BY s.Attribute_Name
+          SEPARATOR '|||'
+        ) as Specifications_Data
       FROM MODEL m
-      LEFT JOIN CATEGORY c ON m.Category_ID = c.Category_ID
+      INNER JOIN CATEGORY c ON m.Category_ID = c.Category_ID
       LEFT JOIN MODEL_SPECS_BRIDGE msb ON m.Model_ID = msb.Model_ID
-      LEFT JOIN ASSET a ON m.Model_ID = a.Model_ID
-      LEFT JOIN INVENTORY i ON a.Asset_ID = i.Asset_ID
-      LEFT JOIN CUSTOMER cust ON i.Customer_ID = cust.Customer_ID
+      LEFT JOIN SPECS s ON msb.Attributes_ID = s.Attributes_ID
+      ${whereClause}
       GROUP BY m.Model_ID, m.Model_Name, m.Category_ID, c.Category
       ORDER BY m.Model_Name ASC
-    `);
+    `, queryParams);
 
-    // Fetch specs for each model
-    const modelsWithSpecs = await Promise.all(
-      models.map(async (model) => {
-        const [specs] = await pool.execute(`
-          SELECT 
-            msb.Attributes_ID,
-            msb.Attributes_Value,
-            s.Attribute_Name
-          FROM MODEL_SPECS_BRIDGE msb
-          INNER JOIN SPECS s ON msb.Attributes_ID = s.Attributes_ID
-          WHERE msb.Model_ID = ?
-          ORDER BY s.Attribute_Name ASC
-        `, [model.Model_ID]);
+    // Parse the concatenated specs into array of objects
+    const modelsWithSpecs = results.map(model => {
+      const specifications = model.Specifications_Data
+        ? model.Specifications_Data.split('|||').map(spec => {
+            const [Attributes_ID, Attribute_Name, Attributes_Value] = spec.split(':::');
+            return {
+              Attributes_ID: parseInt(Attributes_ID),
+              Attribute_Name,
+              Attributes_Value: Attributes_Value || null
+            };
+          })
+        : [];
 
-        return {
-          ...model,
-          specifications: specs
-        };
-      })
-    );
+      return {
+        Model_ID: model.Model_ID,
+        Model_Name: model.Model_Name,
+        Category_ID: model.Category_ID,
+        Category_Name: model.Category_Name,
+        Spec_Count: model.Spec_Count,
+        Customer_Tags: model.Customer_Tags,
+        specifications
+      };
+    });
 
     res.status(200).json({
       success: true,

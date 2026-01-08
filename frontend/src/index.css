@@ -1995,3 +1995,250 @@ input[type="checkbox"] {
     padding: 10px 12px;
   }
 }
+
+/* Model Specifications Page Styles */
+.model-spec-card {
+  background: white;
+  border: 2px solid #e5e7eb;
+  border-radius: 16px;
+  padding: 24px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.model-spec-card:hover {
+  border-color: #667eea;
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(102, 126, 234, 0.15);
+}
+
+.model-spec-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.model-spec-title {
+  flex: 1;
+}
+
+.model-spec-name {
+  margin: 0 0 8px 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #1f2937;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.model-spec-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.model-tag {
+  font-size: 13px;
+  padding: 4px 12px;
+  border-radius: 6px;
+  font-weight: 500;
+}
+
+.model-tag-category {
+  color: #6b7280;
+  background: #f3f4f6;
+}
+
+.model-tag-customer {
+  color: #7c3aed;
+  background: #f3e8ff;
+  border: 1px solid #c4b5fd;
+}
+
+.model-spec-count {
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  text-align: center;
+  min-width: 50px;
+}
+
+.model-spec-count.has-specs {
+  background: #ecfdf5;
+  color: #059669;
+}
+
+.model-spec-count.no-specs {
+  background: #f3f4f6;
+  color: #6b7280;
+}
+
+.model-spec-count-label {
+  font-size: 11px;
+  font-weight: 400;
+}
+
+.spec-overview-section {
+  margin-top: 16px;
+}
+
+.spec-overview-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.spec-overview-title {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.expand-button {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  border: none;
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.expand-button.collapsed {
+  background: rgba(102, 126, 234, 0.1);
+  color: #667eea;
+}
+
+.expand-button.collapsed:hover {
+  background: rgba(102, 126, 234, 0.2);
+}
+
+.expand-button.expanded {
+  background: #667eea;
+  color: white;
+}
+
+.expand-button.expanded:hover {
+  background: #5568d3;
+}
+
+.specs-container-expanded {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  max-height: 300px;
+  overflow-y: auto;
+  padding: 8px;
+  background: #f9fafb;
+  border-radius: 12px;
+}
+
+.specs-placeholder {
+  background: #f9fafb;
+  border: 2px dashed #e5e7eb;
+  border-radius: 12px;
+  padding: 16px;
+  text-align: center;
+  color: #6b7280;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.spec-badge {
+  background: rgba(102, 126, 234, 0.1);
+  border: 1px solid rgba(102, 126, 234, 0.2);
+  color: #667eea;
+  padding: 8px 14px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  white-space: nowrap;
+}
+
+.no-specs-placeholder {
+  background: #fef3c7;
+  border-radius: 12px;
+  padding: 16px;
+  margin-top: 16px;
+  text-align: center;
+}
+
+.no-specs-text {
+  margin: 0;
+  font-size: 13px;
+  color: #92400e;
+  font-weight: 500;
+}
+
+.no-specs-subtext {
+  margin: 4px 0 0 0;
+  font-size: 12px;
+  color: #b45309;
+}
+
+.skeleton-card {
+  background: white;
+  border: 2px solid #e5e7eb;
+  border-radius: 16px;
+  padding: 24px;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+.skeleton-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.skeleton-title {
+  flex: 1;
+}
+
+.skeleton-bar {
+  background: #e5e7eb;
+  border-radius: 6px;
+}
+
+.skeleton-bar-lg {
+  height: 24px;
+  width: 70%;
+  margin-bottom: 12px;
+}
+
+.skeleton-bar-md {
+  height: 20px;
+  width: 40%;
+}
+
+.skeleton-count {
+  height: 60px;
+  width: 60px;
+  background: #f3f4f6;
+  border-radius: 8px;
+}
+
+.skeleton-tags {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.skeleton-tag {
+  height: 32px;
+  width: 80px;
+  background: #f3f4f6;
+  border-radius: 10px;
+}
