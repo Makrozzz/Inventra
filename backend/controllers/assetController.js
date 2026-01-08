@@ -15,7 +15,8 @@ const getAllAssets = async (req, res, next) => {
       limit = 25,
       search = '',
       sortField = 'Asset_ID',
-      sortDirection = 'DESC'
+      sortDirection = 'DESC',
+      flagged = '' // New parameter for flagged assets filter
     } = req.query;
     
     // Calculate offset
@@ -27,7 +28,8 @@ const getAllAssets = async (req, res, next) => {
       offset,
       search,
       sortField,
-      sortDirection
+      sortDirection,
+      flagged: flagged === 'true' || flagged === '1' // Convert to boolean
     });
 
     // Return paginated response

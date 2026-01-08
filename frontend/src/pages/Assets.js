@@ -138,6 +138,11 @@ const Assets = ({ onDelete }) => {
           params.append('search', debouncedSearchTerm);
         }
         
+        // Add flagged filter parameter
+        if (showFlaggedOnly) {
+          params.append('flagged', 'true');
+        }
+        
         // Use direct fetch with pagination parameters
         const response = await fetch(`${API_URL}/assets?${params.toString()}`);
         
@@ -185,13 +190,13 @@ const Assets = ({ onDelete }) => {
         setLoading(false);
         setIsFetching(false);
       }
-    }, [isFetching, lastFetchTime, allAssets.length, currentPage, itemsPerPage, sortField, sortDirection, debouncedSearchTerm]);
+    }, [isFetching, lastFetchTime, allAssets.length, currentPage, itemsPerPage, sortField, sortDirection, debouncedSearchTerm, showFlaggedOnly]);
 
   // Load assets on component mount and when pagination/sort/search changes
   useEffect(() => {
-    fetchAssets(true); // Force fetch when page, sort, or search changes
+    fetchAssets(true); // Force fetch when page, sort, search, or flagged filter changes
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentPage, itemsPerPage, sortField, sortDirection, debouncedSearchTerm]);
+  }, [currentPage, itemsPerPage, sortField, sortDirection, debouncedSearchTerm, showFlaggedOnly]);
 
   // Refresh data when coming from CSV import or when explicitly requested
   useEffect(() => {
@@ -306,8 +311,7 @@ const Assets = ({ onDelete }) => {
   // Filter and sort assets - server-side pagination handles most of this
   const filteredAssets = useMemo(() => {
     return allAssets.filter(asset => {
-      // Only apply client-side flagged filter (server doesn't handle this yet)
-      if (showFlaggedOnly && asset.Is_Flagged !== 1) return false;
+      // Flagged filter is now handled server-side
       
       // Column-specific filters (client-side for now)
       for (const columnKey in columnFilters) {
@@ -320,7 +324,7 @@ const Assets = ({ onDelete }) => {
       return true;
     });
     // Note: Sorting and search are handled server-side
-  }, [allAssets, showFlaggedOnly, columnFilters]);
+  }, [allAssets, columnFilters]);
 
   // Client-side pagination calculations - using server-provided total
   const { totalItems, calculatedTotalPages, paginatedAssets } = useMemo(() => {
@@ -879,7 +883,6 @@ const Assets = ({ onDelete }) => {
             title={showFlaggedOnly ? 'Show all assets' : 'Show flagged assets only'}
           >
             <Flag size={18} color={showFlaggedOnly ? '#f39c12' : '#666'} fill={showFlaggedOnly ? '#f39c12' : 'none'} />
-            {showFlaggedOnly}
             {showFlaggedOnly && filteredAssets.length > 0 && (
               <span style={{
                 backgroundColor: '#f39c12',

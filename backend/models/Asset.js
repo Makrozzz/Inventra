@@ -29,14 +29,20 @@ class Asset {
   // Get all assets with complete inventory information (Project, Customer, Recipients, Category, Model)
   static async findAll(options = {}) {
     try {
-      const { limit, offset = 0, search = '', sortField = 'Asset_ID', sortDirection = 'DESC' } = options;
+      const { limit, offset = 0, search = '', sortField = 'Asset_ID', sortDirection = 'DESC', flagged = false } = options;
       
       // Build WHERE clause for search
       let whereClause = '';
       let searchParams = [];
       
+      // Add flagged filter
+      if (flagged) {
+        whereClause = 'WHERE a.Is_Flagged = 1';
+      }
+      
       if (search) {
-        whereClause = `WHERE (
+        whereClause = whereClause ? `${whereClause} AND (` : 'WHERE (';
+        whereClause += `
           a.Asset_Serial_Number LIKE ? OR
           a.Asset_Tag_ID LIKE ? OR
           a.Item_Name LIKE ? OR
