@@ -1,13 +1,13 @@
 node_modules
 
 # Environment variables
-#.env.production
-#backend/.env
-#backend/.env.example
-#backend/.env.production
-#frontend/.env
-#frontend/.env.production
-#frontend/.env.development
+.env.production
+backend/.env
+backend/.env.example
+backend/.env.production
+frontend/.env
+frontend/.env.production
+frontend/.env.development
 
 # Ignore backend runtime logs
 backend/logs/
