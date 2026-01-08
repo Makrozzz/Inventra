@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { Cpu, Search, Plus, ArrowLeft, AlertCircle, Package, ChevronDown, ChevronUp } from 'lucide-react';
 import Pagination from '../components/Pagination';
 
@@ -111,20 +111,21 @@ const ModelCard = React.memo(({ model, onClick }) => {
 
 const ModelSpecifications = () => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [models, setModels] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('Desktop');
+  const [selectedCategory, setSelectedCategory] = useState(searchParams.get('category') || 'Desktop');
   
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(6);
   const modelSpecsPageOptions = [6, 12, 24, 30];
   
-  // Hardcoded categories for instant display (no API call needed)
-  const categories = ['Router', 'Printer', 'Printer Photo', 'Server', 'Notebook', 'Laptop', 'Desktop', 'Projector', 'Scanner', 'IPAD', 'UPS'];
+  // Hardcoded categories sorted alphabetically for instant display (no API call needed)
+  const categories = ['Desktop', 'IPAD', 'Laptop', 'Notebook', 'Printer', 'Printer Photo', 'Projector', 'Router', 'Scanner', 'Server', 'UPS'];
   
   // Cache for fetched data
   const [dataCache, setDataCache] = useState({});
@@ -179,8 +180,8 @@ const ModelSpecifications = () => {
   };
 
   const handleModelClick = useCallback((modelId) => {
-    navigate(`/models/${modelId}/add-specs`);
-  }, [navigate]);
+    navigate(`/models/${modelId}/add-specs?category=${encodeURIComponent(selectedCategory)}`);
+  }, [navigate, selectedCategory]);
 
   // Filter models based on search term only (category filtering done by backend)
   const filteredModels = useMemo(() => {
@@ -313,7 +314,10 @@ const ModelSpecifications = () => {
           {categories.map((category) => (
             <button
               key={category}
-              onClick={() => setSelectedCategory(category)}
+              onClick={() => {
+                setSelectedCategory(category);
+                setSearchParams({ category });
+              }}
               style={{
                 padding: '8px 16px',
                 fontSize: '14px',

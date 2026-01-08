@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Plus, Trash2, Save, AlertCircle, CheckCircle, Cpu, Edit2 } from 'lucide-react';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api/v1';
@@ -7,6 +7,8 @@ const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api/v1';
 const AddModelSpecs = () => {
   const navigate = useNavigate();
   const { modelId } = useParams();
+  const [searchParams] = useSearchParams();
+  const category = searchParams.get('category');
   
   const [model, setModel] = useState(null);
   const [existingSpecs, setExistingSpecs] = useState([]);
@@ -211,7 +213,7 @@ const AddModelSpecs = () => {
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
             <button
-              onClick={() => navigate('/models/specs')}
+              onClick={() => navigate(category ? `/models/specs?category=${encodeURIComponent(category)}` : '/models/specs')}
               style={{
                 background: 'rgba(255, 255, 255, 0.2)',
                 border: 'none',
