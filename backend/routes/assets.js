@@ -9,6 +9,7 @@ const {
   createAssetWithDetails,
   updateAsset,
   updateAssetById,
+  updateAssetFlag,
   deleteAsset,
   deleteAssetById,
   getAssetStatistics,
@@ -112,6 +113,12 @@ router.put('/id/:id',
   updateAssetValidationRules, 
   handleValidationErrors, 
   updateAssetById
+);
+
+// Update asset flag status and remarks
+router.patch('/id/:id/flag',
+  // authenticateToken,  // Disabled for development
+  updateAssetFlag
 );
 
 router.put('/:serialNumber', 

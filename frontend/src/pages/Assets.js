@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Search, Filter, Edit, Trash2, Download, Plus, Upload, FileText, Columns, AlertTriangle, X, Settings2, Eye, Trash, Edit2, AlertCircle, RefreshCw, Package, Boxes } from 'lucide-react';
+import { Search, Filter, Edit, Trash2, Download, Plus, Upload, FileText, Columns, AlertTriangle, X, Settings2, Eye, Trash, Edit2, AlertCircle, RefreshCw, Package, Boxes, Flag } from 'lucide-react';
 import Pagination from '../components/Pagination';
 import apiService from '../services/apiService';
 import ColumnFilterPopup from '../components/ColumnFilterPopup';
@@ -16,6 +16,7 @@ const Assets = ({ onDelete }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   const [searchFocused, setSearchFocused] = useState(false);
+  const [showFlaggedOnly, setShowFlaggedOnly] = useState(false);
   
   // Column customization state
   const [columnConfig, setColumnConfig] = useState([]);
@@ -275,6 +276,9 @@ const Assets = ({ onDelete }) => {
       const searchableFields = Object.values(asset).join(' ').toLowerCase();
       const matchesSearch = searchableFields.includes(searchTerm.toLowerCase());
       
+      // Flagged filter
+      const matchesFlaggedFilter = showFlaggedOnly ? asset.Is_Flagged === 1 : true;
+      
       // Column-specific filters
       const matchesColumnFilters = Object.keys(columnFilters).every(columnKey => {
         if (!columnFilters[columnKey]) return true; // Empty filter = no filtering
@@ -283,7 +287,7 @@ const Assets = ({ onDelete }) => {
         return assetValue.includes(filterValue);
       });
       
-      return matchesSearch && matchesColumnFilters;
+      return matchesSearch && matchesFlaggedFilter && matchesColumnFilters;
     })
     .sort((a, b) => {
       // Sort by the selected field and direction
@@ -845,6 +849,42 @@ const Assets = ({ onDelete }) => {
             )}
           </div>
           
+          {/* Flagged Assets Filter Button */}
+          <button
+            onClick={() => setShowFlaggedOnly(!showFlaggedOnly)}
+            className="btn"
+            style={{
+              padding: '12px 20px',
+              border: showFlaggedOnly ? '2px solid #f39c12' : '2px solid #e1e8ed',
+              borderRadius: '8px',
+              backgroundColor: showFlaggedOnly ? '#fff3cd' : 'white',
+              color: showFlaggedOnly ? '#856404' : '#666',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              fontWeight: showFlaggedOnly ? '600' : '500',
+              transition: 'all 0.2s ease',
+              boxShadow: showFlaggedOnly ? '0 2px 8px rgba(243, 156, 18, 0.2)' : 'none'
+            }}
+            title={showFlaggedOnly ? 'Show all assets' : 'Show flagged assets only'}
+          >
+            <Flag size={18} color={showFlaggedOnly ? '#f39c12' : '#666'} fill={showFlaggedOnly ? '#f39c12' : 'none'} />
+            {showFlaggedOnly}
+            {showFlaggedOnly && filteredAssets.length > 0 && (
+              <span style={{
+                backgroundColor: '#f39c12',
+                color: 'white',
+                borderRadius: '12px',
+                padding: '2px 8px',
+                fontSize: '0.75rem',
+                fontWeight: '700'
+              }}>
+                {filteredAssets.length}
+              </span>
+            )}
+          </button>
+          
           {/* Bulk Action Buttons */}
           {selectedAssets.length > 0 && (
             <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
@@ -1303,6 +1343,21 @@ const Assets = ({ onDelete }) => {
                             <span className={`status-badge status-${(asset[column.Field] || '').toLowerCase().replace(/\s+/g, '-')}`}>
                               {formatCellValue(asset[column.Field], column.Field)}
                             </span>
+                          ) : column.Field === 'Asset_Serial_Number' ? (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              {asset.Is_Flagged ? (
+                                <Flag 
+                                  size={16} 
+                                  color="#f39c12" 
+                                  fill="#f39c12"
+                                  title={`Flagged: ${asset.Flag_Remarks || 'No remarks'}`}
+                                  style={{ flexShrink: 0 }}
+                                />
+                              ) : null}
+                              <span title={asset[column.Field]}>
+                                {formatCellValue(asset[column.Field], column.Field)}
+                              </span>
+                            </div>
                           ) : column.Field === 'Model' ? (
                             asset.Model_ID ? (
                               <Link

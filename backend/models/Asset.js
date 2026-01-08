@@ -14,6 +14,10 @@ class Asset {
     this.Microsoft_Office = data.Microsoft_Office;
     this.Software = data.Software;
     this.Monthly_Prices = data.Monthly_Prices;
+    this.Is_Flagged = data.Is_Flagged;
+    this.Flag_Remarks = data.Flag_Remarks;
+    this.Flag_Date = data.Flag_Date;
+    this.Flagged_By = data.Flagged_By;
     
     // Related data from JOINs
     this.Category = data.Category;
@@ -62,8 +66,12 @@ class Asset {
           a.Windows,
           a.Microsoft_Office,
           a.Monthly_Prices,
-                   a.AV,
+          a.AV,
           a.Model_ID,
+          a.Is_Flagged,
+          a.Flag_Remarks,
+          a.Flag_Date,
+          a.Flagged_By,
           c.Category,
           m.Model_Name as Model,
           r.Recipient_Name,
@@ -230,6 +238,10 @@ class Asset {
           a.Windows,
           a.Microsoft_Office,
           a.Monthly_Prices,
+          a.Is_Flagged,
+          a.Flag_Remarks,
+          a.Flag_Date,
+          a.Flagged_By,
           c.Category,
           m.Model_Name as Model,
           r.Recipient_Name,
@@ -291,8 +303,8 @@ class Asset {
   static async create(assetData) {
     try {
       const [result] = await pool.execute(
-        `INSERT INTO ASSET (Asset_Serial_Number, Asset_Tag_ID, Item_Name, Recipients_ID, Category_ID, Model_ID, Status, Windows, Microsoft_Office, Monthly_Prices, AV) 
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO ASSET (Asset_Serial_Number, Asset_Tag_ID, Item_Name, Recipients_ID, Category_ID, Model_ID, Status, Windows, Microsoft_Office, Monthly_Prices, AV, Is_Flagged, Flag_Remarks, Flag_Date, Flagged_By) 
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           assetData.Asset_Serial_Number,
           assetData.Asset_Tag_ID,
@@ -304,7 +316,11 @@ class Asset {
           assetData.Windows || null,
           assetData.Microsoft_Office || null,
           assetData.Monthly_Prices || null,
-          assetData.AV !== undefined ? assetData.AV : null
+          assetData.AV !== undefined ? assetData.AV : null,
+          assetData.Is_Flagged || 0,
+          assetData.Flag_Remarks || null,
+          assetData.Flag_Date || null,
+          assetData.Flagged_By || null
         ]
       );
       
@@ -329,7 +345,11 @@ class Asset {
          Status = ?,
          Windows = ?,
          Microsoft_Office = ?,
-         Monthly_Prices = ?
+         Monthly_Prices = ?,
+         Is_Flagged = ?,
+         Flag_Remarks = ?,
+         Flag_Date = ?,
+         Flagged_By = ?
          WHERE Asset_ID = ?`,
         [
           this.Asset_Serial_Number,
@@ -342,6 +362,10 @@ class Asset {
           this.Windows,
           this.Microsoft_Office,
           this.Monthly_Prices,
+          this.Is_Flagged,
+          this.Flag_Remarks,
+          this.Flag_Date,
+          this.Flagged_By,
           this.Asset_ID
         ]
       );
@@ -662,6 +686,10 @@ class Asset {
           a.Monthly_Prices,
           a.Model_ID,
           a.AV AS AV,
+          a.Is_Flagged,
+          a.Flag_Remarks,
+          a.Flag_Date,
+          a.Flagged_By,
           c.Category,
           m.Model_Name as Model,
           r.Recipient_Name,

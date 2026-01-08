@@ -3,7 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { 
   ArrowLeft, Package, FileText, Building2, Users, Wrench, 
   Calendar, CheckCircle, AlertCircle, Info, Monitor, Mouse, 
-  Keyboard, Cable, Shield, Eye, ClipboardList, Trash2
+  Keyboard, Cable, Shield, Eye, ClipboardList, Trash2, Flag, FlagOff, Edit2
 } from 'lucide-react';
 import { API_URL } from '../config/api';
 import apiService from '../services/apiService';
@@ -19,6 +19,9 @@ const AssetDetail = () => {
   const [deleting, setDeleting] = useState(false);
   const [deletingAck, setDeletingAck] = useState(false);
   const [isWideScreen, setIsWideScreen] = useState(window.innerWidth > 992);
+  const [showFlagModal, setShowFlagModal] = useState(false);
+  const [flagRemarks, setFlagRemarks] = useState('');
+  const [updatingFlag, setUpdatingFlag] = useState(false);
 
   useEffect(() => {
     fetchAssetDetail();
@@ -195,6 +198,63 @@ const AssetDetail = () => {
     }
   };
 
+  const handleToggleFlag = async (flag) => {
+    if (flag && !flagRemarks.trim()) {
+      alert('Please enter remarks before flagging the asset');
+      return;
+    }
+
+    setUpdatingFlag(true);
+    try {
+      const response = await fetch(`${API_URL}/assets/id/${assetData.Asset_ID}/flag`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          Is_Flagged: flag ? 1 : 0,
+          Flag_Remarks: flag ? flagRemarks : null,
+          Flagged_By: 'Current User' // Replace with actual user from auth context
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update flag status');
+      }
+
+      const data = await response.json();
+      
+      // Update local state
+      if (flag) {
+        setAssetData({
+          ...assetData,
+          Is_Flagged: 1,
+          Flag_Remarks: flagRemarks,
+          Flag_Date: new Date().toISOString(),
+          Flagged_By: 'Current User'
+        });
+      } else {
+        // When unflagging, clear all flag-related fields
+        const updatedData = { ...assetData };
+        updatedData.Is_Flagged = 0;
+        updatedData.Flag_Remarks = null;
+        updatedData.Flag_Date = null;
+        updatedData.Flagged_By = null;
+        setAssetData(updatedData);
+      }
+
+      setShowFlagModal(false);
+      setFlagRemarks('');
+      
+      alert(data.message || (flag ? 'Asset flagged successfully' : 'Asset unflagged successfully'));
+    } catch (err) {
+      console.error('Error updating flag:', err);
+      alert('Failed to update flag status');
+    } finally {
+      setUpdatingFlag(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="page-container">
@@ -266,11 +326,86 @@ const AssetDetail = () => {
           </p>
         </div>
         <div className="actions">
+          {assetData.Is_Flagged !== 1 && (
+            <button 
+              onClick={() => {
+                setFlagRemarks('');
+                setShowFlagModal(true);
+              }}
+              className="btn btn-warning"
+              style={{ marginRight: '10px', backgroundColor: '#f39c12', borderColor: '#f39c12' }}
+              title="Flag asset"
+            >
+              <Flag size={18} />
+            </button>
+          )}
           <Link to={`/edit-asset/${assetData.Asset_ID}`} className="btn btn-primary">
             Edit Asset
           </Link>
         </div>
       </div>
+
+      {/* Flag Alert Banner */}
+      {assetData.Is_Flagged === 1 && (
+        <div className="card" style={{ 
+          marginBottom: '20px', 
+          background: '#fff3cd', 
+          border: '2px solid #f39c12',
+          borderLeft: '6px solid #f39c12'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '15px' }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '15px', flex: 1 }}>
+              <Flag size={32} color="#f39c12" style={{ flexShrink: 0, marginTop: '5px' }} />
+              <div style={{ flex: 1 }}>
+                <h3 style={{ margin: '0 0 10px 0', color: '#856404', fontSize: '1.2rem', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <AlertCircle size={20} />
+                  Flagged Asset
+                </h3>
+                <div style={{ color: '#856404', marginBottom: '8px' }}>
+                  <strong>Remarks:</strong> {assetData.Flag_Remarks || 'No remarks provided'}
+                </div>
+                {assetData.Flag_Date && (
+                  <div style={{ color: '#856404', fontSize: '0.9rem' }}>
+                    <strong>Flagged on:</strong> {formatDate(assetData.Flag_Date)}
+                    {assetData.Flagged_By && ` by ${assetData.Flagged_By}`}
+                  </div>
+                )}
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: '10px', flexShrink: 0, alignSelf: 'flex-start' }}>
+              <button 
+                onClick={() => {
+                  setFlagRemarks(assetData.Flag_Remarks || '');
+                  setShowFlagModal(true);
+                }}
+                className="btn btn-warning"
+                style={{ 
+                  backgroundColor: '#f39c12', 
+                  borderColor: '#f39c12'
+                }}
+                disabled={updatingFlag}
+                title="Edit flag remarks"
+              >
+                <Edit2 size={16} style={{ marginRight: '5px' }} />
+                Edit Remarks
+              </button>
+              <button 
+                onClick={() => handleToggleFlag(false)}
+                className="btn"
+                style={{ 
+                  backgroundColor: '#95a5a6',
+                  borderColor: '#95a5a6',
+                  color: 'white'
+                }}
+                disabled={updatingFlag}
+                title="Unflag asset"
+              >
+                <FlagOff size={18} />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Asset Overview Card */}
       <div className="card" style={{ marginBottom: '20px', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: 'white' }}>
@@ -1112,6 +1247,98 @@ const AssetDetail = () => {
           {deleting ? 'Deleting...' : 'Delete Asset'}
         </button>
       </div>
+
+      {/* Flag Asset Modal */}
+      {showFlagModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }}>
+          <div className="card" style={{
+            maxWidth: '500px',
+            width: '90%',
+            maxHeight: '90vh',
+            overflow: 'auto'
+          }}>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px',
+              marginBottom: '20px',
+              paddingBottom: '15px',
+              borderBottom: '2px solid #f39c12'
+            }}>
+              <Flag size={24} color="#f39c12" />
+              <h3 style={{ margin: 0, color: '#2c3e50', fontSize: '1.3rem' }}>
+                {assetData.Is_Flagged === 1 ? 'Edit Flag Remarks' : 'Flag Asset'}
+              </h3>
+            </div>
+
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{
+                display: 'block',
+                marginBottom: '8px',
+                color: '#2c3e50',
+                fontWeight: '600',
+                fontSize: '0.95rem'
+              }}>
+                Remarks <span style={{ color: '#e74c3c' }}>*</span>
+              </label>
+              <textarea
+                value={flagRemarks}
+                onChange={(e) => setFlagRemarks(e.target.value)}
+                placeholder="Enter remarks for flagging this asset..."
+                style={{
+                  width: '100%',
+                  minHeight: '120px',
+                  padding: '12px',
+                  border: '1px solid #ddd',
+                  borderRadius: '8px',
+                  fontSize: '0.95rem',
+                  fontFamily: 'inherit',
+                  resize: 'vertical'
+                }}
+              />
+              <small style={{ color: '#7f8c8d', fontSize: '0.85rem' }}>
+                Please provide detailed remarks explaining why this asset is being flagged
+              </small>
+            </div>
+
+            <div style={{
+              display: 'flex',
+              gap: '10px',
+              justifyContent: 'flex-end'
+            }}>
+              <button
+                onClick={() => {
+                  setShowFlagModal(false);
+                  setFlagRemarks('');
+                }}
+                className="btn btn-secondary"
+                disabled={updatingFlag}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handleToggleFlag(true)}
+                className="btn btn-warning"
+                style={{ backgroundColor: '#f39c12', borderColor: '#f39c12' }}
+                disabled={updatingFlag || !flagRemarks.trim()}
+              >
+                {updatingFlag ? (assetData.Is_Flagged === 1 ? 'Updating...' : 'Flagging...') : (assetData.Is_Flagged === 1 ? 'Update Remarks' : 'Flag Asset')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

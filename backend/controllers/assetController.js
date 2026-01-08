@@ -2413,6 +2413,70 @@ const fixOrphanedAssets = async (req, res, next) => {
   }
 };
 
+/**
+ * Update asset flag status and remarks
+ */
+const updateAssetFlag = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { Is_Flagged, Flag_Remarks, Flagged_By } = req.body;
+    
+    const asset = await Asset.findById(id);
+    
+    if (!asset) {
+      return res.status(404).json({
+        success: false,
+        error: 'Asset not found'
+      });
+    }
+    
+    // Update flag fields
+    asset.Is_Flagged = Is_Flagged !== undefined ? (Is_Flagged ? 1 : 0) : asset.Is_Flagged;
+    asset.Flag_Remarks = Flag_Remarks !== undefined ? Flag_Remarks : asset.Flag_Remarks;
+    asset.Flag_Date = Is_Flagged ? new Date() : asset.Flag_Date;
+    asset.Flagged_By = Flagged_By || asset.Flagged_By;
+    
+    // If unflagging, clear remarks and related fields
+    if (Is_Flagged === 0 || Is_Flagged === false) {
+      asset.Flag_Remarks = null;
+      asset.Flag_Date = null;
+      asset.Flagged_By = null;
+    }
+    
+    await asset.update();
+    
+    // Log the flag change
+    try {
+      await logAssetChange({
+        Asset_ID: asset.Asset_ID,
+        User_ID: req.user?.User_ID,
+        Action: Is_Flagged ? 'FLAG_ASSET' : 'UNFLAG_ASSET',
+        Changes: {
+          Is_Flagged: { old: !Is_Flagged, new: Is_Flagged },
+          Flag_Remarks: { old: null, new: Flag_Remarks }
+        }
+      });
+    } catch (logError) {
+      console.error('Failed to log asset flag change:', logError);
+    }
+    
+    const updatedAsset = await Asset.findById(id);
+    
+    res.status(200).json({
+      success: true,
+      message: Is_Flagged ? 'Asset flagged successfully' : 'Asset unflagged successfully',
+      asset: updatedAsset
+    });
+  } catch (error) {
+    logger.error('Error in updateAssetFlag:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to update asset flag',
+      message: error.message
+    });
+  }
+};
+
 module.exports = {
   getAllAssets,
   getAssetById,
@@ -2422,6 +2486,7 @@ module.exports = {
   createAssetWithDetails,
   updateAsset,
   updateAssetById,
+  updateAssetFlag,
   deleteAsset,
   deleteAssetById,
   getAssetStatistics,
