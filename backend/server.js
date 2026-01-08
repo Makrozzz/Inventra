@@ -29,6 +29,9 @@ app.use(helmet({
 }));
 app.use(compression());
 
+// Enable ETag for better caching
+app.set('etag', 'strong');
+
 // Rate limiting - more generous for development
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
