@@ -870,7 +870,7 @@ const Assets = ({ onDelete }) => {
             title={showFlaggedOnly ? 'Show all assets' : 'Show flagged assets only'}
           >
             <Flag size={18} color={showFlaggedOnly ? '#f39c12' : '#666'} fill={showFlaggedOnly ? '#f39c12' : 'none'} />
-            {showFlaggedOnly ? 'Flagged Only' : 'All Assets'}
+            {showFlaggedOnly}
             {showFlaggedOnly && filteredAssets.length > 0 && (
               <span style={{
                 backgroundColor: '#f39c12',
@@ -1343,7 +1343,7 @@ const Assets = ({ onDelete }) => {
                             <span className={`status-badge status-${(asset[column.Field] || '').toLowerCase().replace(/\s+/g, '-')}`}>
                               {formatCellValue(asset[column.Field], column.Field)}
                             </span>
-                          ) : (column.Field === 'Asset_Tag_ID' || column.Field === 'Item_Name') ? (
+                          ) : column.Field === 'Asset_Serial_Number' ? (
                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                               {asset.Is_Flagged ? (
                                 <Flag 
