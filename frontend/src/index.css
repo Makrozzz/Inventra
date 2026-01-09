@@ -1,3 +1,7 @@
+:root {
+  --sidebar-width: 250px;
+}
+
 * {
   margin: 0;
   padding: 0;
@@ -39,6 +43,7 @@ body {
 .app-layout {
   display: flex;
   min-height: 100vh;
+  position: relative;
 }
 
 .sidebar {
@@ -124,6 +129,16 @@ body {
   padding-left: 21px;
 }
 
+.nav-item.minimize-item {
+  cursor: pointer !important;
+  user-select: none;
+}
+
+.nav-item.minimize-item:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: #3498db;
+}
+
 .nav-item:hover {
   background-color: rgba(52, 152, 219, 0.2);
   border-left: 4px solid #3498db;
@@ -141,12 +156,19 @@ body {
   height: 20px;
 }
 
+/* Adjust main content when sidebar is minimized */
+.app-layout.sidebar-minimized .main-content {
+  margin-left: 80px;
+}
+
 .main-content {
-  margin-left: 270px;
-  padding: 20px; /* Reduced from 30px */
-  width: calc(100% - 270px);
+  flex: 1;
+  padding: 20px;
   min-height: 100vh;
   background-color: #f8f9fa;
+  margin-left: var(--sidebar-width);
+  transition: margin-left 0.3s ease;
+  box-sizing: border-box;
 }
 
 .page-header {

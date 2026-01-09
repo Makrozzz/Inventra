@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Search, Filter, Edit, Trash2, Download, Plus, Upload, FileText, Columns, AlertTriangle, X, Settings2, Eye, Trash, Edit2, AlertCircle, RefreshCw, Package, Boxes, Flag } from 'lucide-react';
 import Pagination from '../components/Pagination';
@@ -14,6 +14,7 @@ const Assets = ({ onDelete }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   const [searchFocused, setSearchFocused] = useState(false);
   const [showFlaggedOnly, setShowFlaggedOnly] = useState(false);
@@ -28,10 +29,14 @@ const Assets = ({ onDelete }) => {
   
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [itemsPerPage, setItemsPerPage] = useState(25);
 
   // State for all assets (loaded once)
   const [allAssets, setAllAssets] = useState([]);
+  const [totalAssets, setTotalAssets] = useState(0);
+  const [lastFetchTime, setLastFetchTime] = useState(0);
+  const [isFetching, setIsFetching] = useState(false);
+  const CACHE_DURATION = 10000; // 10 seconds cache - shorter since we only fetch one page
   
   // Sorting state
   const [sortField, setSortField] = useState('Inventory_ID');
@@ -89,34 +94,78 @@ const Assets = ({ onDelete }) => {
     setColumnConfig(savedConfig);
   }, []);
 
-  // Fetch all assets from database
-  const fetchAssets = async () => {
+  // Debounce search input for better performance
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+      // Reset to page 1 when search changes
+      if (searchTerm !== debouncedSearchTerm) {
+        setCurrentPage(1);
+      }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchTerm, debouncedSearchTerm]);
+
+  // Fetch assets from database with server-side pagination
+  const fetchAssets = useCallback(async (force = false) => {
+    const now = Date.now();
+    
+    // Deduplication: prevent multiple simultaneous requests
+    if (isFetching) {
+      return;
+    }
+    
+    // Use cache if available and not expired (unless forced)
+    if (!force && now - lastFetchTime < CACHE_DURATION && allAssets.length > 0) {
+      return;
+    }
+    
     try {
+      setIsFetching(true);
       setLoading(true);
       setError(null);
         
-        // Use direct fetch with correct API endpoint
-        const response = await fetch(`${API_URL}/assets`);
+        // Build query parameters for server-side pagination
+        const params = new URLSearchParams({
+          page: currentPage,
+          limit: itemsPerPage,
+          sortField: sortField,
+          sortDirection: sortDirection
+        });
         
-        console.log('Assets API Response Status:', response.status); // Debug log
+        // Add search parameter if exists
+        if (debouncedSearchTerm) {
+          params.append('search', debouncedSearchTerm);
+        }
+        
+        // Add flagged filter parameter
+        if (showFlaggedOnly) {
+          params.append('flagged', 'true');
+        }
+        
+        // Use direct fetch with pagination parameters
+        const response = await fetch(`${API_URL}/assets?${params.toString()}`);
         
         if (!response.ok) {
+          if (response.status === 429) {
+            throw new Error('Too many requests. Please wait a moment and try again.');
+          }
           const errorText = await response.text();
-          console.error('Assets API Error Response:', errorText);
           throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
         }
-        const assets = await response.json();
+        const result = await response.json();
         
-        console.log('Assets API Response:', assets); // Debug log
-        console.log('Number of assets:', assets.length); // Debug log
-        
-        setAllAssets(assets);
+        // Handle paginated response
+        setAllAssets(result.data || result);
+        setTotalAssets(result.pagination?.total || result.length);
+        setLastFetchTime(now);
         
         // Create columns based on new database schema
         // Default columns in specified order:
         // 1. Customer name, 2. Branch, 3. Serial number, 4. Tag ID, 5. Status
         // 6. Item name, 7. Model, 8. Category, 9. Antivirus, 10. Windows version
-        // 11. Microsoft Office version, 12. Software, 13. Software Name, 14. Recipient name
+        // 11. Microsoft Office version, 12. Recipient name
+        // Note: Software and Peripheral columns are available but hidden by default
         const assetColumns = [
           { Field: 'Customer_Name', Type: 'varchar(255)', Label: 'Customer Name' },
           { Field: 'Branch', Type: 'varchar(255)', Label: 'Branch' },
@@ -129,10 +178,6 @@ const Assets = ({ onDelete }) => {
           { Field: 'Antivirus', Type: 'varchar(255)', Label: 'Antivirus' },
           { Field: 'Windows', Type: 'varchar(255)', Label: 'Windows Version' },
           { Field: 'Microsoft_Office', Type: 'varchar(255)', Label: 'Microsoft Office' },
-          { Field: 'Software', Type: 'text', Label: 'Software' },
-          { Field: 'Software_Name', Type: 'text', Label: 'Software Name' },
-          { Field: 'Peripheral_Type', Type: 'text', Label: 'Peripheral Name' },
-          { Field: 'Peripheral_Serial', Type: 'text', Label: 'Peripheral Serial Code' },
           { Field: 'Recipient_Name', Type: 'varchar(255)', Label: 'Recipient Name' }
         ];
         setColumns(assetColumns);
@@ -143,13 +188,15 @@ const Assets = ({ onDelete }) => {
         setColumns([]);
       } finally {
         setLoading(false);
+        setIsFetching(false);
       }
-    };
+    }, [isFetching, lastFetchTime, allAssets.length, currentPage, itemsPerPage, sortField, sortDirection, debouncedSearchTerm, showFlaggedOnly]);
 
-  // Load assets on component mount
+  // Load assets on component mount and when pagination/sort/search changes
   useEffect(() => {
-    fetchAssets();
-  }, []); // Only fetch once on mount
+    fetchAssets(true); // Force fetch when page, sort, search, or flagged filter changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentPage, itemsPerPage, sortField, sortDirection, debouncedSearchTerm, showFlaggedOnly]);
 
   // Refresh data when coming from CSV import or when explicitly requested
   useEffect(() => {
@@ -158,9 +205,8 @@ const Assets = ({ onDelete }) => {
     const hasRefresh = location.state?.refresh || location.search.includes('refresh=true');
     
     if (hasRefresh) {
-      console.log('Refreshing assets:', stateMessage || 'Data refresh requested');
       setSuccessMessage(stateMessage || 'Asset data refreshed successfully');
-      fetchAssets();
+      fetchAssets(true); // Force refresh
       
       // Clear the state to prevent infinite refreshing
       if (location.state) {
@@ -173,25 +219,21 @@ const Assets = ({ onDelete }) => {
   }, [location, navigate]);
 
   // Refresh function to be called from external components
-  const refreshAssets = () => {
-    fetchAssets();
-  };
+  const refreshAssets = useCallback(() => {
+    fetchAssets(true); // Force refresh when explicitly called
+  }, [fetchAssets]);
 
   // Handle column configuration changes
   const handleColumnConfigApply = (newConfig) => {
     setColumnConfig(newConfig);
     ColumnConfigService.saveConfig(newConfig);
-    console.log('Column configuration updated:', {
-      visible: ColumnConfigService.getVisibleColumns(newConfig).length,
-      total: newConfig.length
-    });
   };
 
   // Get currently visible columns
   const visibleColumns = ColumnConfigService.getVisibleColumns(columnConfig);
 
   // Handle checkbox selection
-  const handleSelectAsset = (assetId) => {
+  const handleSelectAsset = useCallback((assetId) => {
     setSelectedAssets(prev => {
       if (prev.includes(assetId)) {
         return prev.filter(id => id !== assetId);
@@ -199,16 +241,16 @@ const Assets = ({ onDelete }) => {
         return [...prev, assetId];
       }
     });
-  };
+  }, []);
 
   // Handle delete button click - show confirmation dialog
-  const handleDeleteClick = (asset) => {
+  const handleDeleteClick = useCallback((asset) => {
     setDeleteDialog({
       show: true,
       asset: asset,
       deleting: false
     });
-  };
+  }, []);
 
   // Handle confirmed delete
   const handleConfirmDelete = async () => {
@@ -217,12 +259,9 @@ const Assets = ({ onDelete }) => {
     setDeleteDialog(prev => ({ ...prev, deleting: true }));
 
     try {
-      console.log(`Attempting to delete asset ID: ${deleteDialog.asset.Asset_ID}`);
-      
       const response = await apiService.deleteAssetById(deleteDialog.asset.Asset_ID);
       
       if (response.success) {
-        console.log('Delete successful:', response);
 
         const data = response.data || {};
         const peripheralsDeleted = data.peripherals_deleted ?? 0;
@@ -265,66 +304,40 @@ const Assets = ({ onDelete }) => {
   };
 
   // Handle cancel delete
-  const handleCancelDelete = () => {
+  const handleCancelDelete = useCallback(() => {
     setDeleteDialog({ show: false, asset: null, deleting: false });
-  };
+  }, []);
 
-  // Filter and sort assets based on search, column-specific filters, and sort settings
-  const filteredAssets = allAssets
-    .filter(asset => {
-      // Global search filter
-      const searchableFields = Object.values(asset).join(' ').toLowerCase();
-      const matchesSearch = searchableFields.includes(searchTerm.toLowerCase());
+  // Filter and sort assets - server-side pagination handles most of this
+  const filteredAssets = useMemo(() => {
+    return allAssets.filter(asset => {
+      // Flagged filter is now handled server-side
       
-      // Flagged filter
-      const matchesFlaggedFilter = showFlaggedOnly ? asset.Is_Flagged === 1 : true;
-      
-      // Column-specific filters
-      const matchesColumnFilters = Object.keys(columnFilters).every(columnKey => {
-        if (!columnFilters[columnKey]) return true; // Empty filter = no filtering
+      // Column-specific filters (client-side for now)
+      for (const columnKey in columnFilters) {
+        if (!columnFilters[columnKey]) continue;
         const assetValue = (asset[columnKey] || '').toString().toLowerCase();
         const filterValue = columnFilters[columnKey].toLowerCase();
-        return assetValue.includes(filterValue);
-      });
-      
-      return matchesSearch && matchesFlaggedFilter && matchesColumnFilters;
-    })
-    .sort((a, b) => {
-      // Sort by the selected field and direction
-      const aValue = a[sortField] || '';
-      const bValue = b[sortField] || '';
-      
-      // Handle numeric fields (like Inventory_ID)
-      if (sortField === 'Inventory_ID') {
-        const aNum = parseInt(aValue) || 0;
-        const bNum = parseInt(bValue) || 0;
-        return sortDirection === 'asc' ? aNum - bNum : bNum - aNum;
+        if (!assetValue.includes(filterValue)) return false;
       }
       
-      // Handle string fields
-      const comparison = aValue.toString().localeCompare(bValue.toString());
-      return sortDirection === 'asc' ? comparison : -comparison;
+      return true;
     });
+    // Note: Sorting and search are handled server-side
+  }, [allAssets, columnFilters]);
 
-  // Client-side pagination calculations
-  const totalItems = filteredAssets.length;
-  const calculatedTotalPages = Math.ceil(totalItems / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const paginatedAssets = filteredAssets.slice(startIndex, endIndex);
-
-  // Debug logging
-  console.log('📊 Asset Data Debug:', {
-    totalAssets: allAssets.length,
-    filteredAssets: filteredAssets.length,
-    paginatedAssets: paginatedAssets.length,
-    firstAsset: paginatedAssets[0],
-    hasAssetID: paginatedAssets[0]?.Asset_ID,
-    selectedAssets: selectedAssets
-  });
+  // Client-side pagination calculations - using server-provided total
+  const { totalItems, calculatedTotalPages, paginatedAssets } = useMemo(() => {
+    const totalItems = totalAssets; // Use server-provided total
+    const calculatedTotalPages = Math.ceil(totalItems / itemsPerPage);
+    // Server already paginated, so just use filtered assets directly
+    const paginatedAssets = filteredAssets;
+    
+    return { totalItems, calculatedTotalPages, paginatedAssets };
+  }, [filteredAssets, totalAssets, itemsPerPage]);
 
   // Handle select all checkbox (must be after paginatedAssets is defined)
-  const handleSelectAll = () => {
+  const handleSelectAll = useCallback(() => {
     if (selectAll) {
       setSelectedAssets([]);
       setSelectAll(false);
@@ -333,7 +346,7 @@ const Assets = ({ onDelete }) => {
       setSelectedAssets(allAssetIds);
       setSelectAll(true);
     }
-  };
+  }, [selectAll, paginatedAssets]);
 
   // Check if all current page assets are selected (for checkbox state)
   const isAllSelected = paginatedAssets.length > 0 && 
@@ -870,7 +883,6 @@ const Assets = ({ onDelete }) => {
             title={showFlaggedOnly ? 'Show all assets' : 'Show flagged assets only'}
           >
             <Flag size={18} color={showFlaggedOnly ? '#f39c12' : '#666'} fill={showFlaggedOnly ? '#f39c12' : 'none'} />
-            {showFlaggedOnly}
             {showFlaggedOnly && filteredAssets.length > 0 && (
               <span style={{
                 backgroundColor: '#f39c12',
@@ -1038,10 +1050,7 @@ const Assets = ({ onDelete }) => {
                       <input
                         type="checkbox"
                         checked={isAllSelected}
-                        onChange={() => {
-                          console.log('Select All clicked, current state:', isAllSelected);
-                          handleSelectAll();
-                        }}
+                        onChange={handleSelectAll}
                         className="custom-checkbox"
                         style={{
                           display: 'block',
@@ -1252,11 +1261,6 @@ const Assets = ({ onDelete }) => {
               </thead>
               <tbody style={{ userSelect: resizingColumn ? 'none' : 'auto' }}>
                 {paginatedAssets.length > 0 ? paginatedAssets.map((asset, index) => {
-                  // Debug log for each asset
-                  if (index === 0) {
-                    console.log('🔍 First asset in render:', asset, 'Asset_ID:', asset.Asset_ID);
-                  }
-                  
                   return (
                   <React.Fragment key={asset.Inventory_ID || asset.Asset_ID || index}>
                     <tr>
@@ -1279,10 +1283,7 @@ const Assets = ({ onDelete }) => {
                           <input
                             type="checkbox"
                             checked={selectedAssets.includes(asset.Asset_ID)}
-                            onChange={() => {
-                              console.log('Checkbox clicked for Asset_ID:', asset.Asset_ID);
-                              handleSelectAsset(asset.Asset_ID);
-                            }}
+                            onChange={() => handleSelectAsset(asset.Asset_ID)}
                             className="custom-checkbox"
                             style={{
                               display: 'block',

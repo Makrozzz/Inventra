@@ -156,6 +156,7 @@ class User {
 
     // Map camelCase to database column names
     const fieldMapping = {
+      username: 'username',
       firstName: 'First_Name',
       lastName: 'Last_Name',
       email: 'User_Email',

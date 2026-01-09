@@ -9,30 +9,31 @@ const { pool } = require('../config/database');
  */
 const getAllAssets = async (req, res, next) => {
   try {
-    // First try to get assets
-    let assets = await Asset.findAll();
+    // Extract pagination and filtering parameters from query
+    const {
+      page = 1,
+      limit = 25,
+      search = '',
+      sortField = 'Asset_ID',
+      sortDirection = 'DESC',
+      flagged = '' // New parameter for flagged assets filter
+    } = req.query;
     
-    // Check if we need to fix orphaned assets based on the debug output
-    const shouldCheckOrphans = true; // For now, always check
+    // Calculate offset
+    const offset = (parseInt(page) - 1) * parseInt(limit);
     
-    if (shouldCheckOrphans) {
-      console.log('Checking for orphaned assets and fixing if needed...');
-      
-      try {
-        // Check for orphaned assets (no longer auto-fixes with defaults)
-        const checkResult = await Asset.fixOrphanedAssets();
-        if (checkResult.orphaned > 0) {
-          console.log(`⚠️  FOUND ${checkResult.orphaned} ORPHANED ASSETS - Manual assignment required`);
-          console.log('⚠️  Orphaned assets will not be auto-assigned to default customers');
-        }
-        // No need to re-fetch since we don't auto-fix anymore
-      } catch (checkError) {
-        console.warn('Failed to check orphaned assets:', checkError.message);
-      }
-    }
+    // Get assets with pagination
+    const result = await Asset.findAll({
+      limit: parseInt(limit),
+      offset,
+      search,
+      sortField,
+      sortDirection,
+      flagged: flagged === 'true' || flagged === '1' // Convert to boolean
+    });
 
-    // Return assets directly as JSON array for frontend compatibility
-    res.status(200).json(assets);
+    // Return paginated response
+    res.status(200).json(result);
   } catch (error) {
     logger.error('Error in getAllAssets:', error);
     console.error('Error fetching assets from database:', error);

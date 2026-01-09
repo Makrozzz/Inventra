@@ -29,15 +29,20 @@ app.use(helmet({
 }));
 app.use(compression());
 
+// Enable ETag for better caching
+app.set('etag', 'strong');
+
 // Rate limiting - more generous for development
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: process.env.NODE_ENV === 'production' ? 100 : 1000, // 1000 requests for development, 100 for production
+  max: process.env.NODE_ENV === 'production' ? 500 : 2000, // Increased: 2000 for dev, 500 for prod
   message: {
     success: false,
     error: 'Too many requests from this IP, please try again later.',
     retryAfter: '15 minutes'
-  }
+  },
+  standardHeaders: true, // Return rate limit info in headers
+  legacyHeaders: false,
 });
 app.use('/api', limiter);
 

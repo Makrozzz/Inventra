@@ -27,34 +27,57 @@ class Asset {
   }
 
   // Get all assets with complete inventory information (Project, Customer, Recipients, Category, Model)
-  static async findAll() {
+  static async findAll(options = {}) {
     try {
-      // First, let's check all assets and their inventory status
-      console.log('=== Asset.findAll() DEBUG ===');
+      const { limit, offset = 0, search = '', sortField = 'Asset_ID', sortDirection = 'DESC', flagged = false } = options;
       
-      // Check total assets in ASSET table
-      const [assetCount] = await pool.execute('SELECT COUNT(*) as total FROM ASSET');
-      console.log(`Total assets in ASSET table: ${assetCount[0].total}`);
+      // Build WHERE clause for search
+      let whereClause = '';
+      let searchParams = [];
       
-      // Check total inventory records
-      const [inventoryCount] = await pool.execute('SELECT COUNT(*) as total FROM INVENTORY WHERE Asset_ID IS NOT NULL');
-      console.log(`Total inventory records with Asset_ID: ${inventoryCount[0].total}`);
-      
-      // Check assets without inventory linkage
-      const [orphanAssets] = await pool.execute(`
-        SELECT a.Asset_ID, a.Asset_Serial_Number, a.Asset_Tag_ID, a.Item_Name 
-        FROM ASSET a 
-        WHERE a.Asset_ID NOT IN (SELECT DISTINCT Asset_ID FROM INVENTORY WHERE Asset_ID IS NOT NULL)
-      `);
-      
-      if (orphanAssets.length > 0) {
-        console.log(`WARNING: Found ${orphanAssets.length} assets without inventory links:`);
-        orphanAssets.forEach(asset => {
-          console.log(`  - Asset_ID: ${asset.Asset_ID}, Serial: ${asset.Asset_Serial_Number}, Tag: ${asset.Asset_Tag_ID}`);
-        });
+      // Add flagged filter
+      if (flagged) {
+        whereClause = 'WHERE a.Is_Flagged = 1';
       }
-
-      console.log('Executing main assets query...');
+      
+      if (search) {
+        whereClause = whereClause ? `${whereClause} AND (` : 'WHERE (';
+        whereClause += `
+          a.Asset_Serial_Number LIKE ? OR
+          a.Asset_Tag_ID LIKE ? OR
+          a.Item_Name LIKE ? OR
+          cust.Customer_Name LIKE ? OR
+          cust.Branch LIKE ? OR
+          m.Model_Name LIKE ?
+        )`;
+        const searchPattern = `%${search}%`;
+        searchParams = [searchPattern, searchPattern, searchPattern, searchPattern, searchPattern, searchPattern];
+      }
+      
+      // Get total count for pagination
+      const countQuery = `
+        SELECT COUNT(DISTINCT a.Asset_ID) as total
+        FROM ASSET a
+        LEFT JOIN INVENTORY i ON i.Asset_ID = a.Asset_ID
+        LEFT JOIN CATEGORY c ON a.Category_ID = c.Category_ID
+        LEFT JOIN MODEL m ON a.Model_ID = m.Model_ID
+        LEFT JOIN CUSTOMER cust ON i.Customer_ID = cust.Customer_ID
+        ${whereClause}
+      `;
+      
+      const [countResult] = await pool.execute(countQuery, searchParams);
+      const total = countResult[0].total;
+      
+      // Build ORDER BY clause
+      const validSortFields = ['Asset_ID', 'Asset_Serial_Number', 'Asset_Tag_ID', 'Item_Name', 'Status', 'Customer_Name', 'Model'];
+      const orderField = validSortFields.includes(sortField) ? sortField : 'Asset_ID';
+      const orderDir = sortDirection.toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
+      const orderBy = `ORDER BY ${orderField} ${orderDir}`;
+      
+      // Build LIMIT clause
+      const limitClause = limit ? `LIMIT ${parseInt(limit)} OFFSET ${parseInt(offset)}` : '';
+      
+      // Optimized query with minimal JOINs - fetch only essential data
       const [rows] = await pool.execute(`
         SELECT 
           i.Inventory_ID,
@@ -92,14 +115,7 @@ class Asset {
           cust.Customer_ID,
           cust.Customer_Ref_Number,
           cust.Customer_Name,
-          cust.Branch,
-          GROUP_CONCAT(DISTINCT s.Software_Name SEPARATOR ', ') AS Software,
-          GROUP_CONCAT(DISTINCT s.Software_Name SEPARATOR ', ') AS Software_Name,
-          GROUP_CONCAT(DISTINCT s.Price SEPARATOR ', ') AS Software_Prices,
-          (SELECT GROUP_CONCAT(CONCAT(pt2.Peripheral_Type_Name, '|', COALESCE(NULLIF(per2.Serial_Code, ''), 'N/A'), '|', COALESCE(NULLIF(per2.Condition, ''), 'N/A'), '|', COALESCE(NULLIF(per2.Remarks, ''), 'N/A')) ORDER BY per2.Peripheral_ID SEPARATOR '||')
-           FROM PERIPHERAL per2
-           LEFT JOIN PERIPHERAL_TYPE pt2 ON per2.Peripheral_Type_ID = pt2.Peripheral_Type_ID
-           WHERE per2.Asset_ID = a.Asset_ID) AS Peripheral_Data
+          cust.Branch
         FROM ASSET a
         LEFT JOIN INVENTORY i ON i.Asset_ID = a.Asset_ID
         LEFT JOIN CATEGORY c ON a.Category_ID = c.Category_ID
@@ -107,94 +123,78 @@ class Asset {
         LEFT JOIN RECIPIENTS r ON a.Recipients_ID = r.Recipients_ID
         LEFT JOIN PROJECT p ON i.Project_ID = p.Project_ID
         LEFT JOIN CUSTOMER cust ON i.Customer_ID = cust.Customer_ID
-        LEFT JOIN ASSET_SOFTWARE_BRIDGE asb ON a.Asset_ID = asb.Asset_ID
-        LEFT JOIN SOFTWARE s ON asb.Software_ID = s.Software_ID
-        GROUP BY a.Asset_ID
-        ORDER BY a.Asset_ID DESC
-      `);
+        ${whereClause}
+        ${orderBy}
+        ${limitClause}
+      `, searchParams);
       
-      console.log(`✅ Query returned ${rows.length} assets (including those without inventory links)`);
+      // Get asset IDs for fetching related data
+      const assetIds = rows.map(r => r.Asset_ID);
       
-      if (rows.length > 0) {
-        const withInventory = rows.filter(row => row.Inventory_ID !== null).length;
-        const withoutInventory = rows.length - withInventory;
-        console.log(`   - ${withInventory} assets with inventory links`);
-        console.log(`   - ${withoutInventory} assets without inventory links`);
+      // Fetch software data in a single query if we have assets
+      let softwareMap = new Map();
+      if (assetIds.length > 0) {
+        const placeholders = assetIds.map(() => '?').join(',');
+        const [softwareRows] = await pool.execute(`
+          SELECT asb.Asset_ID, s.Software_Name, s.Price
+          FROM ASSET_SOFTWARE_BRIDGE asb
+          LEFT JOIN SOFTWARE s ON asb.Software_ID = s.Software_ID
+          WHERE asb.Asset_ID IN (${placeholders})
+        `, assetIds);
         
-        const assetIds = rows.map(row => row.Asset_ID).sort((a, b) => a - b);
-        console.log(`Asset_ID range: ${assetIds[0]} - ${assetIds[assetIds.length - 1]}`);
-        console.log(`Latest 5 Asset_IDs: ${assetIds.slice(-5).join(', ')}`);
+        softwareRows.forEach(sw => {
+          if (!softwareMap.has(sw.Asset_ID)) {
+            softwareMap.set(sw.Asset_ID, []);
+          }
+          softwareMap.get(sw.Asset_ID).push(sw);
+        });
       }
       
-      // Post-process to extract peripheral details into separate columns
+      // Fetch peripheral data in a single query
+      let peripheralMap = new Map();
+      if (assetIds.length > 0) {
+        const placeholders = assetIds.map(() => '?').join(',');
+        const [peripheralRows] = await pool.execute(`
+          SELECT per.Asset_ID, pt.Peripheral_Type_Name,
+                 per.Serial_Code, per.Condition, per.Remarks, per.Peripheral_ID
+          FROM PERIPHERAL per
+          LEFT JOIN PERIPHERAL_TYPE pt ON per.Peripheral_Type_ID = pt.Peripheral_Type_ID
+          WHERE per.Asset_ID IN (${placeholders})
+          ORDER BY per.Peripheral_ID
+        `, assetIds);
+        
+        peripheralRows.forEach(p => {
+          if (!peripheralMap.has(p.Asset_ID)) {
+            peripheralMap.set(p.Asset_ID, []);
+          }
+          peripheralMap.get(p.Asset_ID).push(p);
+        });
+      }
+      
+      // Process rows with fetched data
       const processedRows = rows.map(row => {
         const processed = { ...row };
         
-        if (row.Peripheral_Data) {
-          // Format: "Type1|Serial1|Condition1|Remarks1||Type2|Serial2|Condition2|Remarks2"
-          const peripherals = row.Peripheral_Data.split('||').filter(p => p.trim());
-          
-          // Debug log for first asset to check data format
-          if (row.Asset_ID === rows[0].Asset_ID) {
-            console.log('🔍 Raw Peripheral_Data:', row.Peripheral_Data);
-            console.log('🔍 Split by ||:', peripherals);
-            peripherals.forEach((p, idx) => {
-              const parts = p.split('|');
-              console.log(`🔍 Peripheral ${idx + 1}:`, parts);
-              console.log(`   Type: "${parts[0]}", Serial: "${parts[1]}", Condition: "${parts[2]}", Remarks: "${parts[3]}"`);
-            });
-          }
-          
-          // Build formatted lists for each peripheral attribute
-          const formattedPeripherals = peripherals.map(p => {
-            const parts = p.split('|');
-            const [type, serial, condition, remark] = parts;
-            
-            return {
-              type: type?.trim() || '',
-              serial: serial?.trim() || '',
-              condition: condition?.trim() || '',
-              remark: remark?.trim() || ''
-            };
-          });
-          
-          // Separate columns - each shows ONLY its own data (keep N/A to maintain alignment)
-          processed.Peripheral_Type = formattedPeripherals
-            .map(p => p.type)
-            .join(', ') || null;
-          
-          processed.Peripheral_Serial = formattedPeripherals
-            .map(p => p.serial)
-            .join(', ') || null;
-          
-          processed.Peripheral_Condition = formattedPeripherals
-            .map(p => p.condition)
-            .join(', ') || null;
-          
-          processed.Peripheral_Remarks = formattedPeripherals
-            .map(p => p.remark)
-            .join(', ') || null;
-            
-          // Combined column: "Type1 (Serial1, Condition1); Type2 (Serial2, Condition2)"
-          processed.Peripheral_Details = formattedPeripherals
-            .map(p => {
-              const parts = [];
-              if (p.type) parts.push(p.type);
-              
-              const details = [];
-              if (p.serial) details.push(p.serial);
-              if (p.condition) details.push(p.condition);
-              
-              if (parts.length > 0) {
-                if (details.length > 0) {
-                  return `${parts[0]} (${details.join(', ')})`;
-                }
-                return parts[0];
-              }
-              return '';
-            })
-            .filter(d => d.trim())
-            .join('; ') || null;
+        // Add software data
+        const softwareList = softwareMap.get(row.Asset_ID) || [];
+        processed.Software = softwareList.map(s => s.Software_Name).join(', ') || null;
+        processed.Software_Name = softwareList.map(s => s.Software_Name).join(', ') || null;
+        processed.Software_Prices = softwareList.map(s => s.Price).join(', ') || null;
+        
+        // Add peripheral data
+        const peripheralList = peripheralMap.get(row.Asset_ID) || [];
+        if (peripheralList.length > 0) {
+          processed.Peripheral_Type = peripheralList.map(p => p.Peripheral_Type_Name).join(', ');
+          processed.Peripheral_Serial = peripheralList.map(p => p.Serial_Code || 'N/A').join(', ');
+          processed.Peripheral_Condition = peripheralList.map(p => p.Condition || 'N/A').join(', ');
+          processed.Peripheral_Remarks = peripheralList.map(p => p.Remarks || 'N/A').join(', ');
+          processed.Peripheral_Details = peripheralList.map(p => {
+            const parts = [p.Peripheral_Type_Name];
+            const details = [];
+            if (p.Serial_Code) details.push(p.Serial_Code);
+            if (p.Condition) details.push(p.Condition);
+            return details.length > 0 ? `${parts[0]} (${details.join(', ')})` : parts[0];
+          }).join('; ');
         } else {
           processed.Peripheral_Type = null;
           processed.Peripheral_Serial = null;
@@ -203,14 +203,23 @@ class Asset {
           processed.Peripheral_Details = null;
         }
         
-        // Remove temporary field
-        delete processed.Peripheral_Data;
-        
         return processed;
       });
       
-      console.log('=== End Asset.findAll() DEBUG ===');
-      
+      // Return pagination metadata if limit was specified
+      if (limit) {
+        return {
+          data: processedRows,
+          pagination: {
+            total,
+            limit: parseInt(limit),
+            offset: parseInt(offset),
+            page: Math.floor(offset / limit) + 1,
+            totalPages: Math.ceil(total / limit)
+          }
+        };
+      }
+
       return processedRows;
     } catch (error) {
       console.error('❌ Error in Asset.findAll:', error.message);
