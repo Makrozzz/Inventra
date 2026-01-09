@@ -665,20 +665,23 @@ const Assets = ({ onDelete }) => {
   };
 
   return (
-    <div style={{ padding: '0' }}>
+    <div style={{ padding: '0', overflow: 'visible', width: '100%', maxWidth: '100%' }}>
       <div style={{
         display: 'flex',
-        alignItems: 'center',
+        alignItems: 'flex-start',
         justifyContent: 'space-between',
-        gap: '12px',
+        gap: '20px',
         marginBottom: '30px',
         paddingBottom: '15px',
         borderBottom: '3px solid #667eea',
-        padding: '0 20px 15px 20px'
+        padding: '0 20px 15px 20px',
+        flexWrap: 'wrap',
+        width: '100%',
+        boxSizing: 'border-box'
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <Boxes size={28} color="#667eea" />
-          <div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: '1 1 auto', minWidth: '250px', maxWidth: '100%' }}>
+          <Boxes size={28} color="#667eea" style={{ flexShrink: 0 }} />
+          <div style={{ overflow: 'hidden' }}>
             <h2 style={{ margin: 0, color: '#2c3e50', fontSize: '1.4rem' }}>
               Assets
             </h2>
@@ -687,7 +690,7 @@ const Assets = ({ onDelete }) => {
             </p>
           </div>
         </div>
-        <div className="actions" style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+        <div className="actions" style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', flex: '0 0 auto', justifyContent: 'flex-end' }}>
           <button
             onClick={() => navigate('/assets/import')}
             className="btn btn-secondary"
