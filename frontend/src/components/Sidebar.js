@@ -16,6 +16,8 @@ const Sidebar = ({ onLogout, onMinimizeChange }) => {
   const location = useLocation();
   const [username, setUsername] = useState('');
   const [isMinimized, setIsMinimized] = useState(false);
+  const [sidebarWidth, setSidebarWidth] = useState(250);
+  const [isResizing, setIsResizing] = useState(false);
 
   useEffect(() => {
     // Get username from localStorage
@@ -29,6 +31,39 @@ const Sidebar = ({ onLogout, onMinimizeChange }) => {
       }
     }
   }, []);
+
+  // Handle resize
+  useEffect(() => {
+    const handleMouseMove = (e) => {
+      if (!isResizing) return;
+      
+      const newWidth = e.clientX;
+      if (newWidth >= 80 && newWidth <= 400) {
+        setSidebarWidth(newWidth);
+        // Update CSS variable for main content margin
+        document.documentElement.style.setProperty('--sidebar-width', `${newWidth}px`);
+      }
+    };
+
+    const handleMouseUp = () => {
+      setIsResizing(false);
+    };
+
+    if (isResizing) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+    }
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isResizing]);
+
+  const handleResizeStart = (e) => {
+    e.preventDefault();
+    setIsResizing(true);
+  };
 
   const toggleMinimize = () => {
     const newMinimizedState = !isMinimized;
@@ -49,9 +84,9 @@ const Sidebar = ({ onLogout, onMinimizeChange }) => {
   ];
 
   return (
-    <div className={`sidebar ${isMinimized ? 'minimized' : ''}`} style={{ width: isMinimized ? '80px' : '250px', transition: 'width 0.3s ease' }}>
+    <div className={`sidebar ${isMinimized ? 'minimized' : ''}`} style={{ width: `${sidebarWidth}px`, transition: isResizing ? 'none' : 'width 0.3s ease' }}>
       <div className="sidebar-header">
-        {isMinimized ? (
+        {sidebarWidth < 150 ? (
           <div className="sidebar-logo" style={{ textAlign: 'center', fontSize: '24px' }}>I</div>
         ) : (
           <>
@@ -72,14 +107,14 @@ const Sidebar = ({ onLogout, onMinimizeChange }) => {
                 key={item.path}
                 to={item.path}
                 className={`nav-item ${isActive ? 'active' : ''}`}
-                title={isMinimized ? item.label : ''}
+                title={sidebarWidth < 150 ? item.label : ''}
                 style={{
-                  justifyContent: isMinimized ? 'center' : 'flex-start',
-                  padding: isMinimized ? '12px' : '12px 20px'
+                  justifyContent: sidebarWidth < 150 ? 'center' : 'flex-start',
+                  padding: sidebarWidth < 150 ? '12px' : '12px 20px'
                 }}
               >
                 <IconComponent className="nav-icon" />
-                {!isMinimized && <span>{item.label}</span>}
+                {sidebarWidth >= 150 && <span>{item.label}</span>}
               </Link>
             );
           })}
@@ -87,54 +122,51 @@ const Sidebar = ({ onLogout, onMinimizeChange }) => {
         
         <div className="sidebar-bottom-nav" style={{ borderTop: 'none', paddingTop: '0' }}>
           <button 
-            onClick={toggleMinimize}
-            className="nav-item minimize-item"
-            style={{
-              justifyContent: 'center',
-              padding: '10px 12px',
-              color: '#95a5a6',
-              fontSize: '13px',
-              fontStyle: 'italic',
-              cursor: 'pointer',
-              background: 'transparent',
-              border: 'none',
-              borderBottom: '3px solid rgba(255, 255, 255, 0.1)',
-              width: '100%',
-              textAlign: 'center',
-              marginBottom: '10px',
-              letterSpacing: '3px'
-            }}
-          >
-            {!isMinimized && '- minimize -'}
-            {isMinimized && '>'}
-          </button>
-
-          <button 
+            type="button"
             onClick={onLogout} 
             className="nav-item logout-item"
-            title={isMinimized ? 'Logout' : ''}
+            title={sidebarWidth < 150 ? 'Logout' : ''}
             style={{
-              justifyContent: isMinimized ? 'center' : 'flex-start',
-              padding: isMinimized ? '12px' : '12px 20px'
+              justifyContent: sidebarWidth < 150 ? 'center' : 'flex-start',
+              padding: sidebarWidth < 150 ? '12px' : '12px 20px'
             }}
           >
             <LogOut className="nav-icon" />
-            {!isMinimized && <span>Logout</span>}
+            {sidebarWidth >= 150 && <span>Logout</span>}
           </button>
           
           <div 
             className="nav-item user-item"
-            title={isMinimized ? username : ''}
+            title={sidebarWidth < 150 ? username : ''}
             style={{
-              justifyContent: isMinimized ? 'center' : 'flex-start',
-              padding: isMinimized ? '12px' : '12px 20px'
+              justifyContent: sidebarWidth < 150 ? 'center' : 'flex-start',
+              padding: sidebarWidth < 150 ? '12px' : '12px 20px'
             }}
           >
             <User className="nav-icon" />
-            {!isMinimized && <span>{username}</span>}
+            {sidebarWidth >= 150 && <span>{username}</span>}
           </div>
         </div>
       </nav>
+      
+      {/* Resize Handle */}
+      <div 
+        className="sidebar-resize-handle"
+        onMouseDown={handleResizeStart}
+        style={{
+          position: 'absolute',
+          right: 0,
+          top: 0,
+          bottom: 0,
+          width: '4px',
+          cursor: 'ew-resize',
+          backgroundColor: isResizing ? 'rgba(52, 152, 219, 0.5)' : 'transparent',
+          transition: 'background-color 0.2s ease',
+          zIndex: 1001
+        }}
+        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(52, 152, 219, 0.3)'}
+        onMouseLeave={(e) => !isResizing && (e.currentTarget.style.backgroundColor = 'transparent')}
+      />
     </div>
   );
 };

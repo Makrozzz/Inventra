@@ -7,7 +7,8 @@ const Pagination = ({
   onPageChange, 
   itemsPerPage, 
   onItemsPerPageChange, 
-  totalItems 
+  totalItems,
+  itemsPerPageOptions = [10, 25, 50, 100] // Default options
 }) => {
   // Generate page numbers to display
   const getPageNumbers = () => {
@@ -50,10 +51,9 @@ const Pagination = ({
             onChange={(e) => onItemsPerPageChange(Number(e.target.value))}
             className="items-per-page-select"
           >
-            <option value={6}>6</option>
-            <option value={12}>12</option>
-            <option value={20}>20</option>
-            <option value={30}>30</option>
+            {itemsPerPageOptions.map(option => (
+              <option key={option} value={option}>{option}</option>
+            ))}
           </select>
           <span>per page</span>
         </div>

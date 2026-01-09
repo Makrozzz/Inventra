@@ -100,13 +100,9 @@ function App() {
 
   return (
     <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-      <div className="app-layout">
+      <div className={`app-layout ${isSidebarMinimized ? 'sidebar-minimized' : ''}`}>
         <Sidebar onLogout={handleLogout} onMinimizeChange={setIsSidebarMinimized} />
-        <main className="main-content" style={{
-          marginLeft: isSidebarMinimized ? '80px' : '250px',
-          width: isSidebarMinimized ? 'calc(100% - 80px)' : 'calc(100% - 250px)',
-          transition: 'margin-left 0.3s ease, width 0.3s ease'
-        }}>
+        <main className="main-content">
           <Routes>
             <Route path="/" element={<Dashboard />} />
             <Route path="/projects" element={<Projects />} />

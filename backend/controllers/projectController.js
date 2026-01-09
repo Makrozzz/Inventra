@@ -2,6 +2,7 @@ const Project = require('../models/Project');
 const Customer = require('../models/Customer');
 const Inventory = require('../models/Inventory');
 const { logProjectChange, detectChanges } = require('../utils/auditLogger');
+const { pool } = require('../config/database');
 
 // Get all projects
 exports.getAllProjects = async (req, res) => {
@@ -171,7 +172,7 @@ exports.getBranchesByProjectRef = async (req, res) => {
 // Create new project
 exports.createProject = async (req, res) => {
   try {
-    const { project, customer } = req.body;
+    const { project, customer, solution_principals } = req.body;
     
     // Validate required fields
     const requiredProjectFields = ['Project_Title'];
@@ -197,13 +198,27 @@ exports.createProject = async (req, res) => {
       });
     }
 
-    console.log('Creating project with customer data:', { project, customer });
+    console.log('Creating project with customer data:', { project, customer, solution_principals });
 
     // Step 1: Create the project
     const newProject = await Project.create(project);
     console.log('Project created:', newProject);
 
-    // Step 2: Create customer records (one for each branch)
+    // Step 2: Create solution principal associations if provided
+    if (solution_principals && Array.isArray(solution_principals) && solution_principals.length > 0) {
+      for (const sp of solution_principals) {
+        const spId = typeof sp === 'object' ? sp.SP_ID : sp;
+        const supportType = typeof sp === 'object' ? sp.supportType : null;
+        
+        await pool.execute(
+          `INSERT INTO PROJECT_SP_BRIDGE (Project_ID, SP_ID, \`Support Type\`) VALUES (?, ?, ?)`,
+          [newProject.Project_ID, spId, supportType]
+        );
+      }
+      console.log('Solution principal associations created');
+    }
+
+    // Step 3: Create customer records (one for each branch)
     // NOTE: Customer table no longer has Project_ID in new database
     const customerIds = await Customer.createMultipleBranches(
       customer.Customer_Ref_Number,
@@ -212,7 +227,7 @@ exports.createProject = async (req, res) => {
     );
     console.log('Customer records created with IDs:', customerIds);
 
-    // Step 3: Create INVENTORY records linking project to customers
+    // Step 4: Create INVENTORY records linking project to customers
     // Asset_ID will be NULL initially, filled when assets are added
     const inventoryIds = await Inventory.createForProject(
       newProject.Project_ID,
@@ -220,7 +235,10 @@ exports.createProject = async (req, res) => {
     );
     console.log('Inventory records created with IDs:', inventoryIds);
 
-    // Step 4: Log the creation in audit log
+    // Step 5: Fetch the complete project with solution principals to return
+    const completeProject = await Project.findById(newProject.Project_ID);
+
+    // Step 6: Log the creation in audit log
     const userId = req.user?.User_ID || req.user?.userId || 1; // Get from auth token
     const username = req.user?.Username || req.user?.username || 'System';
     await logProjectChange(
@@ -234,7 +252,7 @@ exports.createProject = async (req, res) => {
     // Return success with project, customer, and inventory info
     res.status(201).json({
       success: true,
-      project: newProject,
+      project: completeProject,
       customer: {
         Customer_Ref_Number: customer.Customer_Ref_Number,
         Customer_Name: customer.Customer_Name,
@@ -379,13 +397,20 @@ exports.deleteProject = async (req, res) => {
       }
     }
     
-    // Step 4: Delete the project
+    // Step 4: Delete solution principal associations for this project
+    await pool.execute(
+      `DELETE FROM PROJECT_SP_BRIDGE WHERE Project_ID = ?`,
+      [id]
+    );
+    console.log(`Deleted solution principal associations for project ${id}`);
+    
+    // Step 5: Delete the project
     const deleted = await Project.delete(id);
     if (!deleted) {
       return res.status(404).json({ error: 'Project not found' });
     }
     
-    // Step 5: Log the deletion
+    // Step 6: Log the deletion
     const userId = req.user?.User_ID || req.user?.userId || 1;
     const username = req.user?.Username || req.user?.username || 'System';
     const customerName = inventoryRecords.length > 0 ? inventoryRecords[0].Customer_Name : 'Unknown';
