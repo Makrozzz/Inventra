@@ -138,11 +138,12 @@ router.get('/assets', async (req, res) => {
     console.log('Fetching assets for PM import:', { customer, branch, category });
     
     const [assets] = await pool.execute(
-      `SELECT DISTINCT a.Asset_ID, a.Asset_Serial_Number, a.Item_Name, a.Asset_Tag_ID
+      `SELECT DISTINCT a.Asset_ID, a.Asset_Serial_Number, a.Item_Name, a.Asset_Tag_ID, m.Model_Name as Model
        FROM ASSET a
        LEFT JOIN INVENTORY i ON a.Asset_ID = i.Asset_ID
        LEFT JOIN CUSTOMER c ON i.Customer_ID = c.Customer_ID
        LEFT JOIN CATEGORY cat ON a.Category_ID = cat.Category_ID
+       LEFT JOIN MODEL m ON a.Model_ID = m.Model_ID
        WHERE c.Customer_Name = ? 
        AND c.Branch = ?
        AND cat.Category = ?
