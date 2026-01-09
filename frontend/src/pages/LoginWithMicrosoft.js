@@ -8,7 +8,7 @@ const msalConfig = {
   auth: {
     clientId: "YOUR_CLIENT_ID", // Replace with your Azure AD App Client ID
     authority: "https://login.microsoftonline.com/YOUR_TENANT_ID", // Replace with your Tenant ID or 'common' for multi-tenant
-    redirectUri: "http://localhost:3000/", // Replace with your deployed URL when live
+    redirectUri: process.env.REACT_APP_REDIRECT_URI || window.location.origin,
   },
 };
 
